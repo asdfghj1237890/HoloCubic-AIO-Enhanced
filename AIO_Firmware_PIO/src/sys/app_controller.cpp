@@ -321,8 +321,8 @@ int AppController::req_event_deal(void)
 }
 
 /**
- *  wifi事件的处理
- *  事件处理成功返回true 否则false
+ *  WiFi event handling
+ *  Returns true if event handled successfully, false otherwise
  * */
 bool AppController::wifi_event(APP_MESSAGE_TYPE type)
 {
@@ -330,7 +330,7 @@ bool AppController::wifi_event(APP_MESSAGE_TYPE type)
     {
     case APP_MESSAGE_WIFI_CONN:
     {
-        // 更新请求
+        // Update request timestamp
         // CONN_ERROR == g_network.end_conn_wifi() ||
         if (false == m_wifi_status)
         {
@@ -338,10 +338,25 @@ bool AppController::wifi_event(APP_MESSAGE_TYPE type)
             m_wifi_status = true;
         }
         m_preWifiReqMillis = GET_SYS_MILLIS();
-        if ((WiFi.getMode() & WIFI_MODE_STA) == WIFI_MODE_STA && CONN_SUCC != g_network.end_conn_wifi())
+        
+        if ((WiFi.getMode() & WIFI_MODE_STA) == WIFI_MODE_STA)
         {
-            // 在STA模式下 并且还没连接上wifi
-            return false;
+            int conn_result = g_network.end_conn_wifi();
+            if (CONN_TIMEOUT == conn_result)
+            {
+                // Connection timeout - stop trying to avoid continuous retry loop
+                Serial.println(F("[WiFi] Connection timeout reached. Stopping connection attempts."));
+                Serial.println(F("[WiFi] Please check your WiFi settings via web interface."));
+                g_network.close_wifi();
+                m_wifi_status = false;
+                // Return true to mark event as handled and prevent retry loop
+                return true;
+            }
+            else if (CONN_SUCC != conn_result)
+            {
+                // Still trying to connect
+                return false;
+            }
         }
     }
     break;

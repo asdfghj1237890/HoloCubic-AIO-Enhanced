@@ -6,7 +6,8 @@
 
 #define CONN_SUCC 0
 #define CONN_ERROR 1
-#define CONN_ERR_TIMEOUT 15 // 连接WiFi的超时时间（s）
+#define CONN_TIMEOUT 2
+#define CONN_ERR_TIMEOUT 15 // WiFi connection timeout (seconds)
 
 // wifi是否连接标志
 #define AP_DISABLE 0
@@ -51,7 +52,9 @@ void restCallback(TimerHandle_t xTimer);
 class Network
 {
 private:
-    unsigned long m_preDisWifiConnInfoMillis; // 保存上一回显示连接状态的时间戳
+    unsigned long m_preDisWifiConnInfoMillis; // Timestamp of last connection status display
+    unsigned long m_wifiConnStartMillis;       // Timestamp when WiFi connection started
+    bool m_isConnecting;                       // Flag to track if currently attempting connection
 
 public:
     Network();
@@ -60,6 +63,7 @@ public:
     boolean end_conn_wifi(void);
     boolean close_wifi(void);
     boolean open_ap(const char *ap_ssid = AP_SSID, const char *ap_password = NULL);
+    unsigned long get_conn_duration(void);    // Get connection attempt duration in milliseconds
 };
 
 #endif

@@ -18,6 +18,8 @@ TimerHandle_t xTimer_ap;
 Network::Network()
 {
     m_preDisWifiConnInfoMillis = 0;
+    m_wifiConnStartMillis = 0;
+    m_isConnecting = false;
     WiFi.enableSTA(false);
     WiFi.enableAP(false);
 }
@@ -52,68 +54,109 @@ boolean Network::start_conn_wifi(const char *ssid, const char *password)
 {
     if (WiFi.status() == WL_CONNECTED)
     {
-        Serial.println(F("\nWiFi is OK.\n"));
+        Serial.println(F("\nWiFi is already connected.\n"));
+        m_isConnecting = false;
         return false;
     }
     
-    Serial.println("");
-    Serial.print(F("Connecting: "));
-    Serial.print(ssid);
-    Serial.print(F(" @ "));
-    Serial.println(password);
+    // Validate SSID is not empty
+    if (ssid == NULL || strlen(ssid) == 0)
+    {
+        Serial.println(F("\n[WiFi Error] SSID is empty! Please configure WiFi via web interface."));
+        Serial.println(F("[WiFi Info] Connect to AP 'HoloCubic_AIO' at 192.168.4.2 to configure."));
+        m_isConnecting = false;
+        return false;
+    }
+    
+    Serial.println(F("\n========== WiFi Connection Attempt =========="));
+    Serial.print(F("SSID: "));
+    Serial.println(ssid);
+    Serial.print(F("Password: "));
+    Serial.println(password && strlen(password) > 0 ? "********" : "<empty>");
+    Serial.println(F("============================================\n"));
 
-    // 设置为STA模式并连接WIFI
+    // Set to STA mode and connect to WiFi
     WiFi.enableSTA(true);
-    // 关闭省电模式 提升wifi功率（两个API都可以）
+    // Disable power saving mode to improve WiFi performance (either API works)
     // WiFi.setSleep(false);
     // esp_wifi_set_ps(WIFI_PS_NONE);
-    // 修改主机名
+    // Set hostname
     WiFi.setHostname(HOST_NAME);
     WiFi.begin(ssid, password);
+    
     m_preDisWifiConnInfoMillis = GET_SYS_MILLIS();
-
-    // if (!WiFi.config(local_ip, gateway, subnet, dns))
-    // { //WiFi.config(ip, gateway, subnet, dns1, dns2);
-    // 	Serial.println("WiFi STATION Failed to configure Correctly");
-    // }
-    // wifiMulti.addAP(AP_SSID, AP_PASS); // add Wi-Fi networks you want to connect to, it connects strongest to weakest
-    // wifiMulti.addAP(AP_SSID1, AP_PASS1); // Adjust the values in the Network tab
-
-    // Serial.println("Connecting ...");
-    // while (wifiMulti.run() != WL_CONNECTED)
-    // { // Wait for the Wi-Fi to connect: scan for Wi-Fi networks, and connect to the strongest of the networks above
-    // 	delay(250);
-    // 	Serial.print('.');
-    // }
-    // Serial.println("\nConnected to " + WiFi.SSID() + " Use IP address: " + WiFi.localIP().toString()); // Report which SSID and IP is in use
-    // // The logical name http://fileserver.local will also access the device if you have 'Bonjour' running or your system supports multicast dns
-    // if (!MDNS.begin(SERVER_NAME))
-    // { // Set your preferred server name, if you use "myserver" the address would be http://myserver.local/
-    // 	Serial.println(F("Error setting up MDNS responder!"));
-    // 	ESP.restart();
-    // }
+    m_wifiConnStartMillis = GET_SYS_MILLIS();
+    m_isConnecting = true;
 
     return true;
 }
 
 boolean Network::end_conn_wifi(void)
 {
-    if (WL_CONNECTED != WiFi.status())
+    wl_status_t status = WiFi.status();
+    
+    if (WL_CONNECTED != status)
     {
+        // Check for connection timeout
+        if (m_isConnecting && (GET_SYS_MILLIS() - m_wifiConnStartMillis) > (CONN_ERR_TIMEOUT * 1000))
+        {
+            if (doDelayMillisTime(10000, &m_preDisWifiConnInfoMillis, false))
+            {
+                Serial.println(F("\n========== WiFi Connection Failed =========="));
+                Serial.print(F("Status: "));
+                switch(status)
+                {
+                    case WL_NO_SSID_AVAIL:
+                        Serial.println(F("SSID not found"));
+                        break;
+                    case WL_CONNECT_FAILED:
+                        Serial.println(F("Connection failed (wrong password?)"));
+                        break;
+                    case WL_CONNECTION_LOST:
+                        Serial.println(F("Connection lost"));
+                        break;
+                    case WL_DISCONNECTED:
+                        Serial.println(F("Disconnected"));
+                        break;
+                    case WL_IDLE_STATUS:
+                        Serial.println(F("Idle (still trying to connect)"));
+                        break;
+                    default:
+                        Serial.printf("Unknown (%d)\n", status);
+                        break;
+                }
+                Serial.print(F("Duration: "));
+                Serial.print((GET_SYS_MILLIS() - m_wifiConnStartMillis) / 1000);
+                Serial.println(F(" seconds"));
+                Serial.println(F("Suggestion: Check SSID/password in web settings"));
+                Serial.println(F("============================================\n"));
+            }
+            m_isConnecting = false;
+            return CONN_TIMEOUT;
+        }
+        
         if (doDelayMillisTime(10000, &m_preDisWifiConnInfoMillis, false))
         {
-            // 这个if为了减少频繁的打印
-            Serial.println(F("\nWiFi connect error.\n"));
+            // Reduce frequent printing
+            Serial.print(F("."));
         }
         return CONN_ERROR;
     }
 
-    if (doDelayMillisTime(10000, &m_preDisWifiConnInfoMillis, false))
+    // Successfully connected
+    if (m_isConnecting || doDelayMillisTime(10000, &m_preDisWifiConnInfoMillis, false))
     {
-        // 这个if为了减少频繁的打印
-        Serial.println(F("\nWiFi connected"));
+        // Reduce frequent printing
+        Serial.println(F("\n========== WiFi Connected =========="));
+        Serial.print(F("SSID: "));
+        Serial.println(WiFi.SSID());
         Serial.print(F("IP address: "));
         Serial.println(WiFi.localIP());
+        Serial.print(F("Signal strength: "));
+        Serial.print(WiFi.RSSI());
+        Serial.println(F(" dBm"));
+        Serial.println(F("====================================\n"));
+        m_isConnecting = false;
     }
     return CONN_SUCC;
 }
@@ -123,7 +166,7 @@ boolean Network::close_wifi(void)
     if (WiFi.getMode() & WIFI_MODE_AP)
     {
         WiFi.enableAP(false);
-        Serial.println(F("AP shutdowm"));
+        Serial.println(F("AP shutdown"));
     }
 
     if (!WiFi.disconnect())
@@ -132,12 +175,22 @@ boolean Network::close_wifi(void)
     }
     WiFi.enableSTA(false);
     WiFi.mode(WIFI_MODE_NULL);
-    // esp_wifi_set_inactive_time(ESP_IF_ETH, 10); //设置暂时休眠时间
-    // esp_wifi_get_ant(wifi_ant_config_t * config);                   //获取暂时休眠时间
+    m_isConnecting = false;
+    // esp_wifi_set_inactive_time(ESP_IF_ETH, 10); // Set temporary sleep time
+    // esp_wifi_get_ant(wifi_ant_config_t * config); // Get temporary sleep time
     // WiFi.setSleep(WIFI_PS_MIN_MODEM);
     // WiFi.onEvent();
-    Serial.println(F("WiFi disconnect"));
+    Serial.println(F("WiFi disconnected"));
     return true;
+}
+
+unsigned long Network::get_conn_duration(void)
+{
+    if (!m_isConnecting)
+    {
+        return 0;
+    }
+    return GET_SYS_MILLIS() - m_wifiConnStartMillis;
 }
 
 boolean Network::open_ap(const char *ap_ssid, const char *ap_password)
