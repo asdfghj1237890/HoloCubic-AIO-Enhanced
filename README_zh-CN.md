@@ -1,4 +1,4 @@
-# HoloCubic_AIO（HoloCubic一体化固件）
+# HoloCubic-AIO-Enhanced（HoloCubic一体化固件）
 
 > 🌍 _您也可以阅读本文件的其他语言版本 [English 英文版](./README.md)_
 

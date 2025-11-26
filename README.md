@@ -1,4 +1,4 @@
-# HoloCubic_AIO (All in one for HoloCubic)
+# HoloCubic-AIO-Enhanced (All in one for HoloCubic)
 
 > 🌍 _您也可以阅读本文件的其他语言版本 [简体中文 Simplified Chinese](./README_zh-CN.md)_
 
