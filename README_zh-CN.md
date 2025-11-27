@@ -535,6 +535,10 @@ if(sck == -1 && miso == -1 && mosi == -1 && ss == -1) {
 
 **框架讲解视频**：https://www.bilibili.com/video/BV1jh411a7pV?p=4
 
+### ESP32系统流程图
+
+![ESP32系统流程图](Image/ESP32-system-flowchart.png)
+
 ### 开发资源
 
 #### UI设计工具

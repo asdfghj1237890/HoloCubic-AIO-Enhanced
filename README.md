@@ -521,6 +521,10 @@ In the PlatformIO toolbar at the bottom of VS Code:
 
 **Framework Explanation Video**: https://www.bilibili.com/video/BV1jh411a7pV?p=4
 
+### ESP32 System Flowchart
+
+![ESP32 System Flowchart](Image/ESP32-system-flowchart.png)
+
 ### Development Resources
 
 #### UI Design Tools

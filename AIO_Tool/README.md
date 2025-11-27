@@ -1,79 +1,90 @@
-## 项目为AIO固件配套上位机
-Holocubic_AIO开源地址 https://github.com/ClimbSnail/HoloCubic_AIO
+# AIO Tool - PC Companion Software for HoloCubic AIO Firmware
+
+[中文文档](README_zh-CN.md) | English
+
+HoloCubic_AIO Open Source Repository: https://github.com/ClimbSnail/HoloCubic_AIO
 
 [^_^]:
 	![AIO_TOOL](Image/holocubic_aio_tool.png)
 
 ![AIO_TOOL](https://gitee.com/ClimbSnailQ/Project_Image/raw/master/OtherProject/holocubic_aio_tool.png)
 
-## 快速开始
+## Architecture
 
-### 前置要求
-- [uv](https://github.com/astral-sh/uv) - 快速的 Python 包管理器（推荐）
+### AIO Tool Flowchart
 
-### 一键安装（推荐）
+![AIO Tool Flowchart](../Image/AIO-Tool-flowchart.png)
 
-使用自动化脚本快速设置环境：
+The flowchart above illustrates the architecture and data flow of the AIO Tool application, showing how different modules interact with each other.
+
+## Quick Start
+
+### Prerequisites
+- [uv](https://github.com/astral-sh/uv) - Fast Python package manager (recommended)
+
+### One-Click Installation (Recommended)
+
+Use the automated script to quickly set up the environment:
 
 ```bash
 # Windows PowerShell
 .\setup.ps1
 ```
 
-### 手动安装
+### Manual Installation
 
-#### 方法 1: 使用 uv（推荐）
+#### Method 1: Using uv (Recommended)
 
 ```bash
-# 1. 安装 uv (如果尚未安装)
+# 1. Install uv (if not already installed)
 # Windows (PowerShell)
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 # macOS/Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 2. 创建虚拟环境
+# 2. Create virtual environment
 uv venv
 
-# 3. 安装所有依赖（包括本地的 esptool）
+# 3. Install all dependencies (including local esptool)
 uv pip install -r requirements.txt
 
-# 4. 运行应用
+# 4. Run the application
 uv run python CubicAIO_Tool.py
 ```
 
-#### 方法 2: 传统方式
+#### Method 2: Traditional Approach
 
 ```bash
-# 1. 创建虚拟环境
+# 1. Create virtual environment
 python -m venv venv
 
-# 2. 激活虚拟环境
+# 2. Activate virtual environment
 # Windows
 venv\Scripts\activate
 # macOS/Linux
 source venv/bin/activate
 
-# 3. 安装所有依赖（包括本地的 esptool）
+# 3. Install all dependencies (including local esptool)
 pip install -r requirements.txt
 
-# 4. 运行应用
+# 4. Run the application
 python CubicAIO_Tool.py
 ```
 
-### 依赖说明
+### Dependencies
 
-本项目的 `requirements.txt` 包含：
-- **运行时依赖**: pillow, requests, pyserial
-- **esptool v4.1**: 从本地 `esptool_v41/` 目录安装
-- **构建工具**: pyinstaller（用于打包可执行文件）
+The `requirements.txt` includes:
+- **Runtime dependencies**: pillow, requests, pyserial
+- **esptool v4.1**: Installed from local `esptool_v41/` directory
+- **Build tools**: pyinstaller (for packaging executable)
 
-所有 esptool 的依赖（bitstring, cryptography, ecdsa, reedsolo）会自动安装。
+All esptool dependencies (bitstring, cryptography, ecdsa, reedsolo) will be installed automatically.
 
-## 重要问题
-本工程包含了上位机所有代码及资源文件，但唯独缺少视频转化工具`ffmpeg`（文件太大），需要转化功能的可以自行访问`ffmpeg`原项目地址 https://github.com/FFmpeg/FFmpeg 下载，把其中的`ffmpeg.exe`文件放在本工程的根目录下即可。
+## Important Note
+This project contains all PC software code and resource files, but is missing the video conversion tool `ffmpeg` (file too large). If you need video conversion functionality, you can download it from the official `ffmpeg` repository at https://github.com/FFmpeg/FFmpeg and place the `ffmpeg.exe` file in the project root directory.
 
-或者使用包管理器安装（推荐）：
+Or install using a package manager (recommended):
 ```bash
 # Windows (Chocolatey)
 choco install ffmpeg -y
@@ -85,84 +96,84 @@ brew install ffmpeg
 sudo apt install ffmpeg
 ```
 
-## 打包成可执行程序
+## Building Executable
 
-### 使用 spec 文件（推荐）
+### Using spec File (Recommended)
 
-本项目包含优化的 `CubicAIO_Tool.spec` 文件，可以正确打包所有依赖（包括 esptool）：
+This project includes an optimized `CubicAIO_Tool.spec` file that correctly packages all dependencies (including esptool):
 
 ```bash
-# 使用 uv（推荐）
+# Using uv (recommended)
 uv run pyinstaller CubicAIO_Tool.spec
 
-# 或清理后重新构建
+# Or clean rebuild
 uv run pyinstaller --clean CubicAIO_Tool.spec
 ```
 
-### 快速打包（不推荐）
+### Quick Build (Not Recommended)
 
 ```bash
-# 使用 uv
+# Using uv
 uv run pyinstaller --icon ./image/holo_256.ico -w -F CubicAIO_Tool.py
 
-# 传统方式
+# Traditional way
 pyinstaller --icon ./image/holo_256.ico -w -F CubicAIO_Tool.py
 ```
 
-**⚠️ 注意**: 快速打包可能无法正确包含 esptool 模块，建议使用 `.spec` 文件。
+**⚠️ Note**: Quick build may not correctly include the esptool module. It's recommended to use the `.spec` file.
 
-**参数说明：**
-- `--icon ./image/holo_256.ico` - 设置应用程序图标
-- `-w` - 不显示控制台窗口（仅GUI）
-- `-F` - 打包成单个可执行文件
+**Parameter Description:**
+- `--icon ./image/holo_256.ico` - Set application icon
+- `-w` - Hide console window (GUI only)
+- `-F` - Package into a single executable file
 
-**输出位置：** `dist/CubicAIO_Tool.exe`
+**Output Location:** `dist/CubicAIO_Tool.exe`
 
-## 故障排除
+## Troubleshooting
 
-### "No module named 'esptool'" 错误
+### "No module named 'esptool'" Error
 
-如果遇到此错误：
+If you encounter this error:
 
-1. **检查 esptool 是否已安装**:
+1. **Check if esptool is installed**:
    ```bash
    uv pip list | findstr esptool  # Windows
    uv pip list | grep esptool     # macOS/Linux
    ```
 
-2. **重新安装所有依赖**:
+2. **Reinstall all dependencies**:
    ```bash
    uv pip install --force-reinstall -r requirements.txt
    ```
 
-3. **重新构建可执行文件**:
+3. **Rebuild the executable**:
    ```bash
    uv run pyinstaller --clean CubicAIO_Tool.spec
    ```
 
-### 其他常见问题
+### Other Common Issues
 
-- **虚拟环境激活失败**: 确保使用正确的激活命令（见上方安装说明）
-- **依赖安装失败**: 尝试升级 pip/uv 到最新版本
-- **打包失败**: 确保所有依赖都已正确安装
+- **Virtual environment activation failed**: Ensure you're using the correct activation command (see installation instructions above)
+- **Dependency installation failed**: Try upgrading pip/uv to the latest version
+- **Build failed**: Ensure all dependencies are correctly installed
 
-## 开发笔记
+## Developer Notes
 
-#### 关于烧录
-对ESP32进行开发完后，烧录需要提取四个文件，其中包含两个启动引导文件`bootloader_qio_80m.bin`、`boot_app0.bin`，一个flash划分文件`partitions.bin`和一个固件文件`firmware.bin`(在本工程里名为`HoloCubic_AIO固件_vX.X.X.bin`)。https://github.com/ClimbSnail/HoloCubic_AIO/releases/tag/v2.1.0%E5%9B%BA%E4%BB%B6
+### About Flashing
+After developing for ESP32, flashing requires extracting four files: two boot loader files `bootloader_qio_80m.bin` and `boot_app0.bin`, one flash partition file `partitions.bin`, and one firmware file `firmware.bin` (named `HoloCubic_AIO固件_vX.X.X.bin` in this project). https://github.com/ClimbSnail/HoloCubic_AIO/releases/tag/v2.1.0%E5%9B%BA%E4%BB%B6
 
 
-###### 下面说下这些文件的存放位置以及烧录地址（以Windows为例）：
-1. `bootloader_qio_80m.bin`的位置为PlatformIO安装目录下的`.platformio\packages\framework-arduinoespressif32\tools\sdk\bin`目录下面,它的对应的烧录地址为0X1000。
-2. `boot_app0.bin`的位置为PlatformIO安装目录下的`platformio\packages\framework-arduinoespressif32\tools\partitions`目录下面，它对应的烧录地址为0xe000
-3. `partitions.bin`的位置为代码工程目录下的.pioenvs\[board]目录下面,它对应的烧录地址为0x8000。同时platformio\packages\framework-arduinoespressif32\tools\partitions目录下面的`partitions.csv`为编译的分区配置文件，会根据版型选择的不同有所不同，可以使用Excel打开进行编辑，然后在编译器内使用PIO进行重新编译即可，同时他也可以使用PIO包里面带的`gen_esp32part.py`脚本进行编译与反编译，操作方法为：python C:\SPB_Data\.platformio\packages\framework-arduinoespressif32\tools\gen_esp32part.py --verify xxx.csv xxx.bin(后面填写csv文件或者bin文件存放的位置，这里是将csv转换成bin，如果将位置对换，则可以将bin转换成csv),它的对应的烧录地址为0X8000。
-4. `firmware.bin`的位置为代码工程目录下的`.pioenvs\[board]`目录下面，这个就是代码编译出来的固件，它对应的烧录地址为0x10000，如果分区文件未做修改的话（人为修改，或者更换编译平台），更新固件或者重新烧录只在对应地址开始需要烧录这一个文件即可。此文件手动命名为`HoloCubic_AIO固件_vX.X.X.bin`，由于经常随着源码的更新而更新。,它的对应的烧录地址为0x10000。
+###### File Locations and Flash Addresses (Windows example):
+1. `bootloader_qio_80m.bin` is located in `.platformio\packages\framework-arduinoespressif32\tools\sdk\bin` under the PlatformIO installation directory, with flash address 0x1000.
+2. `boot_app0.bin` is located in `platformio\packages\framework-arduinoespressif32\tools\partitions` under the PlatformIO installation directory, with flash address 0xe000.
+3. `partitions.bin` is located in `.pioenvs\[board]` under the code project directory, with flash address 0x8000. The `partitions.csv` in `platformio\packages\framework-arduinoespressif32\tools\partitions` is the partition configuration file that varies with board selection. It can be edited in Excel and recompiled using PIO. It can also be compiled and decompiled using the `gen_esp32part.py` script: `python C:\SPB_Data\.platformio\packages\framework-arduinoespressif32\tools\gen_esp32part.py --verify xxx.csv xxx.bin` (converting csv to bin, or vice versa by swapping positions).
+4. `firmware.bin` is located in `.pioenvs\[board]` under the code project directory. This is the compiled firmware with flash address 0x10000. If the partition file hasn't been modified, only this file needs to be flashed at the corresponding address for firmware updates. This file is manually named `HoloCubic_AIO固件_vX.X.X.bin` and is frequently updated with source code changes.
 
-#### 烧录参考脚本
-1. python tool-esptoolpy\esptool.py --port COM7 --baud 921600 write_flash -fm dio -fs 4MB 0x1000 bootloader_qio_80m.bin 0x00008000 partitions.bin 0x0000e000 boot_app0.bin 0x00010000 HoloCubic_AIO固件_v1.3.bin
-2. 清空flash命令 python tool-esptoolpy\esptool.py erase_flash
+### Flash Reference Script
+1. `python tool-esptoolpy\esptool.py --port COM7 --baud 921600 write_flash -fm dio -fs 4MB 0x1000 bootloader_qio_80m.bin 0x00008000 partitions.bin 0x0000e000 boot_app0.bin 0x00010000 HoloCubic_AIO固件_v1.3.bin`
+2. Erase flash command: `python tool-esptoolpy\esptool.py erase_flash`
 
-可用波特率为：
+Available baud rates:
 * 115200
 * 230400
 * 460800
@@ -171,34 +182,34 @@ pyinstaller --icon ./image/holo_256.ico -w -F CubicAIO_Tool.py
 * 1152000
 
 
-#### 图片转化开发要点
+### Image Conversion Key Points
 https://lvgl.io/assets/images/logo_lvgl.png
 
-利用lvgl的官方转换器 https://lvgl.io/tools/imageconverter 图片则可以转换成（True color with alpha 选择Binary RGB565）bin文件存储到SD卡中
+Using LVGL's official converter https://lvgl.io/tools/imageconverter, images can be converted to (True color with alpha, select Binary RGB565) bin files for storage on SD card.
 
-## 项目结构
+## Project Structure
 
 ```
 AIO_Tool/
-├── CubicAIO_Tool.py          # 主程序入口
-├── CubicAIO_Tool.spec         # PyInstaller 配置文件（包含 esptool 配置）
-├── requirements.txt           # Python 依赖列表（包括本地 esptool）
-├── setup.ps1                  # Windows 自动化安装脚本
-├── esptool_v41/              # 本地 esptool v4.1 包
-├── page/                      # UI 页面模块
-│   ├── download_debug.py     # 下载调试页面（使用 esptool）
-│   ├── videotool.py          # 视频工具
-│   ├── images_converter.py   # 图片转换器
+├── CubicAIO_Tool.py          # Main program entry
+├── CubicAIO_Tool.spec         # PyInstaller config file (includes esptool config)
+├── requirements.txt           # Python dependencies (including local esptool)
+├── setup.ps1                  # Windows automated installation script
+├── esptool_v41/              # Local esptool v4.1 package
+├── page/                      # UI page modules
+│   ├── download_debug.py     # Download debug page (uses esptool)
+│   ├── videotool.py          # Video tool
+│   ├── images_converter.py   # Image converter
 │   └── ...
-├── util/                      # 工具模块
-├── image/                     # 图标资源
-├── base_bin/                  # 基础固件文件
-└── dist/                      # 构建输出目录
-    └── CubicAIO_Tool.exe     # 最终可执行文件
+├── util/                      # Utility modules
+├── image/                     # Icon resources
+├── base_bin/                  # Base firmware files
+└── dist/                      # Build output directory
+    └── CubicAIO_Tool.exe     # Final executable
 ```
 
-## 致谢
-* 固件下载工具 https://github.com/espressif/esptool
-* 视频转码工具 https://github.com/FFmpeg/FFmpeg
-* LVGL离线转换工具 https://github.com/W-Mai/lvgl_image_converter
+## Acknowledgments
+* Firmware download tool: https://github.com/espressif/esptool
+* Video transcoding tool: https://github.com/FFmpeg/FFmpeg
+* LVGL offline conversion tool: https://github.com/W-Mai/lvgl_image_converter
 
