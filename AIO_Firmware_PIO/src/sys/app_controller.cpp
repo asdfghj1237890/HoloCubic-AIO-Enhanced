@@ -247,7 +247,8 @@ int AppController::send_to(const char *from, const char *to,
             return 1;
         }
         // 发给控制器的消息(目前都是wifi事件)
-        EVENT_OBJ new_event = {fromApp, type, message, 3, 0, 0};
+        // retryMaxNum=5: allows ~20 seconds of retries, enough for CONN_ERR_TIMEOUT (15s)
+        EVENT_OBJ new_event = {fromApp, type, message, 5, 0, 0};
         eventList.push_back(new_event);
         Serial.print("[EVENT]\tAdd -> " + String(app_event_type_info[type]));
         Serial.print(F("\tEventList Size: "));
@@ -331,33 +332,35 @@ bool AppController::wifi_event(APP_MESSAGE_TYPE type)
     case APP_MESSAGE_WIFI_CONN:
     {
         // Update request timestamp
-        // CONN_ERROR == g_network.end_conn_wifi() ||
-        if (false == m_wifi_status)
-        {
-            g_network.start_conn_wifi(sys_cfg.ssid_0.c_str(), sys_cfg.password_0.c_str());
-            m_wifi_status = true;
-        }
         m_preWifiReqMillis = GET_SYS_MILLIS();
         
-        if ((WiFi.getMode() & WIFI_MODE_STA) == WIFI_MODE_STA)
+        // Check actual WiFi connection status (not just internal flag)
+        // This fixes reconnection bug when WiFi drops after being connected
+        if (WiFi.status() != WL_CONNECTED)
         {
+            // WiFi not connected - always try to start connection
+            // start_conn_wifi() internally checks if already connecting
+            g_network.start_conn_wifi(sys_cfg.ssid_0.c_str(), sys_cfg.password_0.c_str());
+            m_wifi_status = true;
+            
+            // Check connection result
             int conn_result = g_network.end_conn_wifi();
             if (CONN_TIMEOUT == conn_result)
             {
-                // Connection timeout - stop trying to avoid continuous retry loop
-                Serial.println(F("[WiFi] Connection timeout reached. Stopping connection attempts."));
-                Serial.println(F("[WiFi] Please check your WiFi settings via web interface."));
+                // Connection timeout - stop to avoid continuous retry loop
+                Serial.println(F("[WiFi] Connection timeout. Stopping attempts."));
                 g_network.close_wifi();
                 m_wifi_status = false;
-                // Return true to mark event as handled and prevent retry loop
-                return true;
+                return true; // Mark as handled to prevent infinite retry
             }
             else if (CONN_SUCC != conn_result)
             {
-                // Still trying to connect
+                // Still trying to connect, event will be retried
                 return false;
             }
         }
+        // WiFi connected successfully
+        m_wifi_status = true;
     }
     break;
     case APP_MESSAGE_WIFI_AP:

@@ -59,6 +59,13 @@ boolean Network::start_conn_wifi(const char *ssid, const char *password)
         return false;
     }
     
+    // If already connecting, don't restart - let it continue
+    // This prevents resetting the timeout counter on every retry
+    if (m_isConnecting)
+    {
+        return true; // Connection already in progress
+    }
+    
     // Validate SSID is not empty
     if (ssid == NULL || strlen(ssid) == 0)
     {
