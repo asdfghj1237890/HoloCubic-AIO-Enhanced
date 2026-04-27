@@ -1,0 +1,15 @@
+# Smoke test for screen_share. WiFi.softAPIP() returns 192.168.4.1 from
+# the host stub and ss_client never connects (WiFiClient stub returns 0
+# from connected/available), so the app's first process tick paints the
+# "Wait connect ...." panel and stays there. Asserts init + the panel
+# render + RETURN exit don't crash.
+
+app screen_share
+
+wait_ms 600
+screenshot 01_initial
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
