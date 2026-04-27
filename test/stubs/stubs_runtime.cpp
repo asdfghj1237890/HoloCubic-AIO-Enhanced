@@ -40,6 +40,11 @@ EspClass ESP;
 // AppController construction.
 AppController *app_controller = nullptr;
 
+// LHLXW sub-apps reference these globals defined in firmware
+// HoloCubic_AIO.cpp (the main sketch we don't link in on host).
+bool isCheckAction = false;
+ImuAction *act_info = nullptr;
+
 // ---------- LVGL / display globals ----------
 TFT_eSPI g_stub_tft;
 TFT_eSPI *tft = &g_stub_tft;
