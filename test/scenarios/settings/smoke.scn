@@ -1,13 +1,13 @@
 # Smoke test for settings (system config UI).
-# Only the initial frame is captured; the version page contains an
-# auto-scrolling LVGL label whose marquee offset depends on wall-clock
-# tick timing, which makes any later screenshot non-deterministic.
-# RETURN exits the app and asserts we didn't crash on the way out.
+# The version page uses an auto-scrolling LVGL label whose marquee
+# offset depends on wall-clock tick timing — even the first frame
+# at +200 ms lands at a different scroll position across CI runs.
+# Visual screenshots aren't worth the noise here; the scenario just
+# exercises the boot / GO_FORWORD / RETURN paths and asserts no crash.
 
 app settings
 
 wait_ms 200
-screenshot 01_initial
 assert_no_crash
 
 action GO_FORWORD
