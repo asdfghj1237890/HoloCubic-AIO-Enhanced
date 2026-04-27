@@ -28,4 +28,9 @@ public:
 };
 extern HardwareSerial Serial;
 
+// Arduino's random(max) returns a long in [0, max). The game_2048
+// model calls it from addRandom(); none of the tested methods do, but
+// the symbol still has to resolve since addRandom is in the same TU.
+inline long random(long max) { return rand() % max; }
+
 #endif
