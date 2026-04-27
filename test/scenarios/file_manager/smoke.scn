@@ -1,0 +1,16 @@
+# Smoke test for file_manager. Same WiFi-server offline pattern as
+# screen_share — WiFi.softAPIP() returns 192.168.4.1 from the host
+# stub, ftpServer.begin() / handleFTP() are no-ops on the WiFiServer
+# stub (no real socket), so the app paints the "Wait connect ...."
+# panel, transitions to "Connect succ" via APP_MESSAGE_WIFI_CONN, and
+# sits there. Asserts init + that flow + RETURN don't crash.
+
+app file_manager
+
+wait_ms 600
+screenshot 01_initial
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

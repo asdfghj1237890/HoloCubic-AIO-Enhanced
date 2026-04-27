@@ -30,6 +30,8 @@ public:
     }
     size_t read(uint8_t *buf, size_t n) { return fp ? fread(buf, 1, n, fp) : 0; }
     int read() { if (!fp) return -1; int c = fgetc(fp); return c == EOF ? -1 : c; }
+    size_t readBytes(char *buf, size_t n) { return fp ? fread(buf, 1, n, fp) : 0; }
+    size_t readBytes(uint8_t *buf, size_t n) { return fp ? fread(buf, 1, n, fp) : 0; }
     size_t size() {
         if (!fp) return 0;
         long pos = ftell(fp);

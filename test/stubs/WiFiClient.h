@@ -1,6 +1,8 @@
 #ifndef AIO_STUB_WIFICLIENT_H
 #define AIO_STUB_WIFICLIENT_H
 #include "Arduino.h"
+#include "WiFi.h"  // for IPAddress (file_manager's ESP32FtpServer.h needs it
+                   // through this header).
 
 class WiFiClient {
 public:
@@ -12,6 +14,8 @@ public:
     int available() { return 0; }
     int read() { return -1; }
     int read(uint8_t *, size_t) { return 0; }
+    size_t readBytes(uint8_t *, size_t) { return 0; }
+    size_t readBytes(char *, size_t) { return 0; }
     size_t write(uint8_t) { return 1; }
     size_t write(const uint8_t *, size_t n) { return n; }
     size_t write(const char *s) { return s ? strlen(s) : 0; }

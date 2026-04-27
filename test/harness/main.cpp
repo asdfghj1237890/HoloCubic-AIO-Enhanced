@@ -33,7 +33,7 @@
 #include "app/weather/weather.h"
 #include "app/weather_old/weather_old.h"
 #include "app/stockmarket/stockmarket.h"
-// #include "app/file_manager/file_manager.h"  // deferred — see platformio.ini
+#include "app/file_manager/file_manager.h"
 #include "app/server/server.h"
 #include "app/idea_anim/idea.h"
 #include "app/LHLXW/LHLXW.h"
@@ -179,7 +179,7 @@ static const ScenarioApp kRegisteredApps[] = {
     { "weather",     &weather_app },
     { "weather_old", &weather_old_app },
     { "stockmarket", &stockmarket_app },
-    // { "file_manager",&file_manager_app },  // deferred
+    { "file_manager",&file_manager_app },
     { "server",      &server_app },
     { "idea",        &idea_app },
     { "LHLXW",       &LHLXW_app },  // init_only smoke — see scenario file
