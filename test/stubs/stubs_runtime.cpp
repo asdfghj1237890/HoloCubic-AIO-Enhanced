@@ -266,7 +266,7 @@ void AppController::app_exit() {
     }
     app_exit_flag = 0;
 }
-int AppController::send_to(const char *, const char *to,
+int AppController::send_to(const char *from, const char *to,
                            APP_MESSAGE_TYPE type, void *message, void *ext_info) {
     if (!to) return 0;
     // Direct app-to-app message: dispatch to the named target.
