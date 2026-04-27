@@ -2,6 +2,7 @@
 #include "app_controller_gui.h"
 #include "common.h"
 #include "interface.h"
+#include "send_to_dispatch.h"
 #include "Arduino.h"
 
 const char *app_event_type_info[] = {"APP_MESSAGE_WIFI_CONN", "APP_MESSAGE_WIFI_AP",
@@ -239,39 +240,31 @@ int AppController::send_to(const char *from, const char *to,
 {
     APP_OBJ *fromApp = getAppByName(from); // 来自谁 有可能为空
     APP_OBJ *toApp = getAppByName(to);     // 发送给谁 有可能为空
-    if (type <= APP_MESSAGE_MQTT_DATA)
-    {
-        // 更新事件的请求者
-        if (eventList.size() > EVENT_LIST_MAX_LENGTH)
-        {
-            return 1;
-        }
-        // 发给控制器的消息(目前都是wifi事件)
-        // retryMaxNum=5: allows ~20 seconds of retries, enough for CONN_ERR_TIMEOUT (15s)
-        EVENT_OBJ new_event = {fromApp, type, message, 5, 0, 0};
-        eventList.push_back(new_event);
+
+    // The queue/dispatch logic lives in send_to_dispatch.cpp so the
+    // host-side Unity unit test (test/native/test_app_controller) can
+    // exercise it without standing up the full AppController. Side
+    // effects that need controller state (Serial logging, deal_config
+    // routing) stay here.
+    int rc = send_to_dispatch(fromApp, toApp, from, to,
+                              type, message, ext_info, &eventList);
+
+    if (type <= APP_MESSAGE_MQTT_DATA && rc == 0) {
         Serial.print("[EVENT]\tAdd -> " + String(app_event_type_info[type]));
         Serial.print(F("\tEventList Size: "));
         Serial.println(eventList.size());
-    }
-    else
-    {
-        // 各个APP之间通信的消息
-        if (NULL != toApp)
-        {
-            Serial.print("[Massage]\tFrom " + String(fromApp->app_name) + "\tTo " + String(toApp->app_name) + "\n");
-            if (NULL != toApp->message_handle)
-            {
-                toApp->message_handle(from, to, type, message, ext_info);
-            }
-        }
-        else if (!strcmp(to, CTRL_NAME))
-        {
-            Serial.print("[Massage]\tFrom " + String(fromApp->app_name) + "\tTo " + CTRL_NAME + "\n");
+    } else if (type > APP_MESSAGE_MQTT_DATA) {
+        if (rc == 0 && toApp != NULL) {
+            Serial.print("[Massage]\tFrom " + String(fromApp ? fromApp->app_name : "")
+                         + "\tTo " + String(toApp->app_name) + "\n");
+        } else if (rc == 2 && !strcmp(to, CTRL_NAME)) {
+            Serial.print("[Massage]\tFrom " + String(fromApp ? fromApp->app_name : "")
+                         + "\tTo " + CTRL_NAME + "\n");
             deal_config(type, (const char *)message, (char *)ext_info);
+            rc = 0;
         }
     }
-    return 0;
+    return rc == 2 ? 0 : rc;
 }
 
 int AppController::req_event_deal(void)
