@@ -32,7 +32,7 @@
 #include "app/bilibili_fans/bilibili.h"
 #include "app/weather/weather.h"
 #include "app/weather_old/weather_old.h"
-#include "app/stockmarket/stockmarket.h"
+// #include "app/stockmarket/stockmarket.h"  // deferred — silent segfault at init
 // #include "app/file_manager/file_manager.h"  // deferred — see platformio.ini
 // #include "app/server/server.h"  // deferred — see platformio.ini
 #include "app/idea_anim/idea.h"
@@ -146,7 +146,7 @@ static const ScenarioApp kRegisteredApps[] = {
     { "bilibili",    &bilibili_app },
     { "weather",     &weather_app },
     { "weather_old", &weather_old_app },
-    { "stockmarket", &stockmarket_app },
+    // { "stockmarket", &stockmarket_app },  // deferred
     // { "file_manager",&file_manager_app },  // deferred
     // { "server",      &server_app },  // deferred
     { "idea",        &idea_app },
