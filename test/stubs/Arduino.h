@@ -142,4 +142,15 @@ static inline int analogRead(int) { return 0; }
 #define OUTPUT 1
 #define INPUT_PULLUP 2
 
+// Arduino-style RNG mapped onto stdlib for deterministic CI output:
+// every harness run starts from the same state because analogRead(25)
+// is stubbed to 0, so randomSeed(0) feeds srand(0).
+static inline void randomSeed(unsigned long seed) { srand((unsigned)seed); }
+static inline long random(long max_excl) {
+    return max_excl <= 0 ? 0 : (long)(rand() % max_excl);
+}
+static inline long random(long min_incl, long max_excl) {
+    return max_excl <= min_incl ? min_incl : min_incl + random(max_excl - min_incl);
+}
+
 #endif

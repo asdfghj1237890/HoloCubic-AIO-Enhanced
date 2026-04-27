@@ -24,6 +24,7 @@
 #include "driver/imu.h"
 #include "app/anniversary/anniversary.h"
 #include "app/tomato/tomato.h"
+#include "app/game_2048/game_2048.h"
 
 #include "scenario_runner.h"
 
@@ -122,6 +123,7 @@ static Args parse_args(int argc, char **argv) {
 static const ScenarioApp kRegisteredApps[] = {
     { "anniversary", &anniversary_app },
     { "tomato",      &tomato_app },
+    { "2048",        &game_2048_app },
 };
 static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);

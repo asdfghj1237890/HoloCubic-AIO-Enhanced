@@ -1,0 +1,25 @@
+# Smoke test for game_2048.
+# Boot drops two random tiles (deterministic because srand(0) seeds the
+# Arduino-style random() shim — see test/stubs/Arduino.h), then we move
+# the board around to exercise the swipe paths.
+
+app 2048
+
+# game_2048_init ends with vTaskDelay(1000) to debounce the entry-up,
+# so we wait past that before grabbing the first frame.
+wait_ms 1500
+screenshot 01_initial
+assert_no_crash
+
+# Each direction triggers showAnim + delay(700) + showNewBorn + delay(300).
+action TURN_RIGHT
+wait_ms 1200
+screenshot 02_after_turn_right
+
+action UP
+wait_ms 1200
+screenshot 03_after_up
+
+action RETURN
+wait_ms 200
+assert_no_crash
