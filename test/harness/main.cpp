@@ -32,7 +32,7 @@
 #include "app/bilibili_fans/bilibili.h"
 #include "app/weather/weather.h"
 #include "app/weather_old/weather_old.h"
-// #include "app/stockmarket/stockmarket.h"  // deferred — silent segfault at init
+#include "app/stockmarket/stockmarket.h"
 // #include "app/file_manager/file_manager.h"  // deferred — see platformio.ini
 #include "app/server/server.h"
 #include "app/idea_anim/idea.h"
@@ -47,6 +47,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <execinfo.h>
+#include <unistd.h>
 
 static int tick_thread(void *) {
     while (1) {
@@ -54,6 +57,29 @@ static int tick_thread(void *) {
         lv_tick_inc(5);
     }
     return 0;
+}
+
+// Print a glibc backtrace on SIGSEGV/SIGABRT so silent firmware crashes
+// surface a call site in CI logs. backtrace_symbols_fd is async-signal-safe;
+// addresses are unmangled but pinpoint the crashing function in most cases.
+static void crash_handler(int sig) {
+    fprintf(stderr, "\n[harness] caught signal %d — backtrace:\n", sig);
+    void *frames[64];
+    int n = backtrace(frames, 64);
+    backtrace_symbols_fd(frames, n, STDERR_FILENO);
+    fflush(stderr);
+    _exit(128 + sig);
+}
+
+static void install_crash_handler() {
+    struct sigaction sa;
+    sa.sa_handler = crash_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    sigaction(SIGSEGV, &sa, nullptr);
+    sigaction(SIGABRT, &sa, nullptr);
+    sigaction(SIGBUS,  &sa, nullptr);
+    sigaction(SIGFPE,  &sa, nullptr);
 }
 
 #define DISP_HOR_RES 240
@@ -146,7 +172,7 @@ static const ScenarioApp kRegisteredApps[] = {
     { "bilibili",    &bilibili_app },
     { "weather",     &weather_app },
     { "weather_old", &weather_old_app },
-    // { "stockmarket", &stockmarket_app },  // deferred
+    { "stockmarket", &stockmarket_app },
     // { "file_manager",&file_manager_app },  // deferred
     { "server",      &server_app },
     { "idea",        &idea_app },
@@ -159,6 +185,7 @@ static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);
 
 int main(int argc, char **argv) {
+    install_crash_handler();
     Args args = parse_args(argc, argv);
     printf("[harness] HoloCubic_AIO regression harness "
            "(scenario=%s headless=%d)\n",
