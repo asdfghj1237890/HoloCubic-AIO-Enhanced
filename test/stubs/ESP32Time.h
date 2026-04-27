@@ -23,6 +23,11 @@ public:
     int getSecond() { return 0; }
     int getDayofWeek() { return 4; } // 1970-01-01 was a Thursday
     String getTime(const char * = "%H:%M:%S") { return String("00:00:00"); }
+    String getTime(const String &) { return String("00:00:00"); }
+    String getDate(const char * = "%Y-%m-%d") { return String("1970-01-01"); }
+    String getDate(const String &) { return String("1970-01-01"); }
+    String getDateTime(const char * = "%Y-%m-%d %H:%M:%S") { return String("1970-01-01 00:00:00"); }
+    String getDateTime(const String &) { return String("1970-01-01 00:00:00"); }
     struct tm getTimeStruct() {
         time_t t = 0;
         return *localtime(&t);

@@ -30,6 +30,16 @@
 #include "app/game_snake/game_snake.h"
 #include "app/example/example.h"
 #include "app/bilibili_fans/bilibili.h"
+// #include "app/weather/weather.h"  // deferred (ArduinoJson)
+#include "app/weather_old/weather_old.h"
+// #include "app/stockmarket/stockmarket.h"  // deferred (ArduinoJson)
+// #include "app/file_manager/file_manager.h"  // deferred — see platformio.ini
+// #include "app/server/server.h"  // deferred — see platformio.ini
+#include "app/idea_anim/idea.h"
+// #include "app/LHLXW/LHLXW.h"  // deferred — segfaults at init
+// #include "app/screen_share/screen_share.h"  // deferred — title_label collision
+// #include "app/pc_resource/pc_resource.h"  // deferred (ArduinoJson)
+// #include "app/media_player/media_player.h"  // deferred — see platformio.ini
 
 #include "scenario_runner.h"
 
@@ -134,6 +144,16 @@ static const ScenarioApp kRegisteredApps[] = {
     { "snake",       &game_snake_app },
     { "example",     &example_app },
     { "bilibili",    &bilibili_app },
+    // { "weather",     &weather_app },  // deferred
+    { "weather_old", &weather_old_app },
+    // { "stockmarket", &stockmarket_app },  // deferred
+    // { "file_manager",&file_manager_app },  // deferred
+    // { "server",      &server_app },  // deferred
+    { "idea",        &idea_app },
+    // { "LHLXW",       &LHLXW_app },  // deferred
+    // { "screen_share",&screen_share_app },  // deferred
+    // { "pc_resource", &pc_resource_app },  // deferred
+    // { "media",       &media_app },  // deferred
 };
 static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);

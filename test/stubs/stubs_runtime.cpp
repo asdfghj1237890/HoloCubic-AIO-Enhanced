@@ -21,11 +21,13 @@
 #include <sys/stat.h>
 
 #include "ESPmDNS.h"
+#include "TJpg_Decoder.h"
 
 // ---------- Hardware singleton stubs ----------
 HardwareSerial Serial;
 WiFiClass WiFi;
 MDNSResponder MDNS;
+TJpg_Decoder TJpgDec;
 TwoWire Wire;
 SPIClass SPI;
 SPIFFSClass SPIFFS;
@@ -37,6 +39,17 @@ EspClass ESP;
 // raw pointer that main.cpp wires to the harness's controller after
 // AppController construction.
 AppController *app_controller = nullptr;
+
+// LHLXW sub-apps reference these globals defined in firmware
+// HoloCubic_AIO.cpp (the main sketch we don't link in on host).
+bool isCheckAction = false;
+ImuAction *act_info = nullptr;
+
+// LHLXW.cpp calls emoji_process; we excluded the emoji sub-app because it
+// pulls in MjpegPlayDecoder from the dropped media_player tree. Provide a
+// no-op so the hub menu can still link.
+struct _lv_obj_t;
+void emoji_process(_lv_obj_t *) {}
 
 // ---------- LVGL / display globals ----------
 TFT_eSPI g_stub_tft;
