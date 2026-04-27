@@ -12,15 +12,9 @@
 #include "Wire.h"
 #include "driver/imu.h"
 
-// Storage for the fake-motion globals declared extern in MPU6050.h.
-int16_t mpu_fake_ax = 0, mpu_fake_ay = 0, mpu_fake_az = 0;
-int16_t mpu_fake_gx = 0, mpu_fake_gy = 0, mpu_fake_gz = 0;
-
-// Singletons whose addresses imu.cpp references via extern in headers.
-HardwareSerial Serial;
-TwoWire Wire;
-int32_t encoder_diff = 0;
-lv_indev_state_t encoder_state = LV_INDEV_STATE_RELEASED;
+// HardwareSerial Serial / TwoWire Wire / mpu_fake_* / encoder_* are all
+// defined once in test/stubs_unit/test_globals.cpp (compiled into every
+// test binary).
 
 static IMU *imu;
 

@@ -401,8 +401,14 @@ void GAME2048::moveRight(void)
  */
 int GAME2048::judge(void)
 {
+    // Both bounds were `<=` (off-by-one), reading board[16/4][16%4] =
+    // board[4][0] — past the 4x4 array, into previous[0][0]. The empty
+    // check then always saw a 0 there post-init and returned 0 (game
+    // continues), so judge could never report defeat (return 2).
+    // Caught by test/native/test_game_2048/test_judge_returns_2_when_
+    // full_board_no_merges.
     //判赢
-    for (int i = 0; i <= SCALE_SIZE * SCALE_SIZE; i++)
+    for (int i = 0; i < SCALE_SIZE * SCALE_SIZE; i++)
     {
         if (board[i / 4][i % 4] >= WIN_SCORE)
         {
@@ -410,7 +416,7 @@ int GAME2048::judge(void)
         }
     }
     //判空
-    for (int i = 0; i <= SCALE_SIZE * SCALE_SIZE; i++)
+    for (int i = 0; i < SCALE_SIZE * SCALE_SIZE; i++)
     {
         if (board[i / 4][i % 4] == 0)
         {

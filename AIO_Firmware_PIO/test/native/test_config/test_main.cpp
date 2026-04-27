@@ -15,14 +15,10 @@
 #include "Wire.h"
 #include "driver/flash_fs.h"
 
-// build_src_filter pulls driver/imu.cpp into every native_unit binary
-// (so test_imu_action gets it). imu.cpp references these globals at
-// link time even if THIS test never calls IMU. Define them here as
-// no-op placeholders — same idea as a .so's resolved-but-unused symbols.
-HardwareSerial Serial;
-TwoWire Wire;
-int16_t mpu_fake_ax = 0, mpu_fake_ay = 0, mpu_fake_az = 0;
-int16_t mpu_fake_gx = 0, mpu_fake_gy = 0, mpu_fake_gz = 0;
+// build_src_filter pulls driver/imu.cpp into every native_unit binary,
+// so its globals must resolve at link time. Those (HardwareSerial
+// Serial, TwoWire Wire, mpu_fake_*, encoder_*) live in
+// test/stubs_unit/test_globals.cpp now — shared across all tests.
 
 void setUp() {}
 void tearDown() {}
