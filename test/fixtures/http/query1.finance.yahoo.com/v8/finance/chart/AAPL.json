@@ -1,0 +1,23 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "symbol": "AAPL",
+          "regularMarketPrice": 175.50,
+          "chartPreviousClose": 173.20
+        },
+        "indicators": {
+          "quote": [
+            {
+              "open":   [174.00],
+              "high":   [176.50],
+              "low":    [173.00],
+              "volume": [50000000]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

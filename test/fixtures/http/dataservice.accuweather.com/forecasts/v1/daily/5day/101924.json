@@ -1,0 +1,9 @@
+{
+  "DailyForecasts": [
+    {"Date": "2026-04-27T07:00:00+08:00", "Temperature": {"Minimum": {"Value": 12}, "Maximum": {"Value": 24}}, "Day": {"Icon": 1}, "Night": {"Icon": 33}},
+    {"Date": "2026-04-28T07:00:00+08:00", "Temperature": {"Minimum": {"Value": 14}, "Maximum": {"Value": 26}}, "Day": {"Icon": 2}, "Night": {"Icon": 34}},
+    {"Date": "2026-04-29T07:00:00+08:00", "Temperature": {"Minimum": {"Value": 13}, "Maximum": {"Value": 25}}, "Day": {"Icon": 3}, "Night": {"Icon": 35}},
+    {"Date": "2026-04-30T07:00:00+08:00", "Temperature": {"Minimum": {"Value": 11}, "Maximum": {"Value": 22}}, "Day": {"Icon": 4}, "Night": {"Icon": 36}},
+    {"Date": "2026-05-01T07:00:00+08:00", "Temperature": {"Minimum": {"Value": 15}, "Maximum": {"Value": 27}}, "Day": {"Icon": 1}, "Night": {"Icon": 33}}
+  ]
+}

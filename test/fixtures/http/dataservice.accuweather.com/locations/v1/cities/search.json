@@ -1,0 +1,15 @@
+[
+  {
+    "Key": "101924",
+    "LocalizedName": "北京",
+    "EnglishName": "Beijing",
+    "Country": {
+      "ID": "CN",
+      "LocalizedName": "中國"
+    },
+    "AdministrativeArea": {
+      "ID": "BJ",
+      "LocalizedName": "北京"
+    }
+  }
+]

@@ -33,7 +33,12 @@ public:
 
 class WiFiClass {
 public:
-    int status() { return WL_DISCONNECTED; }
+    // Report connected so apps that gate HTTP fetches on
+    // `WiFi.status() == WL_CONNECTED` (weather, weather_old, screen_share's
+    // status check, etc.) actually proceed to call HTTPClient. The
+    // HTTPClient stub then either returns a fixture or -1, both of which
+    // the apps' error paths already handle.
+    int status() { return WL_CONNECTED; }
     int begin(const char *, const char * = nullptr) { return WL_DISCONNECTED; }
     void disconnect(bool = false) {}
     bool softAP(const char *, const char * = nullptr) { return true; }

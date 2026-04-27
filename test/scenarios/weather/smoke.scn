@@ -1,10 +1,17 @@
-# Smoke test for weather. WiFi never connects in the harness so the
-# HTTP path is inert; captures the offline init state.
+# Smoke test for weather. With WiFi.status() reporting WL_CONNECTED
+# and HTTP fixtures under test/fixtures/http/dataservice.accuweather.com/
+# (locations search + currentconditions + 5-day forecast for Beijing,
+# location key 101924), the first process tick fires WIFI_CONN, the
+# message handler runs the location-key + current-weather + forecast
+# fetch chain, and the follow-up `action UP` rerenders display_weather
+# with the parsed values (temperature 23°C, humidity 45%, etc).
 
 app weather
 
-wait_ms 400
-screenshot 01_initial
+wait_ms 800
+action UP
+wait_ms 600
+screenshot 01_with_data
 assert_no_crash
 
 action RETURN

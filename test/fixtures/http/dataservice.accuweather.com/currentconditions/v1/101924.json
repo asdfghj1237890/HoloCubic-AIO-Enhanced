@@ -1,0 +1,16 @@
+[
+  {
+    "LocalObservationDateTime": "2026-04-27T14:00:00+08:00",
+    "WeatherText": "晴",
+    "WeatherIcon": 1,
+    "Temperature": {
+      "Metric": {"Value": 23, "Unit": "C"}
+    },
+    "RelativeHumidity": 45,
+    "Wind": {
+      "Direction": {"Localized": "東北"},
+      "Speed": {"Metric": {"Value": 12.5, "Unit": "km/h"}}
+    },
+    "UVIndex": 5
+  }
+]

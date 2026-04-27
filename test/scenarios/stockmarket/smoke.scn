@@ -1,9 +1,16 @@
-# Smoke test for stockmarket. Same offline pattern as bilibili.
+# Smoke test for stockmarket. With WiFi.status() reporting WL_CONNECTED
+# and the Yahoo AAPL fixture
+# (test/fixtures/http/query1.finance.yahoo.com/v8/finance/chart/AAPL.json),
+# the first process tick fires WIFI_CONN -> update_stock_data ->
+# parse_yahoo_data, and the follow-up `action UP` rerenders the
+# stockmarket GUI with the parsed AAPL values (175.50 / +2.30 / +1.33%).
 
 app stockmarket
 
 wait_ms 400
-screenshot 01_initial
+action UP
+wait_ms 400
+screenshot 01_with_data
 assert_no_crash
 
 action RETURN
