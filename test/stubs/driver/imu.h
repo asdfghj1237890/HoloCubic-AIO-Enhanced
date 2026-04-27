@@ -1,5 +1,6 @@
-#ifndef AIO_STUB_DRIVER_IMU_H
-#define AIO_STUB_DRIVER_IMU_H
+// Guard matches firmware driver/imu.h. See common.h header.
+#ifndef IMU_H
+#define IMU_H
 #include "Arduino.h"
 #include "lvgl.h"
 

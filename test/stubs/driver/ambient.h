@@ -1,5 +1,6 @@
-#ifndef AIO_STUB_DRIVER_AMBIENT_H
-#define AIO_STUB_DRIVER_AMBIENT_H
+// Guard matches firmware driver/ambient.h. See common.h header.
+#ifndef AMBIENT_H
+#define AMBIENT_H
 #include "Arduino.h"
 #include "Wire.h"
 

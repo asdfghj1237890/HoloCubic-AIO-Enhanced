@@ -1,5 +1,6 @@
-#ifndef AIO_STUB_NETWORK_H
-#define AIO_STUB_NETWORK_H
+// Guard matches firmware src/network.h. See test/stubs/common.h header.
+#ifndef NETWORK_H
+#define NETWORK_H
 #include "Arduino.h"
 #include "WiFi.h"
 #include "HTTPClient.h"

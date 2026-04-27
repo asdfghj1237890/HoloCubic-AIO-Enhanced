@@ -1,5 +1,7 @@
-#ifndef AIO_STUB_DRIVER_FLASH_FS_H
-#define AIO_STUB_DRIVER_FLASH_FS_H
+// Guard matches firmware driver/flash_fs.h (added in this PR).
+// See common.h header.
+#ifndef FLASH_FS_H
+#define FLASH_FS_H
 #include "Arduino.h"
 #include "FS.h"
 

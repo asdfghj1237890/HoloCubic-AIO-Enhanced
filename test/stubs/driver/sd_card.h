@@ -1,5 +1,6 @@
-#ifndef AIO_STUB_DRIVER_SD_CARD_H
-#define AIO_STUB_DRIVER_SD_CARD_H
+// Guard matches firmware driver/sd_card.h. See common.h header.
+#ifndef SD_CARD_H
+#define SD_CARD_H
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"

@@ -5,7 +5,10 @@
 #include "WiFiClient.h"
 
 #define HTTP_CODE_OK 200
+#define HTTP_CODE_MOVED_PERMANENTLY 301
+#define HTTP_CODE_FOUND 302
 #define HTTP_CODE_NOT_FOUND 404
+#define HTTP_CODE_INTERNAL_SERVER_ERROR 500
 
 class HTTPClient {
 public:

@@ -1,0 +1,17 @@
+# Smoke test for the example boilerplate app.
+# example is the new-app template; init draws an empty page, process
+# does nothing on input. We just verify it boots and exits cleanly.
+
+app example
+
+wait_ms 200
+screenshot 01_initial
+assert_no_crash
+
+action GO_FORWORD
+wait_ms 200
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

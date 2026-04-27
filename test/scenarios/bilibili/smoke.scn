@@ -1,0 +1,14 @@
+# Smoke test for bilibili_fans.
+# WIFI_CONN message is queued via send_to but the harness controller
+# doesn't dispatch wifi events, so the firmware's HTTP fetch path
+# never runs — fans/follow stay at the run_data init values (0/0).
+
+app bilibili
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
