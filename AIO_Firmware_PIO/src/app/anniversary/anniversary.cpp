@@ -63,6 +63,12 @@ static void read_config(AN_Config *cfg)
         cfg->target_date[1].tm_year = 2025;
         cfg->target_date[1].tm_mon = 7;
         cfg->target_date[1].tm_mday = 4;
+        // 默认 current_date 与 preNetTimestamp 的初值一致（2020-01-01）。
+        // 否则 WiFi 同步时间前的首屏会用 {0,0,0} 走 dateDiff，
+        // 渲染出 "毕业还有 739467 天" 这类首启花数字。
+        cfg->current_date.tm_year = 2020;
+        cfg->current_date.tm_mon = 1;
+        cfg->current_date.tm_mday = 1;
         write_config(cfg);
         Serial.printf("Write config successful\n");
     }
