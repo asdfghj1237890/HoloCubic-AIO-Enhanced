@@ -37,7 +37,7 @@
 // #include "app/server/server.h"  // deferred — see platformio.ini
 #include "app/idea_anim/idea.h"
 #include "app/LHLXW/LHLXW.h"
-#include "app/screen_share/screen_share.h"
+// #include "app/screen_share/screen_share.h"  // deferred — title_label collision
 // #include "app/pc_resource/pc_resource.h"  // deferred (ArduinoJson)
 // #include "app/media_player/media_player.h"  // deferred — see platformio.ini
 
@@ -151,7 +151,7 @@ static const ScenarioApp kRegisteredApps[] = {
     // { "server",      &server_app },  // deferred
     { "idea",        &idea_app },
     { "LHLXW",       &LHLXW_app },
-    { "screen_share",&screen_share_app },
+    // { "screen_share",&screen_share_app },  // deferred
     // { "pc_resource", &pc_resource_app },  // deferred
     // { "media",       &media_app },  // deferred
 };
