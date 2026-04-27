@@ -1,6 +1,11 @@
 #ifndef AIO_STUB_ARDUINO_H
 #define AIO_STUB_ARDUINO_H
 
+// On real ESP32 these surface ambiently via Arduino-ESP32; on host they
+// need to be visible to apps that don't include them explicitly (e.g.
+// screen_share calling heap_caps_malloc without an explicit include).
+#include "esp_heap_caps.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -88,6 +93,8 @@ public:
         if (a == std::string::npos) s.clear(); else s = s.substr(a, b - a + 1);
     }
     int toInt() const { return atoi(s.c_str()); }
+    float toFloat() const { return (float)atof(s.c_str()); }
+    double toDouble() const { return atof(s.c_str()); }
 };
 
 inline String operator+(const String &a, const String &b) { String r(a); r += b; return r; }
@@ -110,7 +117,9 @@ public:
     void println(long v) { printf("%ld\n", v); }
     void println(unsigned long v) { printf("%lu\n", v); }
     void println(double v) { printf("%f\n", v); }
+    void println(double v, int dec) { printf("%.*f\n", dec, v); }
     void print(const char *s) { fputs(s ? s : "", stdout); }
+    void print(double v, int dec) { printf("%.*f", dec, v); }
     void print(const String &s) { fputs(s.c_str(), stdout); }
     void print(int v) { printf("%d", v); }
     void print(unsigned int v) { printf("%u", v); }

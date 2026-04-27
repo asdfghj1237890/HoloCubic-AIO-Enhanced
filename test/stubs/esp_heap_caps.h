@@ -15,6 +15,7 @@ extern "C" {
 #define MALLOC_CAP_DMA      0x00000004
 #define MALLOC_CAP_8BIT     0x00000008
 #define MALLOC_CAP_DEFAULT  0x00000010
+#define MALLOC_CAP_32BIT    0x00000020
 
 static inline void *heap_caps_malloc(size_t s, uint32_t) { return malloc(s); }
 static inline void *heap_caps_calloc(size_t n, size_t s, uint32_t) { return calloc(n, s); }
