@@ -1,8 +1,15 @@
 // HoloCubic_AIO regression-test harness — host entry point.
 //
-// Initialises LVGL + the SDL2 monitor driver from lv_drivers, registers the
-// firmware's anniversary app, and ticks LVGL in a loop while pumping SDL
-// events. Phase 1 walking skeleton: interactive only, no scenario runner yet.
+// Initialises LVGL + the SDL2 monitor driver from lv_drivers and either
+// (a) runs a scripted scenario from disk and exits, or (b) drops into an
+// interactive loop with keyboard input. Used by CI for non-interactive
+// regression and by developers locally to poke at the UI.
+//
+// Usage:
+//   program                              interactive (no exit)
+//   program --scenario PATH              run scenario, exit with its status
+//   program --scenario PATH --headless   same, but won't open a window if
+//                                        SDL_VIDEODRIVER=dummy is set
 //
 // Build: see lv_simulater_platformio/platformio.ini env:native_test
 
@@ -17,8 +24,12 @@
 #include "driver/imu.h"
 #include "app/anniversary/anniversary.h"
 
+#include "scenario_runner.h"
+
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 static int tick_thread(void *) {
     while (1) {
@@ -75,13 +86,46 @@ static void process_sdl_input() {
     }
 }
 
+struct Args {
+    const char *scenario = nullptr;
+    bool headless = false;
+};
+
+static Args parse_args(int argc, char **argv) {
+    Args a;
+    for (int i = 1; i < argc; ++i) {
+        if (!strcmp(argv[i], "--scenario") && i + 1 < argc) {
+            a.scenario = argv[++i];
+        } else if (!strcmp(argv[i], "--headless")) {
+            a.headless = true;
+        } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+            printf("Usage: %s [--scenario PATH] [--headless]\n", argv[0]);
+            exit(0);
+        } else {
+            fprintf(stderr, "[harness] unknown arg '%s'\n", argv[i]);
+            exit(2);
+        }
+    }
+    return a;
+}
+
+// Apps registered with the harness — keep this in sync with build_src_filter
+// in platformio.ini (each entry must have its sources actually compiled in).
+static const ScenarioApp kRegisteredApps[] = {
+    { "anniversary", &anniversary_app },
+};
+static const int kRegisteredAppCount =
+    sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);
+
 int main(int argc, char **argv) {
-    (void)argc; (void)argv;
-    printf("[harness] HoloCubic_AIO regression harness — Phase 1 walking skeleton\n");
+    Args args = parse_args(argc, argv);
+    printf("[harness] HoloCubic_AIO regression harness "
+           "(scenario=%s headless=%d)\n",
+           args.scenario ? args.scenario : "<interactive>",
+           args.headless ? 1 : 0);
 
     lv_init();
 
-    // SDL display from lv_drivers
     lv_disp_draw_buf_init(&disp_buf, buf1, buf2, DISP_HOR_RES * DISP_BUF_LINES);
     lv_disp_drv_init(&disp_drv);
     disp_drv.draw_buf = &disp_buf;
@@ -90,8 +134,6 @@ int main(int argc, char **argv) {
     disp_drv.ver_res = DISP_VER_RES;
     lv_disp_drv_register(&disp_drv);
 
-    // Keyboard / mouse via SDL — used for LVGL focus/input later. For now we
-    // also poll SDL ourselves to translate keys into ImuAction.
     lv_indev_drv_init(&kb_indev_drv);
     kb_indev_drv.type = LV_INDEV_TYPE_KEYPAD;
     kb_indev_drv.read_cb = sdl_keyboard_read;
@@ -100,25 +142,31 @@ int main(int argc, char **argv) {
     sdl_init();
     SDL_CreateThread(tick_thread, "tick", NULL);
 
-    // Hand-off to firmware: install the anniversary app and run its init.
     g_controller = new AppController("AppCtrl");
     g_controller->init();
-    g_controller->app_install(&anniversary_app, APP_TYPE_REAL_TIME);
 
-    // For the walking skeleton, auto-enter the first app on startup so the
-    // user immediately sees rendering rather than a black screen.
+    if (args.scenario) {
+        int rc = run_scenario(args.scenario, g_controller,
+                              kRegisteredApps, kRegisteredAppCount);
+        printf("[harness] scenario exit rc=%d\n", rc);
+        return rc;
+    }
+
+    // Interactive mode: install all known apps, auto-enter the first one,
+    // then sit in the input loop until the window is closed.
+    for (int i = 0; i < kRegisteredAppCount; ++i) {
+        g_controller->app_install(kRegisteredApps[i].app, APP_TYPE_REAL_TIME);
+    }
     g_action.active = GO_FORWORD;
     g_action.isValid = true;
     g_controller->main_process(&g_action);
 
-    // Optional CI / smoke-test cap: exit cleanly after N frames so the
-    // harness can't hang the runner.
     long max_frames = -1;
     if (const char *env = getenv("AIO_HARNESS_FRAMES")) {
         max_frames = strtol(env, nullptr, 10);
     }
-    printf("[harness] entering main loop — keys: arrows / Enter / Esc / S / Q to quit"
-           " (max_frames=%ld)\n", max_frames);
+    printf("[harness] entering interactive loop — arrows / Enter / Esc / S "
+           "(max_frames=%ld)\n", max_frames);
 
     long frame = 0;
     while (max_frames < 0 || frame < max_frames) {
