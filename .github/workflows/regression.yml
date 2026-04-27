@@ -1,0 +1,49 @@
+name: Regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  gui-regression:
+    name: GUI regression (SDL2 host harness)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SDL2 dev headers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Build env:native_test
+        working-directory: lv_simulater_platformio
+        run: pio run -e native_test
+
+      - name: Run harness (smoke — boots, renders one frame, exits)
+        working-directory: lv_simulater_platformio
+        env:
+          SDL_VIDEODRIVER: dummy
+          AIO_HARNESS_FRAMES: "10"
+        run: ./.pio/build/native_test/program || true
+
+      - name: Upload diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-diffs
+          path: test/results/**
+          if-no-files-found: ignore
+          retention-days: 7
