@@ -45,6 +45,12 @@ AppController *app_controller = nullptr;
 bool isCheckAction = false;
 ImuAction *act_info = nullptr;
 
+// LHLXW.cpp calls emoji_process; we excluded the emoji sub-app because it
+// pulls in MjpegPlayDecoder from the dropped media_player tree. Provide a
+// no-op so the hub menu can still link.
+struct _lv_obj_t;
+void emoji_process(_lv_obj_t *) {}
+
 // ---------- LVGL / display globals ----------
 TFT_eSPI g_stub_tft;
 TFT_eSPI *tft = &g_stub_tft;
