@@ -23,6 +23,7 @@
 #include "sys/app_controller.h"
 #include "driver/imu.h"
 #include "app/anniversary/anniversary.h"
+#include "app/tomato/tomato.h"
 
 #include "scenario_runner.h"
 
@@ -120,6 +121,7 @@ static Args parse_args(int argc, char **argv) {
 // in platformio.ini (each entry must have its sources actually compiled in).
 static const ScenarioApp kRegisteredApps[] = {
     { "anniversary", &anniversary_app },
+    { "tomato",      &tomato_app },
 };
 static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);

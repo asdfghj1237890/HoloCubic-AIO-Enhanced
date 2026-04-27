@@ -1,0 +1,23 @@
+# Smoke test for tomato (pomodoro timer).
+# Drives boot -> initial render -> a GO_FORWORD pulse (which the firmware
+# uses for fast-forwarding the timer) -> exit.
+#
+# Note: tomato_process delays 750 ms on first entry plus 100 ms per
+# iteration, and TURN_LEFT/RIGHT mode-switch requires 3+ consecutive
+# directional inputs to clear the debounce counter, so smoke coverage
+# stays on simpler paths.
+
+app tomato
+
+wait_ms 800
+screenshot 01_initial
+assert_no_crash
+
+action GO_FORWORD
+wait_ms 400
+screenshot 02_after_go_forward
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
