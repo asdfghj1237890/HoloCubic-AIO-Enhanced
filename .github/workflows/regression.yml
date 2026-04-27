@@ -5,6 +5,15 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "compare (default) or update-golden (regenerate baselines as artifact)"
+        type: choice
+        default: compare
+        options:
+          - compare
+          - update-golden
 
 jobs:
   gui-regression:
@@ -37,13 +46,35 @@ jobs:
         env:
           SDL_VIDEODRIVER: dummy
         timeout-minutes: 2
-        run: ./.pio/build/native_test/program --scenario ../test/scenarios/anniversary/smoke.scn --headless
+        run: |
+          if [ "${{ inputs.mode }}" = "update-golden" ]; then
+            ./.pio/build/native_test/program \
+              --scenario ../test/scenarios/anniversary/smoke.scn \
+              --headless --update-golden
+          else
+            ./.pio/build/native_test/program \
+              --scenario ../test/scenarios/anniversary/smoke.scn \
+              --headless
+          fi
 
-      - name: Upload diff artifacts on failure
-        if: failure()
+      # Always upload — review-time inspection of "actual" PNGs and any diff
+      # PNGs is how human reviewers approve a UI change.
+      - name: Upload test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: regression-diffs
+          name: regression-results
           path: test/results/**
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 14
+
+      # Only meaningful when running in --update-golden mode; the freshly
+      # written PNGs land here for the operator to download + commit.
+      - name: Upload regenerated goldens
+        if: always() && inputs.mode == 'update-golden'
+        uses: actions/upload-artifact@v4
+        with:
+          name: regenerated-goldens
+          path: test/golden/**
+          if-no-files-found: ignore
+          retention-days: 14

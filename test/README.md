@@ -39,8 +39,11 @@ test/
 - Phase 1 walking skeleton — done. CI builds and runs anniversary headless.
 - Phase 2 scripted scenarios — done for anniversary. CLI takes `--scenario`
   and `--headless`; CI runs `test/scenarios/anniversary/smoke.scn`.
-- Phase 3 golden-image diff — not started. `screenshot` step is currently a
-  log placeholder.
+- Phase 3 golden-image diff — done. Screenshot steps now snapshot
+  `lv_scr_act()`, write 240x240 PNG, and compare against
+  `test/golden/<scenario_dir>/<scenario_stem>/<name>.png`. Mismatches save
+  a red-overlay diff PNG and fail the run. `--update-golden` regenerates
+  baselines instead of comparing.
 - Phase 4 all apps + Unity unit-test track — not started.
 
 ## Scenario format
@@ -78,6 +81,40 @@ Apps available to scenarios are the ones registered in
 `test/harness/main.cpp` (`kRegisteredApps`). Adding a new app to scenarios
 is two edits: add its `+<...>` line to `build_src_filter` in
 `lv_simulater_platformio/platformio.ini` and add it to `kRegisteredApps`.
+
+## Golden-image baselines
+
+Each `screenshot <name>` step takes a 240x240 snapshot of the active LVGL
+screen (via `lv_snapshot_take`), converts RGB565 -> RGB888, and writes a
+PNG. The comparison logic resolves three paths from the scenario file
+location:
+
+```
+golden:  test/golden/<dir>/<scenario>/<name>.png
+actual:  test/results/<dir>/<scenario>/<name>.png      (always written)
+diff:    test/results/<dir>/<scenario>/<name>_diff.png (only on mismatch)
+```
+
+`<dir>` is the parent directory of the scenario file (e.g. `anniversary`)
+and `<scenario>` is the file stem (e.g. `smoke`). Default tolerance is
+`0.5%` differing pixels with a per-channel slack of 6 units to absorb
+RGB565 round-trip noise. Override with `--threshold PCT`.
+
+### Bootstrapping baselines
+
+The repo ships without committed goldens, so the first CI run logs
+`no baseline at ..., candidate saved` for every screenshot step and exits
+0. The "actual" PNGs are uploaded as the `regression-results` artifact —
+review them, copy the ones you accept under `test/golden/...`, commit.
+
+To regenerate baselines after an intentional UI change:
+
+1. Trigger the **Regression** workflow manually from the Actions tab,
+   choose `mode: update-golden`.
+2. Download the `regenerated-goldens` artifact.
+3. Replace the relevant files under `test/golden/`, commit, push.
+
+Subsequent regular CI runs then compare against the new baselines.
 
 ## Local build (Windows)
 

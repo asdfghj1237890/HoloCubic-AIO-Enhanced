@@ -89,6 +89,8 @@ static void process_sdl_input() {
 struct Args {
     const char *scenario = nullptr;
     bool headless = false;
+    bool update_golden = false;
+    double threshold_pct = 0.5;
 };
 
 static Args parse_args(int argc, char **argv) {
@@ -98,8 +100,13 @@ static Args parse_args(int argc, char **argv) {
             a.scenario = argv[++i];
         } else if (!strcmp(argv[i], "--headless")) {
             a.headless = true;
+        } else if (!strcmp(argv[i], "--update-golden")) {
+            a.update_golden = true;
+        } else if (!strcmp(argv[i], "--threshold") && i + 1 < argc) {
+            a.threshold_pct = strtod(argv[++i], nullptr);
         } else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
-            printf("Usage: %s [--scenario PATH] [--headless]\n", argv[0]);
+            printf("Usage: %s [--scenario PATH] [--headless] "
+                   "[--update-golden] [--threshold PCT]\n", argv[0]);
             exit(0);
         } else {
             fprintf(stderr, "[harness] unknown arg '%s'\n", argv[i]);
@@ -146,8 +153,11 @@ int main(int argc, char **argv) {
     g_controller->init();
 
     if (args.scenario) {
+        ScenarioOptions opts;
+        opts.update_golden = args.update_golden;
+        opts.diff_threshold_pct = args.threshold_pct;
         int rc = run_scenario(args.scenario, g_controller,
-                              kRegisteredApps, kRegisteredAppCount);
+                              kRegisteredApps, kRegisteredAppCount, opts);
         printf("[harness] scenario exit rc=%d\n", rc);
         return rc;
     }

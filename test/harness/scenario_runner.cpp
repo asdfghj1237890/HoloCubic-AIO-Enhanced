@@ -1,4 +1,5 @@
 #include "scenario_runner.h"
+#include "screenshot.h"
 
 #include "lvgl.h"
 #include "common.h"
@@ -64,10 +65,37 @@ void tick_for(int ms_total) {
 
 } // namespace
 
+// Derive a scenario "name" from the file path: drop directory components and
+// the .scn extension. Example: ".../anniversary/smoke.scn" -> "smoke", and
+// the parent dir is "anniversary" — both used to layout golden/results paths.
+static void derive_scenario_paths(const char *path,
+                                  std::string *scenario_dir,
+                                  std::string *scenario_stem) {
+    std::string p(path ? path : "");
+    // Normalise separators for parsing.
+    for (auto &c : p) if (c == '\\') c = '/';
+
+    size_t slash = p.find_last_of('/');
+    std::string base = (slash == std::string::npos) ? p : p.substr(slash + 1);
+    size_t dot = base.find_last_of('.');
+    if (dot != std::string::npos) base = base.substr(0, dot);
+    *scenario_stem = base;
+
+    // Parent directory name (e.g. "anniversary") drives the top-level dir.
+    if (slash == std::string::npos) {
+        *scenario_dir = "default";
+        return;
+    }
+    std::string parent = p.substr(0, slash);
+    size_t pslash = parent.find_last_of('/');
+    *scenario_dir = (pslash == std::string::npos) ? parent : parent.substr(pslash + 1);
+}
+
 int run_scenario(const char *path,
                  AppController *controller,
                  const ScenarioApp *apps,
-                 int app_count) {
+                 int app_count,
+                 const ScenarioOptions &opts) {
     FILE *f = fopen(path, "r");
     if (!f) {
         fprintf(stderr, "[scenario] cannot open '%s'\n", path);
@@ -149,8 +177,11 @@ int run_scenario(const char *path,
         controller->main_process(&a);
     }
 
-    printf("[scenario] running '%s' against app '%s' (%zu steps)\n",
-           path, app_name.c_str(), steps.size());
+    std::string scenario_dir, scenario_stem;
+    derive_scenario_paths(path, &scenario_dir, &scenario_stem);
+    printf("[scenario] running '%s' against app '%s' (%zu steps, mode=%s)\n",
+           path, app_name.c_str(), steps.size(),
+           opts.update_golden ? "update-golden" : "compare");
 
     int failures = 0;
     for (size_t i = 0; i < steps.size(); ++i) {
@@ -168,11 +199,60 @@ int run_scenario(const char *path,
                 tick_for(50); // let LVGL settle the screen change
                 break;
             }
-            case StepKind::SCREENSHOT:
-                // Phase 3 will replace this with SDL_RenderReadPixels + PNG write.
-                printf("[scenario] step %zu (line %d): screenshot '%s' (Phase 3 placeholder)\n",
-                       i + 1, s.line_no, s.str_arg.c_str());
+            case StepKind::SCREENSHOT: {
+                char actual_path[512];
+                char golden_path[512];
+                char diff_path[512];
+                snprintf(golden_path, sizeof golden_path,
+                         "../test/golden/%s/%s/%s.png",
+                         scenario_dir.c_str(), scenario_stem.c_str(), s.str_arg.c_str());
+                snprintf(actual_path, sizeof actual_path,
+                         "../test/results/%s/%s/%s.png",
+                         scenario_dir.c_str(), scenario_stem.c_str(), s.str_arg.c_str());
+                snprintf(diff_path, sizeof diff_path,
+                         "../test/results/%s/%s/%s_diff.png",
+                         scenario_dir.c_str(), scenario_stem.c_str(), s.str_arg.c_str());
+
+                if (opts.update_golden) {
+                    if (!aio_screenshot::save_screen_png(golden_path)) {
+                        fprintf(stderr, "[scenario] step %zu: could not save golden %s\n",
+                                i + 1, golden_path);
+                        ++failures;
+                    } else {
+                        printf("[scenario] step %zu (line %d): screenshot '%s' -> golden saved (%s)\n",
+                               i + 1, s.line_no, s.str_arg.c_str(), golden_path);
+                    }
+                } else {
+                    if (!aio_screenshot::save_screen_png(actual_path)) {
+                        fprintf(stderr, "[scenario] step %zu: could not save actual %s\n",
+                                i + 1, actual_path);
+                        ++failures;
+                        break;
+                    }
+                    FILE *gf = fopen(golden_path, "rb");
+                    if (!gf) {
+                        printf("[scenario] step %zu (line %d): screenshot '%s' -> "
+                               "no baseline at %s, candidate saved (artifact upload will collect it)\n",
+                               i + 1, s.line_no, s.str_arg.c_str(), golden_path);
+                        break;
+                    }
+                    fclose(gf);
+                    double pct = 0.0;
+                    bool ok = aio_screenshot::compare_pngs(actual_path, golden_path,
+                                                           diff_path, opts.diff_threshold_pct, &pct);
+                    if (ok) {
+                        printf("[scenario] step %zu (line %d): screenshot '%s' -> match (%.3f%% differ)\n",
+                               i + 1, s.line_no, s.str_arg.c_str(), pct);
+                    } else {
+                        printf("[scenario] step %zu (line %d): screenshot '%s' -> "
+                               "DIFF %.3f%% > %.3f%%, see %s\n",
+                               i + 1, s.line_no, s.str_arg.c_str(), pct,
+                               opts.diff_threshold_pct, diff_path);
+                        ++failures;
+                    }
+                }
                 break;
+            }
             case StepKind::ASSERT_NO_CRASH:
                 printf("[scenario] step %zu (line %d): assert_no_crash — ok\n", i + 1, s.line_no);
                 break;
