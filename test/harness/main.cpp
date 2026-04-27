@@ -63,6 +63,11 @@ static int tick_thread(void *) {
 // surface a call site in CI logs. backtrace_symbols_fd is async-signal-safe;
 // addresses are unmangled but pinpoint the crashing function in most cases.
 static void crash_handler(int sig) {
+    // Flush stdout first so buffered diagnostic prints survive the crash —
+    // CI runs stdout fully-buffered to a pipe, so plain printf()s upstream
+    // would otherwise be lost. (fflush is not strictly async-signal-safe
+    // but is what we have; the alternative is silent diagnostics.)
+    fflush(stdout);
     fprintf(stderr, "\n[harness] caught signal %d — backtrace:\n", sig);
     void *frames[64];
     int n = backtrace(frames, 64);
@@ -186,6 +191,9 @@ static const int kRegisteredAppCount =
 
 int main(int argc, char **argv) {
     install_crash_handler();
+    // Line-buffer stdout so diagnostic printfs in firmware code aren't
+    // lost in the pipe buffer when a downstream SIGSEGV kills us.
+    setvbuf(stdout, nullptr, _IOLBF, 0);
     Args args = parse_args(argc, argv);
     printf("[harness] HoloCubic_AIO regression harness "
            "(scenario=%s headless=%d)\n",
