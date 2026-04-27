@@ -1,0 +1,24 @@
+# Smoke test: boot anniversary, scrub through both events, exit.
+# Each step is one line: <command> <arg>.
+
+app anniversary
+
+# Settle on the initial frame.
+wait_ms 200
+screenshot 01_initial
+assert_no_crash
+
+# Cycle to the second anniversary; the firmware uses TURN_RIGHT to advance.
+action TURN_RIGHT
+wait_ms 400
+screenshot 02_after_turn_right
+
+# Cycle back.
+action TURN_LEFT
+wait_ms 400
+screenshot 03_after_turn_left
+
+# Exit the app.
+action RETURN
+wait_ms 200
+assert_no_crash

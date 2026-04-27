@@ -25,7 +25,7 @@ test/
     sys/app_controller.h   Slim stub of AppController
     driver/{imu,rgb_led,sd_card,flash_fs,display,ambient}.h
     stubs_runtime.cpp  Singleton instances + AppController/FlashFS impl
-  scenarios/       (Phase 2) YAML scenario files
+  scenarios/       Scenario files (`.scn`, line-based, see "Scenario format")
   golden/          (Phase 3) golden PNG baselines
   fixtures/
     flash/         FlashFS host-side mount point
@@ -36,10 +36,48 @@ test/
 
 ## Phase status
 
-- Phase 1 walking skeleton — code in place. **Blocked** on local build until a
-  C/C++ compiler is installed (see "Local build" below).
-- Phase 2 (scripted scenarios + screenshots), Phase 3 (golden-image diff),
-  Phase 4 (all apps + Unity unit tests + CI) — not started.
+- Phase 1 walking skeleton — done. CI builds and runs anniversary headless.
+- Phase 2 scripted scenarios — done for anniversary. CLI takes `--scenario`
+  and `--headless`; CI runs `test/scenarios/anniversary/smoke.scn`.
+- Phase 3 golden-image diff — not started. `screenshot` step is currently a
+  log placeholder.
+- Phase 4 all apps + Unity unit-test track — not started.
+
+## Scenario format
+
+Scenarios are plain text, one step per line. Comment lines start with `#`,
+blank lines are ignored. Every scenario has exactly one `app <name>` header
+followed by zero or more steps:
+
+```
+# Smoke test for anniversary.
+app anniversary
+
+wait_ms 200
+screenshot 01_initial
+assert_no_crash
+
+action TURN_RIGHT
+wait_ms 400
+screenshot 02_after_turn_right
+
+action RETURN
+wait_ms 200
+```
+
+Step kinds:
+
+- `wait_ms <int>` — advance LVGL for N milliseconds in 5 ms slices
+- `action <NAME>` — inject one ImuAction; valid names are `TURN_LEFT`,
+  `TURN_RIGHT`, `UP`, `DOWN`, `GO_FORWORD` (`GO_FORWARD` also accepted),
+  `RETURN`, `SHAKE`
+- `screenshot <name>` — Phase 3 hook; currently logs a placeholder
+- `assert_no_crash` — sanity marker; printed to stdout
+
+Apps available to scenarios are the ones registered in
+`test/harness/main.cpp` (`kRegisteredApps`). Adding a new app to scenarios
+is two edits: add its `+<...>` line to `build_src_filter` in
+`lv_simulater_platformio/platformio.ini` and add it to `kRegisteredApps`.
 
 ## Local build (Windows)
 
