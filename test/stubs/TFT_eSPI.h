@@ -27,6 +27,7 @@ public:
     void pushImage(int32_t, int32_t, uint32_t, uint32_t, const uint8_t *) {}
     void pushImageDMA(int32_t, int32_t, int32_t, int32_t, uint16_t *) {}
     void pushImageDMA(int32_t, int32_t, int32_t, int32_t, const uint16_t *) {}
+    void pushImageDMA(int32_t, int32_t, int32_t, int32_t, uint16_t *, uint16_t *) {}
     bool initDMA(bool = false) { return true; }
     void deInitDMA() {}
     void startWrite(int) {}

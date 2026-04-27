@@ -24,7 +24,9 @@ public:
     typedef std::function<void(void)> THandlerFunction;
     void on(const String &, THandlerFunction) {}
     void on(const String &, int, THandlerFunction) {}
+    void on(const String &, int, THandlerFunction, THandlerFunction) {}
     void onNotFound(THandlerFunction) {}
+    void onFileUpload(THandlerFunction) {}
 
     void send(int = 200, const char * = "text/plain", const String & = "") {}
     void send(int, const String &, const String &) {}

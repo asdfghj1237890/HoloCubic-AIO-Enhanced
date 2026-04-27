@@ -38,9 +38,11 @@ public:
     void begin(uint16_t) {}
     void end() {}
     void close() {}
+    void stop() {}
     WiFiClient available() { return WiFiClient(); }
     WiFiClient accept() { return WiFiClient(); }
     void setNoDelay(bool) {}
+    bool hasClient() { return false; }
 };
 
 #endif
