@@ -27,6 +27,8 @@ public:
         return true;
     }
     bool fromString(const String &s) { return fromString(s.c_str()); }
+    uint8_t &operator[](int i) { return a[i & 3]; }
+    uint8_t operator[](int i) const { return a[i & 3]; }
 };
 
 class WiFiClass {
