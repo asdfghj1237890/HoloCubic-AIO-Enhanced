@@ -6,6 +6,16 @@
 #include "freertos/timers.h"  // TimerHandle_t — app_controller.h has one
                               // as a member.
 
+// app_controller.h declares read/write_config overloads taking these,
+// plus member instances of all three. Provide minimal struct bodies so
+// the header parses; tests don't actually exercise these configs.
+struct SysUtilConfig {
+    int dummy;
+};
+struct RgbConfig {
+    int dummy;
+};
+
 // Pin constants imu.cpp references during init() (which the unit test
 // never invokes — but they need to resolve at compile time).
 #define IMU_I2C_SDA 32
