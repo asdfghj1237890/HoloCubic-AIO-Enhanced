@@ -95,6 +95,21 @@ public:
     int toInt() const { return atoi(s.c_str()); }
     float toFloat() const { return (float)atof(s.c_str()); }
     double toDouble() const { return atof(s.c_str()); }
+    bool startsWith(const char *p) const {
+        if (!p) return true;
+        return s.compare(0, strlen(p), p) == 0;
+    }
+    bool startsWith(const String &o) const { return startsWith(o.c_str()); }
+    bool endsWith(const char *p) const {
+        if (!p) return true;
+        size_t n = strlen(p);
+        return s.size() >= n && s.compare(s.size() - n, n, p) == 0;
+    }
+    char charAt(int i) const { return (i < 0 || (size_t)i >= s.size()) ? 0 : s[i]; }
+    int lastIndexOf(char c) const {
+        auto p = s.find_last_of(c);
+        return p == std::string::npos ? -1 : (int)p;
+    }
 };
 
 inline String operator+(const String &a, const String &b) { String r(a); r += b; return r; }
@@ -179,6 +194,16 @@ static inline long map(long x, long in_min, long in_max, long out_min, long out_
     if (in_max == in_min) return out_min;
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
+
+// Arduino-style min/max macros. Note: these can clash with std::min/std::max
+// when included before <algorithm>, but firmware code uses them as global
+// names, and STL is not used unconditionally.
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef max
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#endif
 
 // Arduino-style RNG mapped onto stdlib for deterministic CI output:
 // every harness run starts from the same state because analogRead(25)
