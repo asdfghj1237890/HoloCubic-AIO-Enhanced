@@ -41,21 +41,22 @@ jobs:
         working-directory: lv_simulater_platformio
         run: pio run -e native_test
 
-      - name: Run anniversary smoke scenario
+      - name: Run scenario suite
         working-directory: lv_simulater_platformio
         env:
           SDL_VIDEODRIVER: dummy
-        timeout-minutes: 2
+        timeout-minutes: 5
         run: |
+          set -e
+          flags="--headless"
           if [ "${{ inputs.mode }}" = "update-golden" ]; then
-            ./.pio/build/native_test/program \
-              --scenario ../test/scenarios/anniversary/smoke.scn \
-              --headless --update-golden
-          else
-            ./.pio/build/native_test/program \
-              --scenario ../test/scenarios/anniversary/smoke.scn \
-              --headless
+            flags="$flags --update-golden"
           fi
+          for scn in ../test/scenarios/*/*.scn; do
+            echo "::group::scenario $scn"
+            ./.pio/build/native_test/program --scenario "$scn" $flags
+            echo "::endgroup::"
+          done
 
       # Always upload — review-time inspection of "actual" PNGs and any diff
       # PNGs is how human reviewers approve a UI change.
