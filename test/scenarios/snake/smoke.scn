@@ -1,0 +1,23 @@
+# Smoke test for game_snake.
+# srand(0) seed (analogRead(A0) returns 0) makes random fruit spawn
+# deterministic — same board layout every CI run.
+
+app snake
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+# Each direction change updates the snake's heading; a SNAKE_SPEED tick
+# inside the firmware moves it one cell per ~1s. Drive a couple of turns.
+action TURN_RIGHT
+wait_ms 300
+screenshot 02_after_right
+
+action DOWN
+wait_ms 300
+screenshot 03_after_down
+
+action RETURN
+wait_ms 200
+assert_no_crash

@@ -1,0 +1,21 @@
+# Smoke test for settings (system config UI).
+# settings_init draws the version page; the WIFI_CONN message handler
+# tries to fetch the latest version via HTTP — in the harness HTTPClient
+# returns -1 from GET() so the displayed "latest" stays empty/garbage,
+# but the page still renders.
+
+app settings
+
+wait_ms 200
+screenshot 01_initial
+assert_no_crash
+
+# GO_FORWORD re-fires send_to(WIFI_CONN) with delay(500); render unchanged
+# in the harness because no real network call lands.
+action GO_FORWORD
+wait_ms 700
+screenshot 02_after_go_forward
+
+action RETURN
+wait_ms 200
+assert_no_crash
