@@ -227,7 +227,12 @@ void stockmarket_gui_del(void)
 {
     if (NULL != stockmarket_gui)
     {
-        lv_obj_del(stockmarket_gui);
+        // lv_obj_clean (not lv_obj_del) matches every other app's _gui_del:
+        // app_exit calls this before app_control_display_scr loads the next
+        // screen, so deleting the active screen here would null out
+        // disp->act_scr and the next refresh tick segfaults in
+        // lv_obj_update_layout. Cleaning leaves the screen object alive.
+        lv_obj_clean(stockmarket_gui);
         stockmarket_gui = NULL;
         nowQuoLabel = NULL;
         ChgValueLabel = NULL;

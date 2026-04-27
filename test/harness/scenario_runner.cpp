@@ -51,23 +51,6 @@ void trim(std::string &s) {
     s = s.substr(a, b - a + 1);
 }
 
-// Dump the LVGL display's screen pointers before a tick — used to diagnose
-// stockmarket's silent crash on first refresh (act/prev/top/sys are what
-// _lv_disp_refr_timer dereferences). Compiled in for the host harness only.
-void dump_disp_state(const char *tag) {
-    lv_disp_t *d = lv_disp_get_default();
-    if (!d) {
-        fprintf(stderr, "[disp %s] no default disp\n", tag);
-        return;
-    }
-    fprintf(stderr,
-            "[disp %s] act=%p prev=%p top=%p sys=%p scr_to_load=%p\n",
-            tag, (void*)d->act_scr, (void*)d->prev_scr,
-            (void*)d->top_layer, (void*)d->sys_layer,
-            (void*)d->scr_to_load);
-    fflush(stderr);
-}
-
 // Tick LVGL for ms_total milliseconds in 5 ms slices. SDL_Delay also
 // advances the tick thread (see test/harness/main.cpp).
 void tick_for(int ms_total) {
@@ -193,17 +176,13 @@ int run_scenario(const char *path,
     // what actually invokes the app's own main_process for the first time.
     // Without this second tick, the first screenshot captures the default
     // LVGL screen (black) rather than the app's real first frame.
-    dump_disp_state("pre-install");
     {
         ImuAction a; a.active = GO_FORWORD; a.isValid = true;
         controller->main_process(&a);
-        dump_disp_state("post-GO_FORWORD");
         ImuAction b; b.active = UNKNOWN; b.isValid = false;
         controller->main_process(&b);
-        dump_disp_state("post-UNKNOWN");
     }
     tick_for(50);
-    dump_disp_state("post-initial-tick");
 
     std::string scenario_dir, scenario_stem;
     derive_scenario_paths(path, &scenario_dir, &scenario_stem);
