@@ -55,12 +55,15 @@ jobs:
           BIN=./.pio/build/native_test/program
           for scn in ../test/scenarios/*/*.scn; do
             echo "::group::scenario $scn"
-            if ! "$BIN" --scenario "$scn" $flags 2> stderr.log; then
-              rc=$?
-              cat stderr.log
+            # Run without `if !` so $? reflects the real exit status (the `!`
+            # form negates the pipeline status to 0/1, hiding rc=139).
+            rc=0
+            "$BIN" --scenario "$scn" $flags 2> stderr.log || rc=$?
+            cat stderr.log
+            if [ $rc -ne 0 ]; then
               # On segfault (rc=139) decode the +0xN frames via addr2line so
               # the trace shows file:line in the firmware/harness sources.
-              if [ "$rc" = "139" ]; then
+              if [ $rc -eq 139 ]; then
                 echo "--- addr2line trace ---"
                 grep -oE '\+0x[0-9a-f]+' stderr.log | sort -u | while read off; do
                   echo -n "$off  "
@@ -69,7 +72,6 @@ jobs:
               fi
               exit $rc
             fi
-            cat stderr.log
             echo "::endgroup::"
           done
 
