@@ -52,9 +52,24 @@ jobs:
           if [ "${{ inputs.mode }}" = "update-golden" ]; then
             flags="$flags --update-golden"
           fi
+          BIN=./.pio/build/native_test/program
           for scn in ../test/scenarios/*/*.scn; do
             echo "::group::scenario $scn"
-            ./.pio/build/native_test/program --scenario "$scn" $flags
+            if ! "$BIN" --scenario "$scn" $flags 2> stderr.log; then
+              rc=$?
+              cat stderr.log
+              # On segfault (rc=139) decode the +0xN frames via addr2line so
+              # the trace shows file:line in the firmware/harness sources.
+              if [ "$rc" = "139" ]; then
+                echo "--- addr2line trace ---"
+                grep -oE '\+0x[0-9a-f]+' stderr.log | sort -u | while read off; do
+                  echo -n "$off  "
+                  addr2line -Cfe "$BIN" "${off#+}" || true
+                done
+              fi
+              exit $rc
+            fi
+            cat stderr.log
             echo "::endgroup::"
           done
 
