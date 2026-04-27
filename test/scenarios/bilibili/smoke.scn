@@ -1,12 +1,16 @@
-# Smoke test for bilibili_fans.
-# WIFI_CONN message is queued via send_to but the harness controller
-# doesn't dispatch wifi events, so the firmware's HTTP fetch path
-# never runs — fans/follow stay at the run_data init values (0/0).
+# Smoke test for bilibili_fans. The harness now wires HTTP fixtures
+# (test/fixtures/http/api.bilibili.com/x/relation/stat.json) into the
+# stub HTTPClient and dispatches WIFI_CONN messages back to the
+# sender — so the first process tick fires the WIFI_CONN callback
+# which fetches + parses, and the follow-up `action UP` tick rerenders
+# display_bilibili with the fetched fans (12345) / follow (520) values.
 
 app bilibili
 
 wait_ms 400
-screenshot 01_initial
+action UP
+wait_ms 400
+screenshot 01_with_data
 assert_no_crash
 
 action RETURN

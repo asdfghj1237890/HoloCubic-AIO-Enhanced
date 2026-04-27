@@ -22,6 +22,7 @@
 
 #include "ESPmDNS.h"
 #include "TJpg_Decoder.h"
+#include "HTTPClient.h"
 
 // ---------- Hardware singleton stubs ----------
 HardwareSerial Serial;
@@ -135,6 +136,59 @@ void FlashFS::deleteFile(const char *path) {
     remove(full.c_str());
 }
 
+// ---------- HTTPClient stub: route GET() to test/fixtures/http/ ----------
+//
+// Maps URL host + path to a fixture file mirroring the URL structure:
+//   https://api.bilibili.com/x/relation/stat?vmid=...
+//     -> ../test/fixtures/http/api.bilibili.com/x/relation/stat.json
+//
+// (`../` because the harness binary runs from lv_simulater_platformio/.)
+// Query strings are stripped — different params for the same endpoint
+// reuse the same fixture; sufficient for the apps' parse-path coverage.
+//
+// Apps without a fixture get the same -1 the old always-offline stub
+// returned, so existing scenarios stay green until a fixture lands.
+static const char *HTTP_FIXTURE_DIR = "../test/fixtures/http";
+
+static bool resolve_http_fixture(const String &url, String *out_path) {
+    // Skip "http://" or "https://".
+    int p = url.indexOf("://");
+    if (p < 0) return false;
+    int host_start = p + 3;
+    int host_end = url.indexOf('/', host_start);
+    if (host_end < 0) host_end = url.length();
+    int path_end = url.indexOf('?', host_end);
+    if (path_end < 0) path_end = url.length();
+
+    String host = url.substring(host_start, host_end);
+    String path = url.substring(host_end, path_end);  // starts with '/' or empty
+    if (path.length() == 0) path = "/index";
+
+    String full(HTTP_FIXTURE_DIR);
+    full += "/";
+    full += host;
+    full += path;
+    full += ".json";
+    *out_path = full;
+    return true;
+}
+
+int HTTPClient::GET() {
+    String fixture;
+    if (!resolve_http_fixture(m_url, &fixture)) return -1;
+    FILE *f = fopen(fixture.c_str(), "rb");
+    if (!f) return -1;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0) { fclose(f); return -1; }
+    std::string buf(sz, '\0');
+    if (sz > 0) fread(&buf[0], 1, sz, f);
+    fclose(f);
+    m_payload = String(buf);
+    return HTTP_CODE_OK;
+}
+
 // Reproduces the firmware's analyseParam: split a buffer on '\n', null-terminating
 // each piece in place. argv[i] gets a pointer to the i-th line.
 bool analyseParam(char *info, int argc, char **argv) {
@@ -212,15 +266,33 @@ void AppController::app_exit() {
     }
     app_exit_flag = 0;
 }
-int AppController::send_to(const char *, const char *to,
+int AppController::send_to(const char *from, const char *to,
                            APP_MESSAGE_TYPE type, void *message, void *ext_info) {
     if (!to) return 0;
+    // Direct app-to-app message: dispatch to the named target.
     for (unsigned int i = 0; i < app_num; ++i) {
         if (appList[i] && appList[i]->app_name && !strcmp(appList[i]->app_name, to)) {
             if (appList[i]->message_handle) {
-                appList[i]->message_handle("", to, type, message, ext_info);
+                appList[i]->message_handle(from ? from : "", to, type, message, ext_info);
             }
             return 0;
+        }
+    }
+    // Controller-bound WiFi events. The real firmware queues these
+    // and req_event_deal eventually fires the wifi callback back at
+    // the *from* app once the connection succeeds. The harness fakes
+    // "wifi connected" by invoking the callback synchronously — that's
+    // enough to drive apps that gate HTTP fetches on WIFI_CONN
+    // (bilibili/weather/stockmarket etc).
+    if (!strcmp(to, "AppCtrl") && from &&
+        (type == APP_MESSAGE_WIFI_CONN || type == APP_MESSAGE_WIFI_AP)) {
+        for (unsigned int i = 0; i < app_num; ++i) {
+            if (appList[i] && appList[i]->app_name && !strcmp(appList[i]->app_name, from)) {
+                if (appList[i]->message_handle) {
+                    appList[i]->message_handle("AppCtrl", from, type, message, ext_info);
+                }
+                return 0;
+            }
         }
     }
     return 0;
