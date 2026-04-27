@@ -1,0 +1,16 @@
+# Smoke test for media_player. tf.listDir("/movie") returns nullptr on
+# host so media_player_init's video_start(false) early-returns without
+# allocating any decoder, and the first process tick takes the
+# `if (NULL == pfile) sys->app_exit()` fast path. media_player has no
+# LVGL screen of its own (it draws raw frames to TFT), so the first
+# screenshot captures the controller's app icon screen.
+
+app media
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
