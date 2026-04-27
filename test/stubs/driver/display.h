@@ -1,5 +1,6 @@
-#ifndef AIO_STUB_DRIVER_DISPLAY_H
-#define AIO_STUB_DRIVER_DISPLAY_H
+// Guard matches firmware driver/display.h. See common.h header.
+#ifndef DISPLAY_H
+#define DISPLAY_H
 #include "lvgl.h"
 
 class Display {

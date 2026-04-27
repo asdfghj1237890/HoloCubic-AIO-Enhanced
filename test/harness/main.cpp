@@ -29,6 +29,7 @@
 #include "app/settings/settings.h"
 #include "app/game_snake/game_snake.h"
 #include "app/example/example.h"
+#include "app/bilibili_fans/bilibili.h"
 
 #include "scenario_runner.h"
 
@@ -132,6 +133,7 @@ static const ScenarioApp kRegisteredApps[] = {
     { "settings",    &settings_app },
     { "snake",       &game_snake_app },
     { "example",     &example_app },
+    { "bilibili",    &bilibili_app },
 };
 static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);

@@ -1,5 +1,10 @@
-#ifndef AIO_STUB_COMMON_H
-#define AIO_STUB_COMMON_H
+// Guard intentionally matches firmware src/common.h. Some apps include
+// "../../common.h" (relative) which lands on the firmware copy in
+// addition to the stub. Aligning the guards ensures whichever lands
+// second is short-circuited, preventing duplicate class definitions.
+// The same trick is used for network.h, driver/*.h.
+#ifndef COMMON_H
+#define COMMON_H
 
 #include "Arduino.h"
 #include "freertos/FreeRTOS.h"

@@ -1,5 +1,6 @@
-#ifndef AIO_STUB_DRIVER_RGB_LED_H
-#define AIO_STUB_DRIVER_RGB_LED_H
+// Guard matches firmware driver/rgb_led.h (RGB_H). See common.h header.
+#ifndef RGB_H
+#define RGB_H
 #include "Arduino.h"
 #include "FastLED.h"
 
