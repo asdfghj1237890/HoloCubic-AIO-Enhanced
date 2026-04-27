@@ -94,6 +94,14 @@ public:
         size_t b = s.find_last_not_of(" \t\r\n");
         if (a == std::string::npos) s.clear(); else s = s.substr(a, b - a + 1);
     }
+    String &remove(unsigned int index) {
+        if (index < s.size()) s.erase(index);
+        return *this;
+    }
+    String &remove(unsigned int index, unsigned int count) {
+        if (index < s.size()) s.erase(index, count);
+        return *this;
+    }
     int toInt() const { return atoi(s.c_str()); }
     float toFloat() const { return (float)atof(s.c_str()); }
     double toDouble() const { return atof(s.c_str()); }
