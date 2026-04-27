@@ -1,0 +1,13 @@
+# Smoke test for the web config server. The harness never receives a
+# real HTTP client, so the route handlers stay inert and the upload/
+# download hooks are never invoked. Captures the boot + LVGL UI render.
+
+app server
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
