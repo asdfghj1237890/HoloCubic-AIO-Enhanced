@@ -1,6 +1,8 @@
 #ifndef AIO_UNIT_STUB_COMMON_H
 #define AIO_UNIT_STUB_COMMON_H
 #include "Arduino.h"
+#include "Wire.h"  // imu.cpp init() uses Wire.begin / setClock; the real
+                   // common.h pulls Wire transitively, so match that.
 
 // Pin constants imu.cpp references during init() (which the unit test
 // never invokes — but they need to resolve at compile time).
