@@ -1,11 +1,11 @@
 #ifndef AIO_STUB_DRIVER_IMU_H
 #define AIO_STUB_DRIVER_IMU_H
 #include "Arduino.h"
+#include "lvgl.h"
 
 #define ACTION_HISTORY_BUF_LEN 5
 
 extern int32_t encoder_diff;
-typedef int lv_indev_state_t;
 extern lv_indev_state_t encoder_state;
 
 extern const char *active_type_info[];

@@ -46,7 +46,7 @@ Ambient ambLight;
 
 // ---------- IMU / encoder input state (used by lv_port_indev) ----------
 int32_t encoder_diff = 0;
-lv_indev_state_t encoder_state = 0;
+lv_indev_state_t encoder_state = LV_INDEV_STATE_RELEASED;
 const char *active_type_info[] = {
     "TURN_RIGHT", "RETURN", "TURN_LEFT", "UP", "DOWN", "GO_FORWORD", "SHAKE", "UNKNOWN"
 };
