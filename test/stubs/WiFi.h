@@ -19,6 +19,14 @@ public:
     IPAddress(uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3) { a[0]=b0; a[1]=b1; a[2]=b2; a[3]=b3; }
     String toString() const { char b[32]; snprintf(b,32,"%u.%u.%u.%u",a[0],a[1],a[2],a[3]); return String(b); }
     operator uint32_t() const { return (a[0]<<24)|(a[1]<<16)|(a[2]<<8)|a[3]; }
+    bool fromString(const char *s) {
+        if (!s) return false;
+        unsigned int v0=0,v1=0,v2=0,v3=0;
+        if (sscanf(s, "%u.%u.%u.%u", &v0, &v1, &v2, &v3) != 4) return false;
+        a[0]=(uint8_t)v0; a[1]=(uint8_t)v1; a[2]=(uint8_t)v2; a[3]=(uint8_t)v3;
+        return true;
+    }
+    bool fromString(const String &s) { return fromString(s.c_str()); }
 };
 
 class WiFiClass {

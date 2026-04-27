@@ -25,6 +25,7 @@
 #include "app/anniversary/anniversary.h"
 #include "app/tomato/tomato.h"
 #include "app/game_2048/game_2048.h"
+#include "app/heartbeat/heartbeat.h"
 
 #include "scenario_runner.h"
 
@@ -124,6 +125,7 @@ static const ScenarioApp kRegisteredApps[] = {
     { "anniversary", &anniversary_app },
     { "tomato",      &tomato_app },
     { "2048",        &game_2048_app },
+    { "heartbeat",   &heartbeat_app },
 };
 static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);
@@ -155,6 +157,8 @@ int main(int argc, char **argv) {
 
     g_controller = new AppController("AppCtrl");
     g_controller->init();
+    extern AppController *app_controller;
+    app_controller = g_controller;
 
     if (args.scenario) {
         ScenarioOptions opts;

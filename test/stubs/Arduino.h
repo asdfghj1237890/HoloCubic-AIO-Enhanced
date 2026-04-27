@@ -129,6 +129,18 @@ public:
 
 extern HardwareSerial Serial;
 
+// ESP global — used by network code, heartbeat for client_id, etc.
+class EspClass {
+public:
+    uint64_t getEfuseMac() { return 0xAABBCCDDEEFFULL; }
+    uint32_t getChipId() { return 0xAABBCC; }
+    void restart() {}
+    void deepSleep(uint64_t) {}
+    uint32_t getFreeHeap() { return 0; }
+    uint32_t getMinFreeHeap() { return 0; }
+};
+extern EspClass ESP;
+
 static inline void setCpuFrequencyMhz(uint32_t) {}
 static inline uint32_t getCpuFrequencyMhz() { return 240; }
 static inline uint32_t getXtalFrequencyMhz() { return 40; }

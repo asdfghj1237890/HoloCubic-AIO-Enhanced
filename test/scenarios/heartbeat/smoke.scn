@@ -1,0 +1,23 @@
+# Smoke test for heartbeat (MQTT keep-alive UI).
+# WiFi never connects in the harness (WiFiClass::status() returns
+# WL_DISCONNECTED), so mqtt_client->connected() is always false; the
+# scenario exercises the offline-display path: SEND icon, send_cnt
+# bumps to 1 on entry, no recv heartbeats.
+
+app heartbeat
+
+# heartbeat_init -> read_config (defaults written), creates PubSubClient,
+# fires send_to(WIFI_CONN). First main_process renders SEND icon.
+wait_ms 200
+screenshot 01_initial
+assert_no_crash
+
+# GO_FORWORD bumps send_cnt and re-renders the same SEND icon (publish
+# is a no-op since mqtt_client->connected() returns false).
+action GO_FORWORD
+wait_ms 200
+screenshot 02_after_go_forward
+
+action RETURN
+wait_ms 200
+assert_no_crash
