@@ -24,9 +24,19 @@ struct ScenarioApp {
     APP_OBJ *app;
 };
 
+struct ScenarioOptions {
+    // When true, screenshot steps overwrite test/golden/<...>.png and
+    // skip comparison. When false (default), screenshots are saved to
+    // test/results/<...>.png and compared against the matching golden.
+    bool update_golden = false;
+    // Maximum percentage of differing pixels tolerated before a step fails.
+    double diff_threshold_pct = 0.5;
+};
+
 int run_scenario(const char *path,
                  AppController *controller,
                  const ScenarioApp *apps,
-                 int app_count);
+                 int app_count,
+                 const ScenarioOptions &opts = ScenarioOptions{});
 
 #endif
