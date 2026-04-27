@@ -1,0 +1,17 @@
+# Init-only smoke for LHLXW. The app's main_process is an internal
+# while(1) loop that polls firmware globals (act_info / isCheckAction)
+# instead of returning each tick, so we can't drive it the usual way —
+# the second main_process(UNKNOWN) tick the harness normally fires
+# would hang here. `init_only` skips that tick.
+#
+# What we still cover: link, app icon, LHLXW_init, the 2.5 s startLog
+# boot animation (which drives lv_task_handler internally) all run
+# without crashing. The app icon name returned by AppController is
+# what the screenshot will capture.
+
+app LHLXW
+init_only
+
+wait_ms 200
+screenshot 01_initial
+assert_no_crash
