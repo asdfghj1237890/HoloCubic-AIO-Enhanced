@@ -111,16 +111,25 @@ int main(int argc, char **argv) {
     g_action.isValid = true;
     g_controller->main_process(&g_action);
 
-    printf("[harness] entering main loop — keys: arrows / Enter / Esc / S / Q to quit\n");
+    // Optional CI / smoke-test cap: exit cleanly after N frames so the
+    // harness can't hang the runner.
+    long max_frames = -1;
+    if (const char *env = getenv("AIO_HARNESS_FRAMES")) {
+        max_frames = strtol(env, nullptr, 10);
+    }
+    printf("[harness] entering main loop — keys: arrows / Enter / Esc / S / Q to quit"
+           " (max_frames=%ld)\n", max_frames);
 
-    // Main tick loop
-    while (true) {
+    long frame = 0;
+    while (max_frames < 0 || frame < max_frames) {
         process_sdl_input();
         if (g_action.isValid) {
             g_controller->main_process(&g_action);
         }
         lv_timer_handler();
         SDL_Delay(5);
+        ++frame;
     }
+    printf("[harness] frame cap reached, exiting cleanly\n");
     return 0;
 }

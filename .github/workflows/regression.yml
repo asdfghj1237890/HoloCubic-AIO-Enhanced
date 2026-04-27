@@ -32,12 +32,13 @@ jobs:
         working-directory: lv_simulater_platformio
         run: pio run -e native_test
 
-      - name: Run harness (smoke — boots, renders one frame, exits)
+      - name: Run harness (smoke — boots, renders a few frames, exits)
         working-directory: lv_simulater_platformio
         env:
           SDL_VIDEODRIVER: dummy
-          AIO_HARNESS_FRAMES: "10"
-        run: ./.pio/build/native_test/program || true
+          AIO_HARNESS_FRAMES: "200"
+        timeout-minutes: 2
+        run: ./.pio/build/native_test/program
 
       - name: Upload diff artifacts on failure
         if: failure()
