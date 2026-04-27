@@ -3,7 +3,7 @@
 
 #include "Arduino.h"
 #include "common.h"
-#include "interface.h"
+#include "sys/interface.h"
 #include <list>
 
 #define CTRL_NAME "AppCtrl"
