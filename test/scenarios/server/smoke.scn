@@ -1,0 +1,11 @@
+# Smoke test for the web config server.
+
+app server
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

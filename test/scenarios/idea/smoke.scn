@@ -1,0 +1,12 @@
+# Smoke test for idea_anim. Uses GuiLite for custom-framebuffer
+# rendering, NOT LVGL — lv_snapshot won't capture the actual content,
+# so this scenario is crash-only.
+
+app idea
+
+wait_ms 400
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

@@ -21,11 +21,13 @@
 #include <sys/stat.h>
 
 #include "ESPmDNS.h"
+#include "TJpg_Decoder.h"
 
 // ---------- Hardware singleton stubs ----------
 HardwareSerial Serial;
 WiFiClass WiFi;
 MDNSResponder MDNS;
+TJpg_Decoder TJpgDec;
 TwoWire Wire;
 SPIClass SPI;
 SPIFFSClass SPIFFS;

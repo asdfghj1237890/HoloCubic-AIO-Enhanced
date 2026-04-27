@@ -1,0 +1,12 @@
+# Smoke test for media_player. Reads MJPEG files from SD; the harness
+# has no SD fixture so the playback loop never starts.
+
+app media
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

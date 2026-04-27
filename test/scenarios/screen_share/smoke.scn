@@ -1,0 +1,13 @@
+# Smoke test for screen_share. Real device receives MJPEG bytes over
+# Serial; harness's Serial.available() returns 0 so the decode path
+# stays inert. Captures the "waiting for stream" frame.
+
+app screen_share
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
