@@ -1,12 +1,16 @@
 #include "screen_share_gui.h"
 #include "lvgl.h"
 
-lv_obj_t *share_main_scr = NULL;
+// File-scope statics (not external linkage). Without `static`, the
+// `title_label` global collided with the same-named extern symbol in
+// settings_gui.c and file_manager_gui.c at link time, blocking the host
+// test build. None of these are used outside this TU.
+static lv_obj_t *share_main_scr = NULL;
 
-lv_obj_t *title_label;
-lv_obj_t *local_ip_label;
-lv_obj_t *local_port_label;
-lv_obj_t *info_label;
+static lv_obj_t *title_label;
+static lv_obj_t *local_ip_label;
+static lv_obj_t *local_port_label;
+static lv_obj_t *info_label;
 
 static lv_style_t default_style;
 static lv_style_t label_style;
