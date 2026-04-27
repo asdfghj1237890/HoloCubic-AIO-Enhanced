@@ -28,6 +28,12 @@ SPIClass SPI;
 SPIFFSClass SPIFFS;
 SDClass SD;
 FastLEDClass FastLED;
+EspClass ESP;
+
+// app_controller is referenced by heartbeat (and web_setting). Kept as a
+// raw pointer that main.cpp wires to the harness's controller after
+// AppController construction.
+AppController *app_controller = nullptr;
 
 // ---------- LVGL / display globals ----------
 TFT_eSPI g_stub_tft;

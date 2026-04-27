@@ -1,6 +1,7 @@
 #ifndef AIO_STUB_PUBSUBCLIENT_H
 #define AIO_STUB_PUBSUBCLIENT_H
 #include "Arduino.h"
+#include "WiFi.h"
 #include "WiFiClient.h"
 
 typedef void (*MQTT_CALLBACK_SIGNATURE)(char *topic, uint8_t *payload, unsigned int length);
@@ -9,6 +10,8 @@ class PubSubClient {
 public:
     PubSubClient() {}
     PubSubClient(WiFiClient &) {}
+    PubSubClient(const char *, uint16_t, MQTT_CALLBACK_SIGNATURE, WiFiClient &) {}
+    PubSubClient(const IPAddress &, uint16_t, MQTT_CALLBACK_SIGNATURE, WiFiClient &) {}
     PubSubClient &setServer(const char *, uint16_t) { return *this; }
     PubSubClient &setServer(uint32_t, uint16_t) { return *this; }
     PubSubClient &setCallback(MQTT_CALLBACK_SIGNATURE) { return *this; }
