@@ -20,9 +20,12 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "ESPmDNS.h"
+
 // ---------- Hardware singleton stubs ----------
 HardwareSerial Serial;
 WiFiClass WiFi;
+MDNSResponder MDNS;
 TwoWire Wire;
 SPIClass SPI;
 SPIFFSClass SPIFFS;
