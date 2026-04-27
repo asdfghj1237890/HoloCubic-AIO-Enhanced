@@ -39,7 +39,7 @@
 #include "app/LHLXW/LHLXW.h"
 #include "app/screen_share/screen_share.h"
 #include "app/pc_resource/pc_resource.h"
-#include "app/media_player/media_player.h"
+// #include "app/media_player/media_player.h"  // deferred — see platformio.ini
 
 #include "scenario_runner.h"
 
@@ -153,7 +153,7 @@ static const ScenarioApp kRegisteredApps[] = {
     { "LHLXW",       &LHLXW_app },
     { "screen_share",&screen_share_app },
     { "pc_resource", &pc_resource_app },
-    { "media",       &media_app },
+    // { "media",       &media_app },  // deferred
 };
 static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);
