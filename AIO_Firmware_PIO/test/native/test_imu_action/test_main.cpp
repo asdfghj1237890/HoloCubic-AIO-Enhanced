@@ -8,6 +8,8 @@
 // bus / calibration paths we don't care about here.
 
 #include <unity.h>
+#include "Arduino.h"
+#include "Wire.h"
 #include "driver/imu.h"
 
 // Storage for the fake-motion globals declared extern in MPU6050.h.
