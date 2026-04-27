@@ -96,3 +96,27 @@ jobs:
           path: test/golden/**
           if-no-files-found: ignore
           retention-days: 14
+
+  # Track B: Unity unit tests over pure-logic firmware modules
+  # (currently driver/imu.cpp's getAction). Runs in parallel with the
+  # GUI regression job; a failure here blocks the PR independently.
+  unit-tests:
+    name: Unit tests (PlatformIO Unity, native)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Run Unity tests (env:native_unit)
+        working-directory: AIO_Firmware_PIO
+        timeout-minutes: 5
+        run: pio test -e native_unit
