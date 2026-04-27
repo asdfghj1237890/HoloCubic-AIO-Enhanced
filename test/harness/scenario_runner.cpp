@@ -104,6 +104,11 @@ int run_scenario(const char *path,
 
     std::string app_name;
     std::vector<Step> steps;
+    // init_only: skip the second main_process(UNKNOWN) call below. Apps like
+    // LHLXW take over the main thread inside main_process with their own
+    // while(1) tick loop and never return; we can only verify their init
+    // path under that constraint.
+    bool init_only = false;
 
     char raw[512];
     int line_no = 0;
@@ -144,6 +149,8 @@ int run_scenario(const char *path,
         } else if (cmd == "assert_no_crash") {
             Step s; s.kind = StepKind::ASSERT_NO_CRASH; s.line_no = line_no;
             steps.push_back(s);
+        } else if (cmd == "init_only") {
+            init_only = true;
         } else {
             fprintf(stderr, "[scenario] line %d: unknown command '%s'\n", line_no, cmd.c_str());
             fclose(f);
@@ -176,11 +183,16 @@ int run_scenario(const char *path,
     // what actually invokes the app's own main_process for the first time.
     // Without this second tick, the first screenshot captures the default
     // LVGL screen (black) rather than the app's real first frame.
+    //
+    // init_only mode skips the UNKNOWN frame so apps whose main_process is
+    // an internal while(1) loop (LHLXW & friends) don't hang the harness.
     {
         ImuAction a; a.active = GO_FORWORD; a.isValid = true;
         controller->main_process(&a);
-        ImuAction b; b.active = UNKNOWN; b.isValid = false;
-        controller->main_process(&b);
+        if (!init_only) {
+            ImuAction b; b.active = UNKNOWN; b.isValid = false;
+            controller->main_process(&b);
+        }
     }
     tick_for(50);
 

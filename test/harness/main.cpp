@@ -36,7 +36,7 @@
 // #include "app/file_manager/file_manager.h"  // deferred — see platformio.ini
 #include "app/server/server.h"
 #include "app/idea_anim/idea.h"
-// #include "app/LHLXW/LHLXW.h"  // deferred — segfaults at init
+#include "app/LHLXW/LHLXW.h"
 #include "app/screen_share/screen_share.h"
 #include "app/pc_resource/pc_resource.h"
 #include "app/picture/picture.h"
@@ -182,7 +182,7 @@ static const ScenarioApp kRegisteredApps[] = {
     // { "file_manager",&file_manager_app },  // deferred
     { "server",      &server_app },
     { "idea",        &idea_app },
-    // { "LHLXW",       &LHLXW_app },  // deferred
+    { "LHLXW",       &LHLXW_app },  // init_only smoke — see scenario file
     { "screen_share",&screen_share_app },
     { "pc_resource", &pc_resource_app },
     { "picture",     &picture_app },
