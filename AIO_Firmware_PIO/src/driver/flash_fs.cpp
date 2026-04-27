@@ -350,18 +350,6 @@ void FlashFS::testFileIO(const char *path)
     }
 }
 
-bool analyseParam(char *info, int argc, char **argv)
-{
-    int cnt; // 记录解析到第几个参数
-    for (cnt = 0; cnt < argc; ++cnt)
-    {
-        argv[cnt] = info;
-        while (*info != '\n')
-        {
-            ++info;
-        }
-        *info = 0;
-        ++info;
-    }
-    return true;
-}
+// analyseParam moved to src/driver/analyse_param.cpp so the host-side
+// Unity unit test (env:native_unit) can compile just that translation
+// unit without dragging the SPIFFS-using FlashFS methods above.
