@@ -171,11 +171,18 @@ int run_scenario(const char *path,
     }
     controller->app_install(target, APP_TYPE_REAL_TIME);
 
-    // Boot into the app via a synthetic GO_FORWORD before running steps.
+    // Boot into the app the way the real firmware does: a GO_FORWORD frame
+    // enters the app and runs app_init, then a follow-up UNKNOWN frame is
+    // what actually invokes the app's own main_process for the first time.
+    // Without this second tick, the first screenshot captures the default
+    // LVGL screen (black) rather than the app's real first frame.
     {
         ImuAction a; a.active = GO_FORWORD; a.isValid = true;
         controller->main_process(&a);
+        ImuAction b; b.active = UNKNOWN; b.isValid = false;
+        controller->main_process(&b);
     }
+    tick_for(50);
 
     std::string scenario_dir, scenario_stem;
     derive_scenario_paths(path, &scenario_dir, &scenario_stem);
