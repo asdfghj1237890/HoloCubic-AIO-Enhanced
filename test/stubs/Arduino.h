@@ -112,6 +112,11 @@ public:
         auto p = s.find_last_of(c);
         return p == std::string::npos ? -1 : (int)p;
     }
+    // Iterator surface so `for (char ch : str)` compiles. Used by weather.
+    std::string::iterator begin() { return s.begin(); }
+    std::string::iterator end()   { return s.end(); }
+    std::string::const_iterator begin() const { return s.begin(); }
+    std::string::const_iterator end()   const { return s.end(); }
 };
 
 inline String operator+(const String &a, const String &b) { String r(a); r += b; return r; }
