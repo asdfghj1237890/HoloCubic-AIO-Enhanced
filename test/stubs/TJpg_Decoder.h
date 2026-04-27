@@ -25,6 +25,8 @@ public:
     void setSwapBytes(bool) {}
     JRESULT drawJpg(int32_t, int32_t, const uint8_t *, uint32_t) { return JDR_OK; }
     JRESULT drawJpg(int32_t, int32_t, const String &) { return JDR_OK; }
+    JRESULT drawSdJpg(int32_t, int32_t, const char *) { return JDR_OK; }
+    JRESULT drawSdJpg(int32_t, int32_t, const String &) { return JDR_OK; }
     JRESULT getJpgSize(uint16_t *w, uint16_t *h, const uint8_t *, uint32_t) {
         if (w) *w = 0; if (h) *h = 0; return JDR_OK;
     }

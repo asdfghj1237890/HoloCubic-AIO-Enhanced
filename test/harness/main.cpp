@@ -39,6 +39,7 @@
 // #include "app/LHLXW/LHLXW.h"  // deferred — segfaults at init
 // #include "app/screen_share/screen_share.h"  // deferred — title_label collision
 #include "app/pc_resource/pc_resource.h"
+#include "app/picture/picture.h"
 // #include "app/media_player/media_player.h"  // deferred — see platformio.ini
 
 #include "scenario_runner.h"
@@ -184,6 +185,7 @@ static const ScenarioApp kRegisteredApps[] = {
     // { "LHLXW",       &LHLXW_app },  // deferred
     // { "screen_share",&screen_share_app },  // deferred
     { "pc_resource", &pc_resource_app },
+    { "picture",     &picture_app },
     // { "media",       &media_app },  // deferred
 };
 static const int kRegisteredAppCount =
