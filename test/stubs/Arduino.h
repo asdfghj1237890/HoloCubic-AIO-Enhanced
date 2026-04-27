@@ -85,8 +85,10 @@ public:
     bool operator==(const char *o) const { return s == (o ? o : ""); }
     bool operator!=(const char *o) const { return !(*this == o); }
     char operator[](int i) const { return s[i]; }
-    String &concat(const String &o) { s += o.s; return *this; }
-    String &concat(const char *o) { s += (o ? o : ""); return *this; }
+    // Arduino's concat returns a bool/unsigned char (success flag).
+    // ArduinoJson v6's Writer specialisation casts the return to bool.
+    unsigned char concat(const String &o) { s += o.s; return 1; }
+    unsigned char concat(const char *o) { s += (o ? o : ""); return 1; }
     void trim() {
         size_t a = s.find_first_not_of(" \t\r\n");
         size_t b = s.find_last_not_of(" \t\r\n");
@@ -110,6 +112,11 @@ public:
         auto p = s.find_last_of(c);
         return p == std::string::npos ? -1 : (int)p;
     }
+    // Iterator surface so `for (char ch : str)` compiles. Used by weather.
+    std::string::iterator begin() { return s.begin(); }
+    std::string::iterator end()   { return s.end(); }
+    std::string::const_iterator begin() const { return s.begin(); }
+    std::string::const_iterator end()   const { return s.end(); }
 };
 
 inline String operator+(const String &a, const String &b) { String r(a); r += b; return r; }
@@ -120,6 +127,17 @@ inline String operator+(const String &a, unsigned int v) { String r(a); r += Str
 inline String operator+(const String &a, long v) { String r(a); r += String(v); return r; }
 inline String operator+(const String &a, unsigned long v) { String r(a); r += String(v); return r; }
 inline String operator+(const String &a, char c) { String r(a); r += c; return r; }
+
+// Arduino's StringSumHelper: concrete subclass of String returned by
+// operator+ overloads on the device. ArduinoJson v6's
+// ArduinoStringAdapter has a specialisation for it via is_base_of, so
+// it must be visible at global scope — even if we never instantiate it.
+class StringSumHelper : public String {
+public:
+    StringSumHelper(const String &s) : String(s) {}
+    StringSumHelper(const char *s) : String(s) {}
+    StringSumHelper(char c) : String(std::string(1, c)) {}
+};
 
 class HardwareSerial {
 public:
@@ -194,6 +212,12 @@ static inline long map(long x, long in_min, long in_max, long out_min, long out_
     if (in_max == in_min) return out_min;
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
+
+// Arduino-style min/max as inline templates (NOT macros — those collide
+// with std::vector internals). stockmarket calls bare `min(a, b)` /
+// `max(a, b)`. Argument-dependent lookup in global namespace finds these.
+template <typename T> static inline T min(T a, T b) { return a < b ? a : b; }
+template <typename T> static inline T max(T a, T b) { return a > b ? a : b; }
 
 // Arduino-style RNG mapped onto stdlib for deterministic CI output:
 // every harness run starts from the same state because analogRead(25)
