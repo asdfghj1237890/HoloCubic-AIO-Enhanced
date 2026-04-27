@@ -195,16 +195,6 @@ static inline long map(long x, long in_min, long in_max, long out_min, long out_
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-// Arduino-style min/max macros. Note: these can clash with std::min/std::max
-// when included before <algorithm>, but firmware code uses them as global
-// names, and STL is not used unconditionally.
-#ifndef min
-#define min(a, b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef max
-#define max(a, b) ((a) > (b) ? (a) : (b))
-#endif
-
 // Arduino-style RNG mapped onto stdlib for deterministic CI output:
 // every harness run starts from the same state because analogRead(25)
 // is stubbed to 0, so randomSeed(0) feeds srand(0).
