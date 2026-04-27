@@ -21,6 +21,7 @@ public:
     void startWrite() {}
     void endWrite() {}
     void pushColors(const void *, uint32_t, bool = true) {}
+    void pushPixels(const void *, uint32_t) {}
     void pushImage(int32_t, int32_t, uint32_t, uint32_t, const uint16_t *) {}
     void pushImage(int32_t, int32_t, uint32_t, uint32_t, const uint16_t *, bool) {}
     void pushImage(int32_t, int32_t, uint32_t, uint32_t, const uint8_t *) {}

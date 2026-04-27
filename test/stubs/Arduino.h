@@ -25,6 +25,8 @@ typedef bool boolean;
 #define PROGMEM
 #define PGM_P const char *
 #define pgm_read_byte(addr) (*(const uint8_t *)(addr))
+#define pgm_read_word(addr) (*(const uint16_t *)(addr))
+#define pgm_read_dword(addr) (*(const uint32_t *)(addr))
 
 template <typename T>
 static inline T constrain(T x, T low, T high) {
