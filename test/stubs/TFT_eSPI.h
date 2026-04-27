@@ -23,6 +23,7 @@ public:
     void pushColors(const void *, uint32_t, bool = true) {}
     void pushImage(int32_t, int32_t, uint32_t, uint32_t, const uint16_t *) {}
     void pushImage(int32_t, int32_t, uint32_t, uint32_t, const uint16_t *, bool) {}
+    void pushImage(int32_t, int32_t, uint32_t, uint32_t, const uint8_t *) {}
     void writePixels(const void *, uint32_t) {}
     void setTextColor(uint16_t) {}
     void setTextColor(uint16_t, uint16_t) {}
@@ -31,6 +32,7 @@ public:
     void setCursor(int16_t, int16_t, uint8_t) {}
     void setTextFont(uint8_t) {}
     void drawChar(int32_t, int32_t, uint16_t, uint16_t, uint16_t, uint8_t) {}
+    void drawChar(char, int32_t, int32_t, uint8_t) {}
     void drawChar(uint16_t) {}
     void drawString(const char *, int32_t, int32_t) {}
     void drawString(const char *, int32_t, int32_t, uint8_t) {}
