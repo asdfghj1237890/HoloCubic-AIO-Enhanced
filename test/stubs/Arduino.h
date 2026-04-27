@@ -123,8 +123,11 @@ public:
         return r;
     }
     int write(uint8_t) { return 1; }
+    size_t write(const uint8_t *, size_t n) { return n; }
+    size_t write(const char *s, size_t n) { return n; }
     int available() { return 0; }
     int read() { return -1; }
+    int read(uint8_t *, size_t) { return 0; }
 };
 
 extern HardwareSerial Serial;
@@ -153,6 +156,12 @@ static inline int analogRead(int) { return 0; }
 #define INPUT 0
 #define OUTPUT 1
 #define INPUT_PULLUP 2
+
+// Arduino analog pin aliases (game_snake uses A0).
+#define A0 0
+#define A1 1
+#define A2 2
+#define A3 3
 
 // Arduino-style RNG mapped onto stdlib for deterministic CI output:
 // every harness run starts from the same state because analogRead(25)

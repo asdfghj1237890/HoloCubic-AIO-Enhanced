@@ -1,0 +1,19 @@
+# Smoke test for settings (system config UI).
+# The version page uses an auto-scrolling LVGL label whose marquee
+# offset depends on wall-clock tick timing — even the first frame
+# at +200 ms lands at a different scroll position across CI runs.
+# Visual screenshots aren't worth the noise here; the scenario just
+# exercises the boot / GO_FORWORD / RETURN paths and asserts no crash.
+
+app settings
+
+wait_ms 200
+assert_no_crash
+
+action GO_FORWORD
+wait_ms 700
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

@@ -26,6 +26,8 @@
 #include "app/tomato/tomato.h"
 #include "app/game_2048/game_2048.h"
 #include "app/heartbeat/heartbeat.h"
+#include "app/settings/settings.h"
+#include "app/game_snake/game_snake.h"
 
 #include "scenario_runner.h"
 
@@ -126,6 +128,8 @@ static const ScenarioApp kRegisteredApps[] = {
     { "tomato",      &tomato_app },
     { "2048",        &game_2048_app },
     { "heartbeat",   &heartbeat_app },
+    { "settings",    &settings_app },
+    { "snake",       &game_snake_app },
 };
 static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);

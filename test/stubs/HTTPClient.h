@@ -9,10 +9,10 @@
 
 class HTTPClient {
 public:
-    void begin(const String &) {}
-    void begin(const char *) {}
-    void begin(WiFiClient &, const String &) {}
-    void begin(WiFiClient &, const char *) {}
+    bool begin(const String &) { return true; }
+    bool begin(const char *) { return true; }
+    bool begin(WiFiClient &, const String &) { return true; }
+    bool begin(WiFiClient &, const char *) { return true; }
     int GET() { return -1; }
     int POST(const String &) { return -1; }
     int POST(const uint8_t *, size_t) { return -1; }
