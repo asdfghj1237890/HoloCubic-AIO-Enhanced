@@ -1,12 +1,15 @@
 #include "file_manager_gui.h"
 #include "lvgl.h"
 
-lv_obj_t *file_manager_scr = NULL;
+// File-scope statics (not external linkage). Without `static`, the
+// `title_label` global collided with the same-named extern symbol in
+// settings_gui.c at link time. None of these are used outside this TU.
+static lv_obj_t *file_manager_scr = NULL;
 
-lv_obj_t *title_label;
-lv_obj_t *ap_ip_label;
-lv_obj_t *port_label;
-lv_obj_t *info_label;
+static lv_obj_t *title_label;
+static lv_obj_t *ap_ip_label;
+static lv_obj_t *port_label;
+static lv_obj_t *info_label;
 
 static lv_style_t default_style;
 static lv_style_t label_style5;
