@@ -163,6 +163,12 @@ static inline int analogRead(int) { return 0; }
 #define A2 2
 #define A3 3
 
+// Arduino's `map` value-range converter. Used by LHLXW's animations.
+static inline long map(long x, long in_min, long in_max, long out_min, long out_max) {
+    if (in_max == in_min) return out_min;
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 // Arduino-style RNG mapped onto stdlib for deterministic CI output:
 // every harness run starts from the same state because analogRead(25)
 // is stubbed to 0, so randomSeed(0) feeds srand(0).
