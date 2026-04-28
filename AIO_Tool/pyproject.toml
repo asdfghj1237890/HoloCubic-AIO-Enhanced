@@ -23,10 +23,18 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [
+    "esptool_v41",  # vendored upstream — we depend on PyPI esptool now
+    "build",
+    "dist",
+    ".venv",
+    "OutFile",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C4", "ANN", "N"]
-ignore = ["ANN101", "ANN102", "ANN401"]
+# ANN401 = explicit Any allowed (used in **kwargs forwarding)
+ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ANN"]
