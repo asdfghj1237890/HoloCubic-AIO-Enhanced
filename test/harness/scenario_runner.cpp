@@ -236,8 +236,11 @@ int run_scenario(const char *path,
     // Apply flash_seed directives so app_init's read_config sees the
     // intended state instead of writing fresh defaults.
     for (auto const &seed : flash_seeds) {
+        fprintf(stderr, "[scenario] flash_seed %s (%zu bytes)\n",
+                seed.first.c_str(), seed.second.size());
         g_flashCfg.writeFile(seed.first.c_str(), seed.second.c_str());
     }
+    fflush(stderr);
 
     controller->app_install(target, APP_TYPE_REAL_TIME);
 
