@@ -112,23 +112,27 @@ class Engine(object):
 
         self.m_tab_manager.pack(expand=True, fill=tk.BOTH)
     
-    def OnThreadMessage(self, fromwho, towho, action, param = None):
+    def OnThreadMessage(self, fromwho: str, towho: str, action: str, param: object = None) -> None:
         """
-        引擎的调度函数 控件利用此函数可间接操作或者获取其他控件的对应资源
-        :param fromwho:表示调用者
-        :param towho:表示请求操作的控件
-        :param action:表示请求操作的操作类型
-        :param param:操作请求所携带的参数(根据具体请求来指定参数类型)
+        引擎調度函數，各模組透過此函數間接操作或取得其他模組的資源。
+        :param fromwho: 發送方識別字串
+        :param towho:   接收方識別字串
+        :param action:  操作類型
+        :param param:   操作參數
         """
         print(fromwho, towho, action, param)
-        #info = fromwho+" "+towho+" "+action+" "+param
-        #self.OnThreadMessage(mh.M_ENGINE, mh.M_SYSINFO, mh.A_INFO_PRINT, info+"\n")
 
-        if towho == mh.M_DOWNLOAD_DEBUG: # 下载模块操作请求
-            self.m_debug_tab_windows.api(action, param)    # 处理消息
+        if towho == mh.M_DOWNLOAD_DEBUG:
+            self.m_debug_tab_windows.api(action, param)
 
-        elif towho == mh.M_SETTING: # 设置模块操作请求
-            self.m_modelManager.api(action, param)
+        elif towho == mh.M_SETTING:
+            self.m_setting_tab_windows.api(action, param)
+
+        elif towho == mh.M_ENGINE and action == mh.A_UPDATALANG:
+            for page in [self.m_debug_tab_windows, self.m_setting_tab_windows,
+                         self.m_tool_settings_tab_windows]:
+                if hasattr(page, "api"):
+                    page.api(mh.A_UPDATALANG)
 
     def on_closing(self):
         """
@@ -154,19 +158,6 @@ class Engine(object):
         if self.m_tool_settings_tab_windows != None:
             del self.m_tool_settings_tab_windows
             self.m_tool_settings_tab_windows = None
-
-    def OnThreadMessage(self, fromwho, towho, action, param=None):
-        """
-        引擎的调度函数 控件利用此函数可间接操作或者获取其他控件的对应资源（用函数模拟网络通信模型）
-        :param fromwho:表示调用者
-        :param towho:表示请求操作的控件
-        :param action:表示请求操作的操作类型
-        :param param:操作请求所携带的参数(根据具体请求来指定参数类型)
-        """
-        print(fromwho, towho, action, param)
-
-        if towho == mh.M_ENGINE and action == mh.A_UPDATALANG:  # 更新请求
-            self.m_modelManager.api(mh.A_UPDATALANG)  # 按钮语言更新
 
     def __del__(self):
         """
