@@ -219,13 +219,16 @@ int run_scenario(const char *path,
     // default-init code paths unless it explicitly seeds otherwise.
     // Without this, a previous scenario's writeFile (e.g. a default
     // config write on first boot) would leak into the next.
+    // Path matches FLASH_FIXTURE_DIR in test/stubs/stubs_runtime.cpp.
     {
-        DIR *dh = opendir("test/fixtures/flash");
+        const char *flash_dir = "../test/fixtures/flash";
+        DIR *dh = opendir(flash_dir);
         if (dh) {
             struct dirent *ent;
             while ((ent = readdir(dh)) != nullptr) {
                 if (ent->d_name[0] == '.') continue;
-                std::string p = "test/fixtures/flash/";
+                std::string p(flash_dir);
+                p += "/";
                 p += ent->d_name;
                 unlink(p.c_str());
             }
@@ -236,11 +239,8 @@ int run_scenario(const char *path,
     // Apply flash_seed directives so app_init's read_config sees the
     // intended state instead of writing fresh defaults.
     for (auto const &seed : flash_seeds) {
-        fprintf(stderr, "[scenario] flash_seed %s (%zu bytes)\n",
-                seed.first.c_str(), seed.second.size());
         g_flashCfg.writeFile(seed.first.c_str(), seed.second.c_str());
     }
-    fflush(stderr);
 
     controller->app_install(target, APP_TYPE_REAL_TIME);
 

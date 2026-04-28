@@ -93,7 +93,17 @@ void Display::routine() { lv_timer_handler(); }
 void Display::setBackLight(float) {}
 
 // ---------- Simple persistence: route FlashFS to test/fixtures/flash/ ----------
-static const char *FLASH_FIXTURE_DIR = "test/fixtures/flash";
+//
+// Path resolves to the committed test/fixtures/flash/ at the repo root.
+// (The native_test binary runs from lv_simulater_platformio/, so "../test/..."
+// climbs out of there.) Earlier this said "test/fixtures/flash" (relative
+// to lv_simulater_platformio/), where the parent dir doesn't exist — so
+// mkdir + fopen both failed silently and EVERY writeFile/readFile call
+// was a no-op. That hid itself because the ESP32 read_config code path
+// gracefully falls back to defaults on read failure; until we needed the
+// seeded-config trick for the CN-stockmarket scenario, no regression
+// noticed.
+static const char *FLASH_FIXTURE_DIR = "../test/fixtures/flash";
 
 static String flash_path(const char *path) {
     String p(FLASH_FIXTURE_DIR);
