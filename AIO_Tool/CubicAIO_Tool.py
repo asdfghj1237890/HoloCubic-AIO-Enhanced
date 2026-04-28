@@ -70,41 +70,41 @@ class Engine(object):
         self.m_tab_manager = ttk.Notebook(self.root)
 
         # Download Debug page
-        self.m_debug_tab = tk.Frame(self.m_tab_manager, bg="white")
+        self.m_debug_tab = ctk.CTkFrame(self.m_tab_manager, fg_color="transparent")
         self.m_tab_manager.add(self.m_debug_tab, text=self.i18n.t("tab_download_debug"))
         self.m_debug_tab_windows = DownloadDebug(self.m_debug_tab, self)
 
         # Device Settings page
-        self.m_setting_tab = tk.Frame(self.m_tab_manager, bg="white")
+        self.m_setting_tab = ctk.CTkFrame(self.m_tab_manager, fg_color="transparent")
         self.m_tab_manager.add(self.m_setting_tab, text=self.i18n.t("tab_setting"))
         self.m_setting_tab_windows = Setting(self.m_setting_tab, self)
 
         # File Manager page
-        self.m_file_tab = tk.Frame(self.m_tab_manager, bg="white")
+        self.m_file_tab = ctk.CTkFrame(self.m_tab_manager, fg_color="transparent")
         self.m_tab_manager.add(self.m_file_tab, text=self.i18n.t("tab_file_manager"))
         self.m_file_tab_windows = FileManager(self.m_file_tab, self)
 
         # Image Converter page
-        self.m_image_tab = tk.Frame(self.m_tab_manager, bg="white")
+        self.m_image_tab = ctk.CTkFrame(self.m_tab_manager, fg_color="transparent")
         self.m_tab_manager.add(self.m_image_tab, text=self.i18n.t("tab_image_converter"))
         self.m_image_tab_windows = ImagesConverter(self.m_image_tab, self)
 
         # Video Converter page
-        self.m_video_tab = tk.Frame(self.m_tab_manager, bg="white")
+        self.m_video_tab = ctk.CTkFrame(self.m_tab_manager, fg_color="transparent")
         self.m_tab_manager.add(self.m_video_tab, text=self.i18n.t("tab_video_converter"))
         self.m_video_tab_windows = VideoTool(self.m_video_tab, self)
 
         # Screen Share page
-        self.m_srceen_tab = tk.Frame(self.m_tab_manager, bg="white")
+        self.m_srceen_tab = ctk.CTkFrame(self.m_tab_manager, fg_color="transparent")
         self.m_tab_manager.add(self.m_srceen_tab, text=self.i18n.t("tab_screen_share"))
 
         # Help page
-        self.m_help_tab = tk.Frame(self.m_tab_manager, bg="white")
+        self.m_help_tab = ctk.CTkFrame(self.m_tab_manager, fg_color="transparent")
         self.m_tab_manager.add(self.m_help_tab, text=self.i18n.t("tab_help"))
         self.m_help_tab_windows = Helper(self.m_help_tab, self)
 
         # Tool Settings page (new)
-        self.m_tool_settings_tab = tk.Frame(self.m_tab_manager, bg="white")
+        self.m_tool_settings_tab = ctk.CTkFrame(self.m_tab_manager, fg_color="transparent")
         self.m_tab_manager.add(self.m_tool_settings_tab, text=self.i18n.t("tab_tool_settings"))
         self.m_tool_settings_tab_windows = ToolSettings(self.m_tool_settings_tab, self)
 
