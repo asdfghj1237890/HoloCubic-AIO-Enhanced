@@ -10,6 +10,9 @@
 
 from util.widget_base import EntryWithPlaceholder
 from util.i18n import get_i18n
+from util.logger import get_logger
+
+logger = get_logger(__name__)
 
 import os
 import time
@@ -130,7 +133,7 @@ class DownloadDebug(object):
             if version_info:
                 version_text = version_info[0].split(" ")[1]
         except Exception as err:
-            print(err)
+            logger.error("fetch firmware version failed: %s", err)
 
         if threading.current_thread() is threading.main_thread():
             update_ui(version_text)
@@ -349,7 +352,7 @@ class DownloadDebug(object):
                 if self.download_thread.is_alive():
                     common._async_raise(self.download_thread)
             except Exception as err:
-                print(err)
+                logger.error("kill download thread failed: %s", err)
             finally:
                 self.download_thread = None
 
@@ -400,7 +403,7 @@ class DownloadDebug(object):
                 # 波特率中10或11个10个比特能传输一个字节，这里同意取10
                 all_time = all_time + os.path.getsize(value) * 10 / speed
             except Exception as err:
-                print(err)
+                logger.error("estimate flash time failed for %s: %s", value, err)
 
         self._progress_stop_event.clear()
         self.progress_bar_thread = threading.Thread(target=self.schedule_display,
@@ -424,10 +427,10 @@ class DownloadDebug(object):
             esptool.main(cmd)
             flash_success = True
         except serial.SerialException as err:
-            print(err)
+            logger.error("flash serial error: %s", err)
             self.print_log(err)
         except Exception as err:
-            print(err)
+            logger.error("flash failed: %s", err)
             self.print_log(err)
         finally:
             self.m_download_botton["text"] = self.i18n.t("flash_firmware")

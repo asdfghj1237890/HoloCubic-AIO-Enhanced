@@ -15,6 +15,9 @@ import ctypes
 import inspect
 
 from util.common import _async_raise
+from util.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class RobotSocket(object):
@@ -30,7 +33,7 @@ class RobotSocket(object):
             self.connfd.close()  # 关闭连接
             self.connfd = None
         except Exception as err:
-            print(err)
+            logger.error("close failed: %s", err)
 
     @property
     def callback_func(self):
@@ -76,7 +79,7 @@ class RobotSocketServer(RobotSocket):
         def scanner():
             while True:
                 connfd, addr = self.__sersocket.accept()  # 接受TCP连接，并返回新的套接字与IP地址
-                print('Connected by', addr)  # 输出客户端的IP地址
+                logger.info("Connected by %s", addr)  # 输出客户端的IP地址
                 run_thread = threading.Thread(target=self.recvfrom_client, args=(connfd, addr))
                 run_thread.start()
                 self.__client_link_dict[addr] = {"fd": connfd, 'pthread': run_thread}
@@ -99,8 +102,7 @@ class RobotSocketServer(RobotSocket):
                 if self.callback_func != None:
                     self.callback_func(recv, addr)
         except Exception as err:
-            print("This thread was killed, Client disconnected\t->\t", end='')
-            print(err)
+            logger.info("Client disconnected, recv thread exiting: %s", err)
 
     def send_to_client(self, dat, addr):
         """
@@ -113,9 +115,9 @@ class RobotSocketServer(RobotSocket):
             if addr in self.__client_link_dict.keys():
                 self.__client_link_dict["fd"].sendall(dat)
             else:
-                print("Address is no found or disconnect.")
+                logger.warning("Address not found or disconnected: %s", addr)
         except Exception as err:
-            print(err)
+            logger.error("send_to_client failed: %s", err)
 
     def __del__(self):
         try:
@@ -125,7 +127,7 @@ class RobotSocketServer(RobotSocket):
                 _async_raise(conninfo['pthread'])
                 del conninfo
         except Exception as err:
-            print(err)
+            logger.error("server cleanup failed: %s", err)
 
 
 class RobotSocketClient(RobotSocket):
@@ -155,14 +157,14 @@ class RobotSocketClient(RobotSocket):
                 try:
                     addr = (self._ip, self._port)
                     if False == self.__connFlag:
-                        print("Try to reconnect......")
+                        logger.info("Try to reconnect......")
                         del self.__clientsocket
                         self.__clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # 定义socket类型，网络通信，TCP
                         self.__clientsocket.connect(addr)
-                        print('Connected by', addr)  # 输出客户端的IP地址
+                        logger.info("Connected by %s", addr)  # 输出客户端的IP地址
                         self.__connFlag = True
                 except Exception as err:
-                    print(err)
+                    logger.error("reconnect failed: %s", err)
                     time.sleep(self.__disconntime)
 
         self.reconner_thread = threading.Thread(target=reconner, args=())
@@ -190,11 +192,11 @@ class RobotSocketClient(RobotSocket):
                 except Exception as err:
                     self.__clientsocket.close()
                     self.__connFlag = False
-                    print(err)  # 发生异常所在的文件
+                    logger.error("recv from server failed: %s", err)  # 发生异常所在的文件
                     time.sleep(self.__disconntime * 0.2)
 
         except Exception as err:
-            print(err)
+            logger.error("recvfrom_ser outer failure: %s", err)
 
     def send_to_ser(self, dat):
         """
@@ -205,7 +207,7 @@ class RobotSocketClient(RobotSocket):
         try:
             self.__clientsocket.sendall(dat)
         except Exception as err:
-            print(err)
+            logger.error("send_to_ser failed: %s", err)
 
     def __del__(self):
         try:
@@ -213,7 +215,7 @@ class RobotSocketClient(RobotSocket):
             del self.__clientsocket
             self.__clientsocket = None
         except Exception as err:
-            print(err)
+            logger.error("client cleanup failed: %s", err)
 
         self.__connFlag = False
         _async_raise(self.reconner_thread)
@@ -227,7 +229,7 @@ if __name__ == "__main__":
     def myRecvHandle(dat, addr):  # 接收函数
         sersocket.send_to_client(dat, addr)
         dat = ("Server recv %s from %s\n" % (dat, addr)).encode(encoding="utf-8")
-        print(dat)
+        logger.info("server demo received: %s", dat)
 
 
     # 初始化端口并设置接收数据的函数(当接收到数据，自动被调用)
@@ -242,7 +244,7 @@ if __name__ == "__main__":
     # 客户端范例
     def myRecvHandle(dat):  # 接收函数
         dat = ("Client recv %s\n" % dat).encode(encoding="utf-8")
-        print(dat)
+        logger.info("client demo received: %s", dat)
 
     # 初始化端口并设置接收数据的函数(当接收到数据，自动被调用)
     clientsocket = RobotSocketClient("192.168.123.244", 6666, myRecvHandle)

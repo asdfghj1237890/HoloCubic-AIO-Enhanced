@@ -9,6 +9,7 @@
 ################################################################################
 
 from util.massagehead import AT, MsgHead
+from util.logger import get_logger
 import binascii
 import ctypes
 import inspect
@@ -16,6 +17,8 @@ import traceback
 import re
 import sys
 import os
+
+logger = get_logger(__name__)
 
 # Get the base path for resources (works for both frozen exe and script)
 def get_resource_path(relative_path):
@@ -49,7 +52,7 @@ def getSendInfo(info):
     :return : str
     """
     info = binascii.hexlify(info)
-    print(info)
+    logger.debug("send info: %s", info)
     re_obj = re.compile('.{1,2}')  # 匹配任意字符1-2次
     t = ' '.join(re_obj.findall(str(info).upper()))
     return t

@@ -22,6 +22,7 @@ from page.images_converter import ImagesConverter
 from page.filemanager import FileManager
 from page.tool_settings import ToolSettings
 from util.i18n import get_i18n
+from util.logger import setup_logging, get_logger
 
 import os
 import sys
@@ -31,6 +32,9 @@ from tkinter import ttk
 from tkinter import messagebox
 import requests
 import re
+
+logger = get_logger(__name__)
+
 
 class Engine(object):
     """
@@ -113,7 +117,7 @@ class Engine(object):
         :param action:  操作類型
         :param param:   操作參數
         """
-        print(fromwho, towho, action, param)
+        logger.debug("OnThreadMessage from=%s to=%s action=%s param=%s", fromwho, towho, action, param)
 
         if towho == mh.M_DOWNLOAD_DEBUG:
             self.m_debug_tab_windows.api(action, param)
@@ -178,12 +182,15 @@ def get_version():
         else:
             return "[推荐升级最新版本 " + new_version + "]"
     except Exception as err:
-        print(err)
+        logger.error("get_version failed: %s", err)
         return "[无法获取到最新版本]"
 
 
 if __name__ == '__main__':
     import threading
+
+    setup_logging()
+    logger = get_logger(__name__)
 
     tool_windows = tk.Tk()
     tool_windows.title("HoloCubic_AIO Tools\t  " + TOOL_VERSION)

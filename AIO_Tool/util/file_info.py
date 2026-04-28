@@ -9,8 +9,11 @@
 ################################################################################
 
 from util.massagehead import MT, AT, MsgHead, MsgHead_TT
+from util.logger import get_logger
 from ctypes import *
 import struct
+
+logger = get_logger(__name__)
 
 
 class FileSystem(MsgHead):
@@ -31,8 +34,7 @@ class DirCreate(FileSystem):
         FileSystem.__init__(self, AT.AT_DIR_CREATE)  # 一定要初始化父类
         self.dir_path = bytes(dir_path, encoding='utf8')
         self.fmt = self.fmt + "99s"
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def __dir__(self):
         super_param = super().__dir__()
@@ -45,8 +47,7 @@ class DirRemove(FileSystem):
         FileSystem.__init__(self, AT.AT_DIR_REMOVE)  # 一定要初始化父类
         self.dir_path = bytes(dir_path, encoding='utf8')
         self.fmt = self.fmt + "99s"
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def __dir__(self):
         super_param = super().__dir__()
@@ -60,8 +61,7 @@ class DirRename(FileSystem):
         self.dir_cur_name = bytes(dir_cur_name, encoding='utf8')
         self.dir_new_name = bytes(dir_new_name, encoding='utf8')
         self.fmt = self.fmt + "99s99s"
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def __dir__(self):
         super_param = super().__dir__()
@@ -75,8 +75,7 @@ class DirList(FileSystem):
         self.dir_path = bytes(dir_path, encoding='utf8')
         self.dir_info = bytes(dir_info, encoding='utf8')
         self.fmt = self.fmt + "99s%ds" % len(self.dir_info)
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def decode(self, network_data, byteOrder='!'):
         """
@@ -98,8 +97,7 @@ class FileCreate(FileSystem):
         self.file_name = bytes(file_name, encoding='utf8')
         self.file_size = file_size
         self.fmt = self.fmt + "99s1H"
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def __dir__(self):
         super_param = super().__dir__()
@@ -112,8 +110,7 @@ class FileWrite(FileSystem):
         FileSystem.__init__(self, AT.AT_FILE_WRITE)  # 一定要初始化父类
         self.data = bytes(data, encoding='utf8')
         self.fmt = self.fmt + "%ds" % len(self.data)
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def decode(self, network_data, byteOrder='!'):
         """
@@ -134,8 +131,7 @@ class FileRead(FileSystem):
         FileSystem.__init__(self, AT.AT_FILE_READ)  # 一定要初始化父类
         self.data = bytes(data, encoding='utf8')
         self.fmt = self.fmt + "%ds" % len(self.data)
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def decode(self, network_data, byteOrder='!'):
         """
@@ -156,8 +152,7 @@ class FileRemove(FileSystem):
         FileSystem.__init__(self, AT.AT_FILE_REMOVE)  # 一定要初始化父类
         self.file_name = bytes(file_name, encoding='utf8')
         self.fmt = self.fmt + "99s"
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def __dir__(self):
         super_param = super().__dir__()
@@ -171,8 +166,7 @@ class FileRename(FileSystem):
         self.dir_cur_name = bytes(file_name, encoding='utf8')
         self.dir_new_name = bytes(file_name, encoding='utf8')
         self.fmt = self.fmt + "99s99s"
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def __dir__(self):
         super_param = super().__dir__()
@@ -186,8 +180,7 @@ class FileGetInfo(FileSystem):
         self.file_name = bytes(file_name, encoding='utf8')
         self.file_info = bytes(file_info, encoding='utf8')
         self.fmt = self.fmt + "99s%ds" % len(self.file_info)
-        print("self.fmt = ", end="")
-        print(self.fmt)
+        logger.debug("self.fmt = %s", self.fmt)
 
     def decode(self, network_data, byteOrder='!'):
         """

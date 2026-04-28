@@ -9,6 +9,11 @@
 import json
 import os
 
+from util.logger import get_logger
+
+logger = get_logger(__name__)
+
+
 class I18n:
     """
     Internationalization handler
@@ -630,7 +635,7 @@ class I18n:
                     if saved_lang in self.TRANSLATIONS:
                         self._current_language = saved_lang
         except Exception as e:
-            print(f"Failed to load language preference: {e}")
+            logger.error("Failed to load language preference: %s", e)
             self._current_language = self.LANG_ZH_CN
     
     def save_language_preference(self, language):
@@ -648,7 +653,7 @@ class I18n:
             
             return True
         except Exception as e:
-            print(f"Failed to save language preference: {e}")
+            logger.error("Failed to save language preference: %s", e)
             return False
     
     def set_language(self, language):

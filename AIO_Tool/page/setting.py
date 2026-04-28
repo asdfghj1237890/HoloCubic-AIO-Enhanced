@@ -21,6 +21,9 @@ import time
 import struct
 import traceback
 from util.i18n import get_i18n
+from util.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class Setting(object):
@@ -207,11 +210,11 @@ class Setting(object):
         while BOOL:
             if ser.in_waiting:
                 STRGLO = ser.read(ser.in_waiting)
-                print("Receive---> ", STRGLO)
+                logger.debug("Receive---> %s", STRGLO)
                 time.sleep(0.2)
-    
+
     def print_log(self, msg):
-        print(msg)
+        logger.info(msg)
         self.set_param("ssid_1", "12345678")
 
     
@@ -232,20 +235,20 @@ class Setting(object):
                     }
         try:
             info = self.data_info[key]
-            print(info)
+            logger.debug("set_param info: %s", info)
             send_data = mh.SettingMsg()
             send_data.action_type = mh.AT.AT_SETTING_SET
             send_data.prefs_name = bytes(info["namespace"], encoding='utf8')
             send_data.key = bytes(key, encoding='utf8')
             send_data.type = value_type[info["type"]].to_bytes(1, byteorder='little', signed=True)
-            print(send_data.type)
+            logger.debug("set_param type bytes: %s", send_data.type)
             send_data.value = bytes(value, encoding='utf8')
-            print(send_data.encode())
+            logger.debug("set_param encoded: %s", send_data.encode())
             if self.ser != None:
                 self.ser.write(send_data.encode())
         except Exception as err:
-            print(str(traceback.format_exc()))
-            print(err)
+            logger.error("set_param failed:\n%s", traceback.format_exc())
+            logger.error("set_param error: %s", err)
         
 
     # 帧格式为 
@@ -264,24 +267,24 @@ class Setting(object):
                     }
         try:
             info = self.data_info[key]
-            print(info)
+            logger.debug("get_param info: %s", info)
             send_data = mh.SettingMsg()
             send_data.action_type = mh.AT.AT_SETTING_GET
             send_data.prefs_name = bytes(info["namespace"], encoding='utf8')
             send_data.key = bytes(key, encoding='utf8')
             send_data.type = value_type[info["type"]].to_bytes(1, byteorder='little', signed=True)
-            print(send_data.type)
-            print("send_data --> ", send_data.encode('>'))
+            logger.debug("get_param type bytes: %s", send_data.type)
+            logger.debug("send_data --> %s", send_data.encode('>'))
             if self.ser != None:
                 self.ser.write(send_data.encode('>'))
         except Exception as err:
-            print(str(traceback.format_exc()))
-            print(err)
+            logger.error("get_param failed:\n%s", traceback.format_exc())
+            logger.error("get_param error: %s", err)
         
-        # print("get_param--> ")
+        # legacy debug snippet removed (replaced by logger.debug calls above)
         # if self.ser != None and self.ser.in_waiting:
         #     STRGLO = self.ser.read(self.ser.in_waiting)
-        #     print("read---> ", STRGLO)
+        #     # logger.debug("read---> %s", STRGLO)
             
 
     def create_wifi(self, father):

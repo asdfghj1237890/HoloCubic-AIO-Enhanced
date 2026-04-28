@@ -17,8 +17,11 @@ from ctypes import *
 from util.file_info import *
 from util.robotsocket import *
 from util.i18n import get_i18n
+from util.logger import get_logger
 import sys
 import traceback
+
+logger = get_logger(__name__)
 
 
 # 文件数据的结构
@@ -66,21 +69,7 @@ class FileManager(object):
         # 初始化右击操作项(默认不显示)
         self.init_section(father)
 
-        # print("this test")
-        # fs = DirList("/")
-        # recv_data = b'##\x02\x01\x00d\x04/\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        # recv_data = b'##\x01\x02\x01\xfa\x04/\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00System Volume Information/\tmovie/\tweather/\timage/\tB1.JPG\t\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-        # fs.decode(recv_data)
-        # print(fs.header_mark)
-        # print(fs.msg_len)
-
-        # fs = DirList("/", "test_dir")
-        # data = fs.encode()
-        # print(getSendInfo(data))
-
-        # fs = DirList("")
-        # fs.decode(data)
-        # print(fs.dir_info.decode('utf-8'))
+        # legacy debug snippets removed (replaced by logger calls elsewhere)
 
     def init_section(self, father):
         """
@@ -89,19 +78,19 @@ class FileManager(object):
         """
 
         def op_file_download():
-            print("Enter op_file_download")
+            logger.debug("Enter op_file_download")
             pass
 
         def op_file_rename():
-            print("Enter op_rename")
+            logger.debug("Enter op_rename")
             pass
 
         def op_file_delect():
-            print("Enter op_delect")
+            logger.debug("Enter op_delect")
             pass
 
         def op_file_read_param():
-            print("Enter op_read_param")
+            logger.debug("Enter op_read_param")
             pass
 
         # Create file operation menu
@@ -115,19 +104,19 @@ class FileManager(object):
         self.__file_op_menu.add_command(label=self.i18n.t("properties"), command=op_file_read_param)
 
         def op_folder_upload_file():
-            print("Enter op_folder_upload_file")
+            logger.debug("Enter op_folder_upload_file")
             pass
 
         def op_folder_create_subfolder():
-            print("Enter op_folder_create_subfolder")
+            logger.debug("Enter op_folder_create_subfolder")
             pass
 
         def op_folder_rename():
-            print("Enter op_folder_rename")
+            logger.debug("Enter op_folder_rename")
             pass
 
         def op_folder_delect():
-            print("Enter op_folder_delect")
+            logger.debug("Enter op_folder_delect")
             pass
 
         # Create folder operation menu
@@ -170,51 +159,51 @@ class FileManager(object):
         def myRecvHandle(dat):  # 接收函数
             msg_head = MsgHead()
             msg_head.decode(dat)
-            print("Massages Len = ", msg_head.msg_len)
+            logger.debug("Massages Len = %s", msg_head.msg_len)
 
             msg_fs = FileSystem()
             # dat = b'##\x01\x02\x01\xfa\x04/\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00System Volume Information/\tmovie/\tweather/\timage/\tB1.JPG\t\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
             msg_fs.decode(dat)
-            print("Massages action_type = ", msg_fs.action_type)
+            logger.debug("Massages action_type = %s", msg_fs.action_type)
 
             display_data = ("Client recv %s\n" % dat).encode(encoding="utf-8")
-            print("Massages dat = ", display_data)
+            logger.debug("Massages dat = %s", display_data)
 
             # 消息处理
             if msg_fs.action_type == AT.AT_FREE_STATUS:
-                print("AT_FREE_STATUS")
+                logger.debug("AT_FREE_STATUS")
                 self.__is_freestatus = True
                 return None
             elif msg_fs.action_type == AT.AT_DIR_CREATE:
-                print("AT_DIR_CREATE")
+                logger.debug("AT_DIR_CREATE")
             elif msg_fs.action_type == AT.AT_DIR_REMOVE:
-                print("AT_DIR_REMOVE")
+                logger.debug("AT_DIR_REMOVE")
             elif msg_fs.action_type == AT.AT_DIR_RENAME:
-                print("AT_DIR_RENAME")
+                logger.debug("AT_DIR_RENAME")
             elif msg_fs.action_type == AT.AT_DIR_LIST:
-                print("AT_DIR_LIST")
+                logger.debug("AT_DIR_LIST")
                 msg = DirList()
                 msg.decode(dat)
                 dir_path = msg.dir_path.decode('utf-8').strip(b'\x00'.decode())
                 sub_file_list = msg.dir_info.decode('utf-8').split('\t')[:-1]
-                print("dir_path len: ", len(dir_path))
-                print("DirList info: ", dir_path)
-                print("DirList info: ", sub_file_list)
+                logger.debug("dir_path len: %s", len(dir_path))
+                logger.debug("DirList info: %s", dir_path)
+                logger.debug("DirList info: %s", sub_file_list)
                 self.reflush_folder(dir_path, sub_file_list)
             elif msg_fs.action_type == AT.AT_FILE_CREATE:
-                print("AT_FILE_CREATE")
+                logger.debug("AT_FILE_CREATE")
             elif msg_fs.action_type == AT.AT_FILE_WRITE:
-                print("AT_FILE_WRITE")
+                logger.debug("AT_FILE_WRITE")
             elif msg_fs.action_type == AT.AT_FILE_READ:
-                print("AT_FILE_READ")
+                logger.debug("AT_FILE_READ")
                 msg = FileRead()
                 msg.decode(dat)
             elif msg_fs.action_type == AT.AT_FILE_REMOVE:
-                print("AT_FILE_REMOVE")
+                logger.debug("AT_FILE_REMOVE")
             elif msg_fs.action_type == AT.AT_FILE_RENAME:
-                print("AT_FILE_RENAME")
+                logger.debug("AT_FILE_RENAME")
             elif msg_fs.action_type == AT.AT_FILE_GET_INFO:
-                print("AT_FILE_GET_INFO")
+                logger.debug("AT_FILE_GET_INFO")
                 msg = FileGetInfo()
                 msg.decode(dat)
 
@@ -222,14 +211,14 @@ class FileManager(object):
             try:
                 ip_port = self.m_ip_entry.get().strip()
                 ip, port = ip_port.split(":")
-                print(ip, port)
+                logger.debug("connecting to %s:%s", ip, port)
                 # 初始化端口并设置接收数据的函数(当接收到数据，自动被调用)
                 self.__clientsocket = RobotSocketClient(ip, int(port), myRecvHandle)
                 self.__clientsocket.start()  # socket开始工作
 
                 self.conn_botton["text"] = "断开连接"
             except Exception as err:
-                print(err)
+                logger.error("connect_holocubic failed: %s", err)
         else:
             self.conn_botton["text"] = "连接"
             if self.__clientsocket != None:
@@ -250,18 +239,18 @@ class FileManager(object):
             """
             try:
                 for item in self.tree.selection():
-                    print(self.tree.focus())
-                    print(item)
+                    logger.debug("tree focus: %s", self.tree.focus())
+                    logger.debug("tree item: %s", item)
                     if self.__tree_map_file[item]["type"] == "file":
                         # 右击的是文件
                         self.__file_op_menu.post(event.x_root, event.y_root)
                     elif self.__tree_map_file[item]["type"] == "folder":
                         # 右击的是文件夹
                         self.__folder_op_menu.post(event.x_root, event.y_root)
-                    print(self.__tree_map_file[item]["path"])
+                    logger.debug("tree item path: %s", self.__tree_map_file[item]["path"])
             except Exception as err:
-                print(str(traceback.format_exc()))
-                print(err)
+                logger.error("display_op_menu failed:\n%s", traceback.format_exc())
+                logger.error("display_op_menu error: %s", err)
 
         border_padx = 10  # 两个控件的间距
 
@@ -309,7 +298,7 @@ class FileManager(object):
         :return: None
         """
         if fileObj["sub_file"] == None:
-            print("文件元素不需要显示")
+            logger.debug("文件元素不需要显示")
             return None  # 文件元素不需要显示
 
         # 删除之前创建的节点
@@ -354,10 +343,10 @@ class FileManager(object):
                 # 将子节点添加到父节点中
                 self.__path_map_file[updata_path]["sub_file"].append(sub_tmp)
 
-            print(self.__path_map_file[updata_path])
+            logger.debug("reflush_folder result: %s", self.__path_map_file[updata_path])
         except Exception as err:
-            print(str(traceback.format_exc()))
-            print(err)
+            logger.error("reflush_folder failed:\n%s", traceback.format_exc())
+            logger.error("reflush_folder error: %s", err)
 
         # 刷新显示
         self.display_path_tree(self.__path_map_file[updata_path]["tree"], self.__path_map_file[updata_path]);
@@ -368,15 +357,14 @@ class FileManager(object):
         """
         for item in self.tree.selection():
             # 得到当前选中的节点
-            print("open---> ", self.tree.item(item, "open"))
+            logger.debug("open---> %s", self.tree.item(item, "open"))
             if self.__tree_map_file[item]["type"] == "file":
                 return None
             if self.__clientsocket != None:
                 path = self.__tree_map_file[item]["path"]
                 path = path if path == "/" else path.rstrip("/")
                 send_data = DirList(path).encode()
-                print("Send ---> ", len(send_data), end="  ")
-                print(send_data)
+                logger.debug("Send ---> len=%d data=%s", len(send_data), send_data)
                 # 发送查询数据
                 self.__clientsocket.send_to_ser(send_data)
 
@@ -412,7 +400,7 @@ class FileManager(object):
         点击模型"创建"菜单项触发的函数
         :return: None
         """
-        print("click_model_create")
+        logger.debug("click_model_create")
         # self.__engine.OnThreadMessage(mh.M_CTRLMENU, mh.M_MODEL_FILEMANAGER,
         #                               mh.A_FILE_CREATE, self.m_model_filepath)
 

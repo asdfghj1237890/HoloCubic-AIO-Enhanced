@@ -9,7 +9,10 @@
 ################################################################################
 
 from ctypes import *
+from util.logger import get_logger
 import struct
+
+logger = get_logger(__name__)
 
 # 模块名 M_
 M_ALL = "M_ALL"
@@ -180,7 +183,7 @@ class SettingMsg(MsgHead):
         size = super().decode(network_data, byteOrder)
         # 处理不定长的数据
         self.left_info = network_data[size:]
-        print(self.left_info)
+        logger.debug("SettingMsg left_info: %s", self.left_info)
         # # 获取当前实例化的对象大小（可能是当前类，也可能是它的子类）
         # size = struct.Struct(self.fmt).size
         # # 以下的 self.fmt 可能包含了子类的一部分，并非一定等于 __init__ 中的 self.fmt
@@ -217,7 +220,7 @@ def dump_dict(obj):
     for k, v in obj._fields_:
         av = getattr(obj, k)
         if type(v) == type(Structure):
-            print(av)
+            logger.debug("dump_dict struct field: %s", av)
             # av = av.dump_dict()
         elif type(v) == type(Array):
             av = cast(av, c_char_p).value.decode()
