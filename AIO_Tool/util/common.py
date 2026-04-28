@@ -8,7 +8,7 @@
 #
 ################################################################################
 
-from util.massagehead import *
+from util.massagehead import AT, MsgHead
 import binascii
 import ctypes
 import inspect

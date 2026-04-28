@@ -8,7 +8,7 @@
 #
 ################################################################################
 
-from util.common import *
+from util.massagehead import MT, AT, MsgHead, MsgHead_TT
 from ctypes import *
 import struct
 

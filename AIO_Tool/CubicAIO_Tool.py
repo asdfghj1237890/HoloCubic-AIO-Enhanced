@@ -8,7 +8,11 @@
 #
 ################################################################################
 
-from util.common import *
+from util.common import (
+    TOOL_VERSION,
+    TOOL_VERSION_INFO_URL,
+    get_resource_path,
+)
 import util.massagehead as mh
 from page.videotool import VideoTool
 from page.download_debug import DownloadDebug

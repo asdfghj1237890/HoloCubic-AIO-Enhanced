@@ -9,7 +9,6 @@
 ################################################################################
 
 from ctypes import *
-from util.common import *
 import struct
 
 # 模块名 M_
