@@ -65,16 +65,16 @@ class DownloadDebug:
         self._serial_stop_event.set()  # 預設停止狀態，com_connect 啟動時會 clear()
         self.i18n = get_i18n()
 
-        # Serial settings section (CTk 沒有 LabelFrame，改用 CTkFrame + 標題 CTkLabel)
-        self.connor_grid_frame = ctk.CTkFrame(self.__father)
-        self.connor_grid_frame.place(x=self.__father.winfo_width() + 10, y=10)
+        # Serial settings section（左欄，固定寬度 220 高度 270）
+        self.connor_grid_frame = ctk.CTkFrame(self.__father, width=220, height=270)
+        self.connor_grid_frame.place(x=11, y=10)
+        self.connor_grid_frame.pack_propagate(False)  # 固定外框尺寸，內部 widget 不撐開
         ctk.CTkLabel(
             self.connor_grid_frame,
             text=self.i18n.t("serial_settings"),
             font=ctk.CTkFont(weight="bold"),
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.create_com(self.connor_grid_frame)
-        self.connor_grid_frame.update()
 
         # 连接器相关控件
         cur_dir = os.getcwd()
@@ -97,37 +97,37 @@ class DownloadDebug:
             },
             {"bin_addr": "0x10000", "bin_path": "", "placeholder": self.i18n.t("choose_firmware")},
         ]
-        # Firmware flash section — 從 x=240 開始（避開串口設定 ~220 px 寬度框）
-        self.connor_firmware_frame = ctk.CTkFrame(self.__father)
+        # Firmware flash section（中欄，固定寬度 540 高度 270）
+        self.connor_firmware_frame = ctk.CTkFrame(self.__father, width=540, height=270)
         self.connor_firmware_frame.place(x=240, y=10)
+        self.connor_firmware_frame.pack_propagate(False)
         ctk.CTkLabel(
             self.connor_firmware_frame,
             text=self.i18n.t("firmware_flash"),
             font=ctk.CTkFont(weight="bold"),
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
-        self.connor_firmware_frame.update()
         self.init_firmware(self.connor_firmware_frame)
 
-        # Operation log section — 固件框 (~516 px 寬) 自 x=240 起 ends ~756，這裡 +20 緩衝
-        self.connor_log_frame = ctk.CTkFrame(self.__father)
-        self.connor_log_frame.place(x=780, y=10)
+        # Operation log section（右欄，固定寬度 380）
+        self.connor_log_frame = ctk.CTkFrame(self.__father, width=380, height=270)
+        self.connor_log_frame.place(x=790, y=10)
+        self.connor_log_frame.pack_propagate(False)
         ctk.CTkLabel(
             self.connor_log_frame,
             text=self.i18n.t("operation_log"),
             font=ctk.CTkFont(weight="bold"),
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
-        self.connor_log_frame.update()
         self.init_log(self.connor_log_frame)
 
-        # Serial receive section
-        self.connor_info_frame = ctk.CTkFrame(self.__father)
-        self.connor_info_frame.place(x=self.__father.winfo_width() + 10, y=240)
+        # Serial receive section（下排，固定寬度 1170 高度 410）
+        self.connor_info_frame = ctk.CTkFrame(self.__father, width=1170, height=410)
+        self.connor_info_frame.place(x=11, y=290)
+        self.connor_info_frame.pack_propagate(False)
         ctk.CTkLabel(
             self.connor_info_frame,
             text=self.i18n.t("serial_receive"),
             font=ctk.CTkFont(weight="bold"),
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
-        self.connor_info_frame.update()
         self.init_serial_receive(self.connor_info_frame)
 
         self.display_version()
@@ -545,19 +545,14 @@ class DownloadDebug:
             insertbackground="#dcdcdc",
         )
         self.m_log_scrollbar.configure(command=self.m_log.yview)
-        self.m_log.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)
 
-        # 清空按鈕
+        # 排版：先放底部清空鈕（保留小尺寸不撐滿）+ 右側捲軸，最後文字框 expand 填滿剩餘空間
         m_clear = ctk.CTkButton(
-            father,
-            text="X",
-            command=self.clear_log,
-            width=24,
-            height=24,
+            father, text="X", command=self.clear_log, width=24, height=24,
         )
-        m_clear.pack(side=tk.BOTTOM, fill=tk.X, pady=1)
-
-        self.m_log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        m_clear.pack(side=tk.BOTTOM, anchor=tk.E, padx=3, pady=(0, 3))
+        self.m_log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 3), pady=3)
+        self.m_log.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=3, pady=3)
 
     def print_log(self, msg: object) -> None:
         msg = str(msg) + "\n"
@@ -595,19 +590,14 @@ class DownloadDebug:
             insertbackground="#dcdcdc",
         )
         self.m_scrollbar.configure(command=self.m_msg.yview)
-        self.m_msg.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)
 
-        # 清空按鈕
+        # 排版：先放底部清空鈕（保留小尺寸不撐滿）+ 右側捲軸，最後文字框 expand 填滿剩餘空間
         self.m_clear = ctk.CTkButton(
-            father,
-            text="X",
-            command=self.clear_msg,
-            width=24,
-            height=24,
+            father, text="X", command=self.clear_msg, width=24, height=24,
         )
-        self.m_clear.pack(side=tk.BOTTOM, fill=tk.X, pady=1)
-
-        self.m_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.m_clear.pack(side=tk.BOTTOM, anchor=tk.E, padx=3, pady=(0, 3))
+        self.m_scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 3), pady=3)
+        self.m_msg.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=3, pady=3)
 
     def clear_msg(self) -> None:
         """
