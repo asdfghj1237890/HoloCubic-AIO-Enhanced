@@ -28,6 +28,7 @@ def get_resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 TOOL_VERSION = "v1.6.2"
+TOOL_VERSION_INFO_URL = "http://climbsnail.cn:5001/holocubicAIO/sn/v1/version/tool"
 ROOT_PATH = "OutFile"
 CACHE_PATH = "Cache"
 
