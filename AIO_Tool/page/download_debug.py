@@ -130,9 +130,28 @@ class DownloadDebug:
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.init_serial_receive(self.connor_info_frame)
 
+        # 響應式佈局：tab 頁面尺寸變化時，log + info frame 跟著伸縮
+        # （grid + firmware 維持固定尺寸 — 內容也是固定大小）
+        self.__father.bind("<Configure>", self._on_father_resize)
+
         self.display_version()
         self.get_version_thread = threading.Thread(target=self.display_version)
         self.get_version_thread.start()
+
+    def _on_father_resize(self, event: tk.Event) -> None:
+        """父容器尺寸變化時，更新 log + info frame 的寬高使其填滿可用空間。
+
+        CTkFrame 的 ``<Configure>`` 事件實際由內部 Canvas 觸發，event.width
+        即為父容器當前寬度，所以不需檢查 ``event.widget``。
+        """
+        pw, ph = event.width, event.height
+        # log frame：右上角，從 x=790 延伸到右邊距 11 px
+        log_w = max(200, pw - 790 - 11)
+        self.connor_log_frame.configure(width=log_w)
+        # info frame：下排，左右各 11 px 邊距，y=290 起延伸到底部 10 px 邊距
+        info_w = max(800, pw - 22)
+        info_h = max(300, ph - 290 - 10)
+        self.connor_info_frame.configure(width=info_w, height=info_h)
 
     def api(self, action: str, param: object = None) -> None:
         """
