@@ -27,6 +27,7 @@ from util.logger import setup_logging, get_logger
 import os
 import sys
 import tkinter as tk
+import customtkinter as ctk
 import util.tkutils as tku
 from tkinter import ttk
 from tkinter import messagebox
@@ -192,7 +193,12 @@ if __name__ == '__main__':
     setup_logging()
     logger = get_logger(__name__)
 
-    tool_windows = tk.Tk()
+    # CustomTkinter 主題設定（系統淺/深色 + 預設藍色主題）。
+    # 注意：當前頁面內元件仍為原生 tk/ttk，未來會逐步遷移到 CTk 元件。
+    ctk.set_appearance_mode("System")
+    ctk.set_default_color_theme("blue")
+
+    tool_windows = ctk.CTk()
     tool_windows.title("HoloCubic_AIO Tools\t  " + TOOL_VERSION)
     tool_windows.geometry('1000x655+10+10')
     tool_windows.resizable(False, False)
