@@ -12,8 +12,15 @@ from util.i18n import I18n, get_i18n, t
 
 
 @pytest.fixture(autouse=True)
-def _reset_singleton() -> None:
-    """Reset the I18n singleton before each test for isolation."""
+def _reset_singleton(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reset the I18n singleton + isolate from any on-disk tool_config.json.
+
+    Without the monkeypatch, a tool_config.json left over from manual usage
+    (e.g. user switched language to zh_TW in the GUI) would override the
+    expected default language and break the default-language assertions.
+    """
+    # Point _config_file at a guaranteed-nonexistent path inside tmp_path
+    monkeypatch.setattr(I18n, "_config_file", str(tmp_path / "no_such_config.json"))
     I18n._instance = None
     I18n._current_language = I18n.LANG_ZH_CN
     I18n.TRANSLATIONS = {}
