@@ -1,70 +1,58 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
-from util.massagehead import *
-import binascii
 import ctypes
 import inspect
-import traceback
-import re
 import sys
-import os
+import threading
+from pathlib import Path
+
+from util.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 # Get the base path for resources (works for both frozen exe and script)
-def get_resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller"""
+def get_resource_path(relative_path: str | Path) -> Path:
+    """Get absolute path to resource, works for dev and for PyInstaller."""
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-TOOL_VERSION = "v1.6.2"
-ROOT_PATH = "OutFile"
-CACHE_PATH = "Cache"
-
-# 字节序定义
-byteOrders = {'Native order': '@',  # 本机（默认）
-              'Native standard': '=',  # 本机
-              'Little-endian': '<',  # 小端
-              'Big-endian': '>',  # 大端
-              'Network order': '!'}  # network(大端)
+        base_path = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    except AttributeError:
+        base_path = Path.cwd()
+    return base_path / relative_path
 
 
-# 关于struct格式串字节大小 https://blog.csdn.net/qq_30638831/article/details/80421019
+TOOL_VERSION: str = "v2.5.0"
+#: GitHub raw URL — pyproject.toml 內含 ``version = "X.Y.Z"`` 可抓取比對
+TOOL_VERSION_INFO_URL: str = (
+    "https://raw.githubusercontent.com/asdfghj1237890/"
+    "HoloCubic-AIO-Enhanced/main/AIO_Tool/pyproject.toml"
+)
+#: GitHub repo URL — 使用者下載最新版工具與韌體的入口
+GITHUB_REPO_URL: str = "https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced"
+ROOT_PATH: str = "OutFile"
+CACHE_PATH: str = "Cache"
 
-def getSendInfo(info):
-    """
-    打印网络数据流, 
-    :param info: ctypes.create_string_buffer()
-    :return : str
-    """
-    info = binascii.hexlify(info)
-    print(info)
-    re_obj = re.compile('.{1,2}')  # 匹配任意字符1-2次
-    t = ' '.join(re_obj.findall(str(info).upper()))
-    return t
+# 字節序對照表參考：https://docs.python.org/3/library/struct.html#byte-order-size-and-alignment
 
 
-def _async_raise(thread_obj):
+def _async_raise(thread_obj: threading.Thread) -> None:
     """
     释放进程
-    :param thread: 进程对象
-    :param exctype:
+    :param thread_obj: 进程对象
     :return:
     """
     try:
         tid = thread_obj.ident
         tid = ctypes.c_long(tid)
-        exctype = SystemExit
+        exctype: type = SystemExit
         """raises the exception, performs cleanup if needed"""
         if not inspect.isclass(exctype):
             exctype = type(exctype)

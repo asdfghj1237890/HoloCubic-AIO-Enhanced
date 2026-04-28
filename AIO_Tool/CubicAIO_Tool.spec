@@ -8,6 +8,7 @@ a = Analysis(
     datas=[
         ('cubictool.json', '.'),
         ('image', 'image'),
+        ('i18n', 'i18n'),
     ],
     hiddenimports=[
         'esptool',

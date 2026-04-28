@@ -1,0 +1,52 @@
+name: AIO_Tool
+
+# Python upper-computer tool checks: pytest + ruff format + ruff lint.
+# Triggered only when AIO_Tool/ files (or this workflow) change, so firmware-only
+# PRs aren't slowed down by Python setup.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "AIO_Tool/**"
+      - ".github/workflows/aio-tool.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "AIO_Tool/**"
+      - ".github/workflows/aio-tool.yml"
+  workflow_dispatch:
+
+jobs:
+  python-checks:
+    name: pytest + ruff (uv)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: AIO_Tool
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.9.x"
+          enable-cache: true
+          cache-dependency-glob: "AIO_Tool/uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --all-groups --frozen
+
+      - name: Run pytest
+        env:
+          PYTHONIOENCODING: utf-8
+        run: uv run pytest -v
+
+      - name: ruff format --check
+        run: uv run ruff format --check .
+
+      # Lint is informational for now — 35 legacy warnings (mostly E501 long
+      # Chinese-comment lines + a few %-format strings) are tracked but
+      # non-blocking. Tighten by removing `|| true` once those are cleaned up.
+      - name: ruff check (informational)
+        run: uv run ruff check . || true
