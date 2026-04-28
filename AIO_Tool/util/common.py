@@ -4,49 +4,53 @@
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
+from pathlib import Path
 from util.logger import get_logger
 import binascii
 import ctypes
 import inspect
-import traceback
 import re
 import sys
-import os
+import threading
 
 logger = get_logger(__name__)
 
+
 # Get the base path for resources (works for both frozen exe and script)
-def get_resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller"""
+def get_resource_path(relative_path: str | Path) -> Path:
+    """Get absolute path to resource, works for dev and for PyInstaller."""
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+        base_path = Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    except AttributeError:
+        base_path = Path.cwd()
+    return base_path / relative_path
 
-TOOL_VERSION = "v1.6.2"
-TOOL_VERSION_INFO_URL = "http://climbsnail.cn:5001/holocubicAIO/sn/v1/version/tool"
-ROOT_PATH = "OutFile"
-CACHE_PATH = "Cache"
+
+TOOL_VERSION: str = "v1.6.2"
+TOOL_VERSION_INFO_URL: str = "http://climbsnail.cn:5001/holocubicAIO/sn/v1/version/tool"
+ROOT_PATH: str = "OutFile"
+CACHE_PATH: str = "Cache"
 
 # 字节序定义
-byteOrders = {'Native order': '@',  # 本机（默认）
-              'Native standard': '=',  # 本机
-              'Little-endian': '<',  # 小端
-              'Big-endian': '>',  # 大端
-              'Network order': '!'}  # network(大端)
+byteOrders: dict[str, str] = {
+    'Native order': '@',  # 本机（默认）
+    'Native standard': '=',  # 本机
+    'Little-endian': '<',  # 小端
+    'Big-endian': '>',  # 大端
+    'Network order': '!',  # network(大端)
+}
 
 
 # 关于struct格式串字节大小 https://blog.csdn.net/qq_30638831/article/details/80421019
 
-def getSendInfo(info):
+def getSendInfo(info: bytes) -> str:
     """
-    打印网络数据流, 
+    打印网络数据流,
     :param info: ctypes.create_string_buffer()
     :return : str
     """
@@ -57,17 +61,16 @@ def getSendInfo(info):
     return t
 
 
-def _async_raise(thread_obj):
+def _async_raise(thread_obj: threading.Thread) -> None:
     """
     释放进程
-    :param thread: 进程对象
-    :param exctype:
+    :param thread_obj: 进程对象
     :return:
     """
     try:
         tid = thread_obj.ident
         tid = ctypes.c_long(tid)
-        exctype = SystemExit
+        exctype: type = SystemExit
         """raises the exception, performs cleanup if needed"""
         if not inspect.isclass(exctype):
             exctype = type(exctype)

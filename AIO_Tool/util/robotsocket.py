@@ -4,31 +4,41 @@
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/Robot_For_RaspberryPi
-# 
+#
 #
 ################################################################################
 
-import threading
 import socket  # socket模块
+import threading
 import time
-import ctypes
-import inspect
+from collections.abc import Callable
 
 from util.common import _async_raise
 from util.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Callback signature for received data on the server side
+ServerRecvCallback = Callable[[bytes, tuple[str, int]], None]
+# Callback signature for received data on the client side
+ClientRecvCallback = Callable[[bytes], None]
+
 
 class RobotSocket(object):
 
-    def __init__(self, ip, port, callback_func=None, name=""):
+    def __init__(
+        self,
+        ip: str,
+        port: int,
+        callback_func: Callable[..., None] | None = None,
+        name: str = "",
+    ) -> None:
         self._name = name
         self._ip = ip
         self._port = port
         self._callback_func = callback_func
 
-    def close(self):
+    def close(self) -> None:
         try:
             self.connfd.close()  # 关闭连接
             self.connfd = None
@@ -36,24 +46,31 @@ class RobotSocket(object):
             logger.error("close failed: %s", err)
 
     @property
-    def callback_func(self):
+    def callback_func(self) -> Callable[..., None] | None:
         return self._callback_func
 
     @callback_func.setter
-    def callback_func(self, callback):
+    def callback_func(self, callback: Callable[..., None] | None) -> None:
         self._callback_func = callback
 
-    def start(self, ):
+    def start(self) -> None:
         # override
         pass
 
-    def __del__():
+    def __del__():  # type: ignore[no-untyped-def]  # noqa: ANN  # original signature missing self
         pass
 
 
 class RobotSocketServer(RobotSocket):
     # 服务端类
-    def __init__(self, ip, port, callback_func=None, max_bind=1, name="RobotSocketServer"):
+    def __init__(
+        self,
+        ip: str,
+        port: int,
+        callback_func: ServerRecvCallback | None = None,
+        max_bind: int = 1,
+        name: str = "RobotSocketServer",
+    ) -> None:
         """
         RobotSocketServer类对象的初始化
         :param ip: 点分十进制的ip字符串
@@ -66,17 +83,17 @@ class RobotSocketServer(RobotSocket):
         self.__sersocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # 定义socket类型，网络通信，TCP
         self.__sersocket.bind((self._ip, self._port))  # 套接字绑定的IP与端口
         self.__max_bind = max_bind
-        self.__client_link_dict = {}
+        self.__client_link_dict: dict[tuple[str, int], dict[str, object]] = {}
         self.__sersocket.listen(self.__max_bind)  # 开始TCP监听
         self.__recv_buff = 1024 * 128
 
-    def start(self):
+    def start(self) -> None:
         '''
         启动socket实例
         :return:
         '''
 
-        def scanner():
+        def scanner() -> None:
             while True:
                 connfd, addr = self.__sersocket.accept()  # 接受TCP连接，并返回新的套接字与IP地址
                 logger.info("Connected by %s", addr)  # 输出客户端的IP地址
@@ -87,7 +104,7 @@ class RobotSocketServer(RobotSocket):
         run_thread = threading.Thread(target=scanner, args=())
         run_thread.start()
 
-    def recvfrom_client(self, connfd, addr):
+    def recvfrom_client(self, connfd: socket.socket, addr: tuple[str, int]) -> None:
         """
         客户端连接状态的数据处理
         :param connfd: 连接客户端的文件句柄
@@ -99,12 +116,12 @@ class RobotSocketServer(RobotSocket):
                 recv = connfd.recv(self.__recv_buff)  # 把接收的数据实例化
                 if recv == b'':  # 断开连接
                     break
-                if self.callback_func != None:
+                if self.callback_func is not None:
                     self.callback_func(recv, addr)
         except Exception as err:
             logger.info("Client disconnected, recv thread exiting: %s", err)
 
-    def send_to_client(self, dat, addr):
+    def send_to_client(self, dat: bytes, addr: tuple[str, int]) -> None:
         """
         向本次连接的客户端发送数据
         :param dat: 要发送的数据（bytes类型）
@@ -119,7 +136,7 @@ class RobotSocketServer(RobotSocket):
         except Exception as err:
             logger.error("send_to_client failed: %s", err)
 
-    def __del__(self):
+    def __del__(self) -> None:
         try:
             for conninfo in self.__client_link_dict.items():
                 connfd = conninfo["fd"]
@@ -132,7 +149,14 @@ class RobotSocketServer(RobotSocket):
 
 class RobotSocketClient(RobotSocket):
     # 客户端类
-    def __init__(self, ip, port, callback_func=None, disconntime=0.5, name="RobotSocketClient"):
+    def __init__(
+        self,
+        ip: str,
+        port: int,
+        callback_func: ClientRecvCallback | None = None,
+        disconntime: float = 0.5,
+        name: str = "RobotSocketClient",
+    ) -> None:
         """
         RobotSocket类对象的初始化
         :param ip: 点分十进制的ip字符串
@@ -141,22 +165,22 @@ class RobotSocketClient(RobotSocket):
         :param name: socket实例名称
         """
         super().__init__(ip, port, callback_func, name)
-        self.__clientsocket = None
+        self.__clientsocket: socket.socket | None = None
         self.__connFlag = False  # 连接状态
         self.__disconntime = disconntime  # 掉线重连的时间
         self.__recv_buff = 1024 * 128
 
-    def start(self):
+    def start(self) -> None:
         '''
         启动socket实例
         :return:
         '''
 
-        def reconner():
+        def reconner() -> None:
             while True:
                 try:
                     addr = (self._ip, self._port)
-                    if False == self.__connFlag:
+                    if self.__connFlag is False:
                         logger.info("Try to reconnect......")
                         del self.__clientsocket
                         self.__clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # 定义socket类型，网络通信，TCP
@@ -172,21 +196,21 @@ class RobotSocketClient(RobotSocket):
         self.recvfrom_ser_thread = threading.Thread(target=self.recvfrom_ser, args=())
         self.recvfrom_ser_thread.start()
 
-    def recvfrom_ser(self, ):
+    def recvfrom_ser(self) -> None:
         """
         客户端连接状态的数据处理
         :param client: 连接客户端的文件句柄
         :param addr: 客户端的地址
-        :return: 
+        :return:
         """""
         try:
             while True:
                 try:
-                    if True == self.__connFlag:
+                    if self.__connFlag is True:
                         recv = self.__clientsocket.recv(self.__recv_buff)  # 把接收的数据实例化
                         if recv == b'':  # 断开连接
                             break
-                        if self.callback_func != None:
+                        if self.callback_func is not None:
                             self.callback_func(recv)
 
                 except Exception as err:
@@ -198,7 +222,7 @@ class RobotSocketClient(RobotSocket):
         except Exception as err:
             logger.error("recvfrom_ser outer failure: %s", err)
 
-    def send_to_ser(self, dat):
+    def send_to_ser(self, dat: bytes) -> None:
         """
         向本次连接的客户端发送数据
         :param dat: 要发送的数据（bytes类型）
@@ -209,7 +233,7 @@ class RobotSocketClient(RobotSocket):
         except Exception as err:
             logger.error("send_to_ser failed: %s", err)
 
-    def __del__(self):
+    def __del__(self) -> None:
         try:
             self.__clientsocket.close()  # 关闭连接
             del self.__clientsocket
@@ -226,7 +250,7 @@ if __name__ == "__main__":
     # This is demo
 
     # 服务器端范例
-    def myRecvHandle(dat, addr):  # 接收函数
+    def myRecvHandle(dat: bytes, addr: tuple[str, int]) -> None:  # 接收函数
         sersocket.send_to_client(dat, addr)
         dat = ("Server recv %s from %s\n" % (dat, addr)).encode(encoding="utf-8")
         logger.info("server demo received: %s", dat)
