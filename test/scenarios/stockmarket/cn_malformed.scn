@@ -1,0 +1,21 @@
+# Stockmarket malformed-payload guard. Boots the CN parser path
+# with a Sina fixture that truncates after only 3 fields (the real
+# Sina payload has 30+). The new comma-walk + -1 guards must abort
+# the parse cleanly without indexing into String::substring with
+# negative offsets.
+#
+# Fixture: test/fixtures/http/hq.sinajs.cn/list=sh999999.json
+
+app stockmarket
+flash_seed /stockmarket.cfg "999999\nCN\n10000\n"
+
+wait_ms 400
+assert_no_crash
+
+action UP
+wait_ms 400
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

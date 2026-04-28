@@ -111,11 +111,24 @@ static void pc_resource_data_del(String line)
     String dataStr;
     int data[11];
 
-    // 解析数据
+    // Parse each metric. Guard the indexOf -> +strlen chain so a missing
+    // header or unit doesn't yield negative-index substrings that quietly
+    // produce zero (or worse, junk).
     for (int i = 0; i < 11; i++)
     {
-        dataStart = line.indexOf(rs_data_header[i]) + strlen(rs_data_header[i]); // 寻找前导字符串
-        dataEnd = line.indexOf(rs_data_unit[i], dataStart);                      // 寻找单位字符串
+        int header_pos = line.indexOf(rs_data_header[i]);
+        if (header_pos < 0)
+        {
+            data[i] = 0;
+            continue;
+        }
+        dataStart = header_pos + strlen(rs_data_header[i]);
+        dataEnd = line.indexOf(rs_data_unit[i], dataStart);
+        if (dataEnd < dataStart)
+        {
+            data[i] = 0;
+            continue;
+        }
         dataStr = line.substring(dataStart, dataEnd);
         data[i] = dataStr.toFloat() * 10; // 得到扩大10倍的整型数据
     }
