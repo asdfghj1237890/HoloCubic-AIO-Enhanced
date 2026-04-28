@@ -1,87 +1,75 @@
-## 项目为AIO固件配套上位机
-Holocubic_AIO开源地址 https://github.com/ClimbSnail/HoloCubic_AIO
+# AIO Tool — HoloCubic AIO 韌體上位機
 
-[^_^]:
-	![AIO_TOOL](Image/holocubic_aio_tool.png)
+中文文檔 | [English](README.md)
 
-![AIO_TOOL](https://gitee.com/ClimbSnailQ/Project_Image/raw/master/OtherProject/holocubic_aio_tool.png)
+[HoloCubic AIO Enhanced fork](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced) 的桌面端燒錄與設定工具。
+原始上游：[ClimbSnail/HoloCubic_AIO](https://github.com/ClimbSnail/HoloCubic_AIO)。
 
-## 架构设计
+<p align="center">
+  <img src="image/holo_256.png" alt="AIO Tool icon" width="160">
+</p>
 
-### AIO 工具流程图
+---
 
-![AIO 工具流程图](../Image/AIO-Tool-flowchart.png)
+## 功能
 
-上图展示了 AIO 工具应用程序的架构和数据流，显示了不同模块之间的交互方式。
+- **韌體燒錄** — 透過 [esptool](https://github.com/espressif/esptool)（4 個分區，每行：地址 + 路徑 + 勾選 + 選擇按鈕）
+- **串口除錯** — 即時接收訊息視窗
+- **圖片 / 影片 / 檔案轉換** — 為 HoloCubic SD 卡準備素材
+- **深色主題** — 採用 [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter)，連 Windows 11 標題列也是深色
+- **響應式佈局** — 拖曳視窗或最大化，右側 / 下方面板會自動伸縮
+- **多語系 UI** — 簡中 / 繁中 / 英文（`util/i18n` 從 `i18n/` 讀 JSON）
+- **線上版本檢查** — 從 GitHub `main` 抓 [pyproject.toml](pyproject.toml) 與 [common.h](../AIO_Firmware_PIO/src/common.h) 比對
 
-## 快速开始
+## 快速開始
 
-### 前置要求
-- [uv](https://github.com/astral-sh/uv) - 快速的 Python 包管理器（推荐）
+### 環境需求
+- **Python 3.11+**（CI 在 3.13 上跑）
+- **[uv](https://github.com/astral-sh/uv)** — 取代 pip + venv 的快速套件管理工具
 
-### 一键安装（推荐）
-
-使用自动化脚本快速设置环境：
-
-```bash
-# Windows PowerShell
-.\setup.ps1
+```powershell
+# Windows
+winget install astral-sh.uv
+# 或:  powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### 手动安装
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-#### 方法 1: 使用 uv（推荐）
+### 安裝 + 啟動
 
 ```bash
-# 1. 安装 uv (如果尚未安装)
-# Windows (PowerShell)
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 2. 创建虚拟环境
-uv venv
-
-# 3. 安装所有依赖（包括本地的 esptool）
-uv pip install -r requirements.txt
-
-# 4. 运行应用
+cd AIO_Tool
+uv sync --all-groups          # 建立 .venv，安裝執行 + 開發依賴
 uv run python CubicAIO_Tool.py
 ```
 
-#### 方法 2: 传统方式
+或用內附 PowerShell 腳本：
 
-```bash
-# 1. 创建虚拟环境
-python -m venv venv
-
-# 2. 激活虚拟环境
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-
-# 3. 安装所有依赖（包括本地的 esptool）
-pip install -r requirements.txt
-
-# 4. 运行应用
-python CubicAIO_Tool.py
+```powershell
+.\setup.ps1
 ```
 
-### 依赖说明
+或使用 Makefile 捷徑：
 
-本项目的 `requirements.txt` 包含：
-- **运行时依赖**: pillow, requests, pyserial
-- **esptool v4.1**: 从本地 `esptool_v41/` 目录安装
-- **构建工具**: pyinstaller（用于打包可执行文件）
+```bash
+make dev    # uv sync --all-groups
+make run    # 啟動 GUI
+make test   # pytest（38 個測試）
+make lint   # ruff check
+make build  # PyInstaller -> dist/CubicAIO_Tool.exe
+```
 
-所有 esptool 的依赖（bitstring, cryptography, ecdsa, reedsolo）会自动安装。
+## 預編譯版本下載
 
-## 重要问题
-本工程包含了上位机所有代码及资源文件，但唯独缺少视频转化工具`ffmpeg`（文件太大），需要转化功能的可以自行访问`ffmpeg`原项目地址 https://github.com/FFmpeg/FFmpeg 下载，把其中的`ffmpeg.exe`文件放在本工程的根目录下即可。
+每次推送 `vX.Y.Z` git tag 會觸發 [`.github/workflows/release.yml`](../.github/workflows/release.yml)，自動編譯韌體 `.bin` + Windows `.exe` 並發佈到 [Releases page](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/releases)。
 
-或者使用包管理器安装（推荐）：
+## ffmpeg（影片轉換需要，可選）
+
+只用韌體燒錄功能可跳過此步。影片轉換頁會呼叫 `ffmpeg`：
+
 ```bash
 # Windows (Chocolatey)
 choco install ffmpeg -y
@@ -89,125 +77,113 @@ choco install ffmpeg -y
 # macOS (Homebrew)
 brew install ffmpeg
 
-# Linux (Ubuntu/Debian)
+# Ubuntu / Debian
 sudo apt install ffmpeg
 ```
 
-## 打包成可执行程序
+或者直接把 `ffmpeg.exe` 放到 `CubicAIO_Tool.py` 旁邊（PyInstaller 打包後則放在 `CubicAIO_Tool.exe` 旁）。
 
-### 使用 spec 文件（推荐）
-
-本项目包含优化的 `CubicAIO_Tool.spec` 文件，可以正确打包所有依赖（包括 esptool）：
-
-```bash
-# 使用 uv（推荐）
-uv run pyinstaller CubicAIO_Tool.spec
-
-# 或清理后重新构建
-uv run pyinstaller --clean CubicAIO_Tool.spec
-```
-
-### 快速打包（不推荐）
-
-```bash
-# 使用 uv
-uv run pyinstaller --icon ./image/holo_256.ico -w -F CubicAIO_Tool.py
-
-# 传统方式
-pyinstaller --icon ./image/holo_256.ico -w -F CubicAIO_Tool.py
-```
-
-**⚠️ 注意**: 快速打包可能无法正确包含 esptool 模块，建议使用 `.spec` 文件。
-
-**参数说明：**
-- `--icon ./image/holo_256.ico` - 设置应用程序图标
-- `-w` - 不显示控制台窗口（仅GUI）
-- `-F` - 打包成单个可执行文件
-
-**输出位置：** `dist/CubicAIO_Tool.exe`
-
-## 故障排除
-
-### "No module named 'esptool'" 错误
-
-如果遇到此错误：
-
-1. **检查 esptool 是否已安装**:
-   ```bash
-   uv pip list | findstr esptool  # Windows
-   uv pip list | grep esptool     # macOS/Linux
-   ```
-
-2. **重新安装所有依赖**:
-   ```bash
-   uv pip install --force-reinstall -r requirements.txt
-   ```
-
-3. **重新构建可执行文件**:
-   ```bash
-   uv run pyinstaller --clean CubicAIO_Tool.spec
-   ```
-
-### 其他常见问题
-
-- **虚拟环境激活失败**: 确保使用正确的激活命令（见上方安装说明）
-- **依赖安装失败**: 尝试升级 pip/uv 到最新版本
-- **打包失败**: 确保所有依赖都已正确安装
-
-## 开发笔记
-
-#### 关于烧录
-对ESP32进行开发完后，烧录需要提取四个文件，其中包含两个启动引导文件`bootloader_qio_80m.bin`、`boot_app0.bin`，一个flash划分文件`partitions.bin`和一个固件文件`firmware.bin`(在本工程里名为`HoloCubic_AIO固件_vX.X.X.bin`)。https://github.com/ClimbSnail/HoloCubic_AIO/releases/tag/v2.1.0%E5%9B%BA%E4%BB%B6
-
-
-###### 下面说下这些文件的存放位置以及烧录地址（以Windows为例）：
-1. `bootloader_qio_80m.bin`的位置为PlatformIO安装目录下的`.platformio\packages\framework-arduinoespressif32\tools\sdk\bin`目录下面,它的对应的烧录地址为0X1000。
-2. `boot_app0.bin`的位置为PlatformIO安装目录下的`platformio\packages\framework-arduinoespressif32\tools\partitions`目录下面，它对应的烧录地址为0xe000
-3. `partitions.bin`的位置为代码工程目录下的.pioenvs\[board]目录下面,它对应的烧录地址为0x8000。同时platformio\packages\framework-arduinoespressif32\tools\partitions目录下面的`partitions.csv`为编译的分区配置文件，会根据版型选择的不同有所不同，可以使用Excel打开进行编辑，然后在编译器内使用PIO进行重新编译即可，同时他也可以使用PIO包里面带的`gen_esp32part.py`脚本进行编译与反编译，操作方法为：python C:\SPB_Data\.platformio\packages\framework-arduinoespressif32\tools\gen_esp32part.py --verify xxx.csv xxx.bin(后面填写csv文件或者bin文件存放的位置，这里是将csv转换成bin，如果将位置对换，则可以将bin转换成csv),它的对应的烧录地址为0X8000。
-4. `firmware.bin`的位置为代码工程目录下的`.pioenvs\[board]`目录下面，这个就是代码编译出来的固件，它对应的烧录地址为0x10000，如果分区文件未做修改的话（人为修改，或者更换编译平台），更新固件或者重新烧录只在对应地址开始需要烧录这一个文件即可。此文件手动命名为`HoloCubic_AIO固件_vX.X.X.bin`，由于经常随着源码的更新而更新。,它的对应的烧录地址为0x10000。
-
-#### 烧录参考脚本
-1. python tool-esptoolpy\esptool.py --port COM7 --baud 921600 write_flash -fm dio -fs 4MB 0x1000 bootloader_qio_80m.bin 0x00008000 partitions.bin 0x0000e000 boot_app0.bin 0x00010000 HoloCubic_AIO固件_v1.3.bin
-2. 清空flash命令 python tool-esptoolpy\esptool.py erase_flash
-
-可用波特率为：
-* 115200
-* 230400
-* 460800
-* 576000
-* 921600
-* 1152000
-
-
-#### 图片转化开发要点
-https://lvgl.io/assets/images/logo_lvgl.png
-
-利用lvgl的官方转换器 https://lvgl.io/tools/imageconverter 图片则可以转换成（True color with alpha 选择Binary RGB565）bin文件存储到SD卡中
-
-## 项目结构
+## 專案結構
 
 ```
 AIO_Tool/
-├── CubicAIO_Tool.py          # 主程序入口
-├── CubicAIO_Tool.spec         # PyInstaller 配置文件（包含 esptool 配置）
-├── requirements.txt           # Python 依赖列表（包括本地 esptool）
-├── setup.ps1                  # Windows 自动化安装脚本
-├── esptool_v41/              # 本地 esptool v4.1 包
-├── page/                      # UI 页面模块
-│   ├── download_debug.py     # 下载调试页面（使用 esptool）
-│   ├── videotool.py          # 视频工具
-│   ├── images_converter.py   # 图片转换器
-│   └── ...
-├── util/                      # 工具模块
-├── image/                     # 图标资源
-├── base_bin/                  # 基础固件文件
-└── dist/                      # 构建输出目录
-    └── CubicAIO_Tool.exe     # 最终可执行文件
+├── CubicAIO_Tool.py        # 主程式，Engine 類組裝 7 個 tab
+├── CubicAIO_Tool.spec      # PyInstaller 設定（打包 image/、i18n/、cubictool.json）
+├── pyproject.toml          # 依賴 + ruff/ty/pytest 設定
+├── uv.lock                 # 鎖定的依賴版本
+├── Makefile                # dev/lint/format/typecheck/test/build/run 捷徑
+├── setup.ps1               # Windows 一鍵安裝（呼叫 uv sync）
+├── i18n/                   # 每個語系 134 個翻譯 key
+├── image/                  # 視窗圖示（多解析度 ico）+ 預覽 png
+├── page/                   # 每個 tab 一個檔案
+│   ├── download_debug.py   # 韌體燒錄 + 串口除錯
+│   ├── setting.py          # 裝置參數設定
+│   ├── filemanager.py      # SD 卡檔案瀏覽
+│   ├── images_converter.py # PNG/JPG -> LVGL 圖片格式
+│   ├── videotool.py        # mp4 -> rgb565be / mjpeg
+│   ├── tool_settings.py    # 語系切換
+│   └── help.py             # 內建說明頁
+├── util/                   # 共用工具
+│   ├── common.py           # 常數 + get_resource_path
+│   ├── logger.py           # 集中 logging -> OutFile/aio_tool.log
+│   ├── i18n.py             # JSON 驅動翻譯（單例）
+│   ├── massagehead.py      # 網路通訊協定（IntEnum + MsgHead）
+│   ├── file_info.py        # 檔案操作訊息子類別
+│   ├── robotsocket.py      # TCP server/client（threading.Event 優雅關閉）
+│   ├── tkutils.py          # tkinter 輔助函數
+│   ├── widget_base.py      # CTkEntry placeholder 包裝
+│   └── convertor_core.py   # LVGL 圖片轉換核心
+├── tests/                  # 38 個 pytest 測試
+├── scripts/make_logo.py    # 重新產生 image/holo_256.{ico,png}
+├── base_bin/               # 內建 bootloader / partitions / boot_app0
+└── dist/                   # PyInstaller 輸出（gitignored）
 ```
 
-## 致谢
-* 固件下载工具 https://github.com/espressif/esptool
-* 视频转码工具 https://github.com/FFmpeg/FFmpeg
-* LVGL离线转换工具 https://github.com/W-Mai/lvgl_image_converter
+## 開發流程
 
+### 跑測試
 
+```bash
+uv run pytest -v
+```
+
+測試套件涵蓋：
+- `MsgHead.encode/decode` 位元組格式（4 種 byte order）
+- `IntEnum` 整數值（協定穩定性）
+- `i18n` JSON 載入 + 語系切換
+- `RobotSocket` 優雅關閉（server + client）
+- `logger` 設定與檔案輸出
+
+### Lint + format
+
+```bash
+uv run ruff check .          # 預期 0 warnings
+uv run ruff format --check . # 程式風格一致性
+uv run ty check .            # 型別檢查（informational）
+```
+
+CI（[`.github/workflows/aio-tool.yml`](../.github/workflows/aio-tool.yml)）每個動到 `AIO_Tool/` 的 PR 都會跑這三個。
+
+### 編譯執行檔
+
+```bash
+uv run pyinstaller CubicAIO_Tool.spec --noconfirm --clean
+# 輸出：dist/CubicAIO_Tool.exe（約 25 MB 單檔）
+```
+
+## 疑難排解
+
+### 升級後出現「No module named X」
+```bash
+uv sync --all-groups --frozen   # 重新對齊 uv.lock
+```
+
+### 標題列顯示「[請到 GitHub 查看最新版本]」
+代表版本檢查 URL 回應非 200。可能：
+- `pyproject.toml` 還沒在 `main` 分支
+- 網路被擋
+
+merge 進 `main` 後，徽章會變成「[已是最新版本]」或「[推荐升级最新版本 vX.Y.Z]」。
+
+### Build 失敗 esptool 找不到
+我們依賴上游 PyPI 的 `esptool>=4.1,<5.0`，不是內附的 `esptool_v41/` 目錄（保留作為歷史參考）。
+
+## 燒錄位址（參考）
+
+| 檔案 | 位址 | 來源 |
+|---|---|---|
+| `bootloader_qio_80m.bin` | `0x1000` | `~/.platformio/.../tools/sdk/bin/` |
+| `partitions.bin` | `0x8000` | `AIO_Firmware_PIO/.pio/build/<board>/` |
+| `boot_app0.bin` | `0xe000` | `~/.platformio/.../tools/partitions/` |
+| `firmware.bin` | `0x10000` | `AIO_Firmware_PIO/.pio/build/<board>/` |
+
+四個檔案都已預先放在 `base_bin/` 下，GUI 燒錄頁預設指向那裡。
+
+## 相關連結
+
+- 韌體 repo（此 fork）: https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced
+- 原始 AIO 韌體: https://github.com/ClimbSnail/HoloCubic_AIO
+- 原始 HoloCubic 硬體: https://github.com/peng-zhihui/HoloCubic
+- esptool: https://github.com/espressif/esptool
+- ffmpeg: https://github.com/FFmpeg/FFmpeg
+- LVGL 圖片轉換工具: https://github.com/W-Mai/lvgl_image_converter

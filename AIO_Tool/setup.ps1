@@ -1,5 +1,6 @@
 # Setup script for CubicAIO_Tool
-# This script automates the installation of dependencies
+# Creates a uv-managed virtual environment and installs all dependencies
+# (runtime + dev tools: ruff, ty, pytest, pyinstaller) from pyproject.toml.
 
 Write-Host "=== CubicAIO_Tool Setup ===" -ForegroundColor Cyan
 Write-Host ""
@@ -11,35 +12,31 @@ try {
     Write-Host "[OK] $uvVersion" -ForegroundColor Green
 } catch {
     Write-Host "[ERROR] uv is not installed!" -ForegroundColor Red
-    Write-Host "Please install uv from: https://github.com/astral-sh/uv" -ForegroundColor Yellow
+    Write-Host "Install via:" -ForegroundColor Yellow
+    Write-Host "  winget install astral-sh.uv" -ForegroundColor White
+    Write-Host "  -or-" -ForegroundColor Yellow
+    Write-Host "  powershell -c `"irm https://astral.sh/uv/install.ps1 | iex`"" -ForegroundColor White
     exit 1
 }
 
 Write-Host ""
-Write-Host "Step 1: Creating virtual environment..." -ForegroundColor Yellow
-uv venv
+Write-Host "Step 1: Syncing dependencies from pyproject.toml + uv.lock..." -ForegroundColor Yellow
+uv sync --all-groups
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[ERROR] Failed to create virtual environment" -ForegroundColor Red
+    Write-Host "[ERROR] uv sync failed" -ForegroundColor Red
     exit 1
 }
-Write-Host "[OK] Virtual environment created" -ForegroundColor Green
-
-Write-Host ""
-Write-Host "Step 2: Installing all dependencies (including esptool)..." -ForegroundColor Yellow
-uv pip install -r requirements.txt
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[ERROR] Failed to install dependencies" -ForegroundColor Red
-    exit 1
-}
-Write-Host "[OK] All dependencies installed" -ForegroundColor Green
+Write-Host "[OK] Dependencies installed" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "=== Setup Complete ===" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "You can now run the application with:" -ForegroundColor Yellow
+Write-Host "Run the application:" -ForegroundColor Yellow
 Write-Host "  uv run python CubicAIO_Tool.py" -ForegroundColor White
 Write-Host ""
-Write-Host "Or build the executable with:" -ForegroundColor Yellow
-Write-Host "  uv run pyinstaller CubicAIO_Tool.spec" -ForegroundColor White
+Write-Host "Or use the Makefile shortcuts:" -ForegroundColor Yellow
+Write-Host "  make run        # launch GUI" -ForegroundColor White
+Write-Host "  make test       # pytest" -ForegroundColor White
+Write-Host "  make lint       # ruff check" -ForegroundColor White
+Write-Host "  make build      # PyInstaller -> dist/CubicAIO_Tool.exe" -ForegroundColor White
 Write-Host ""
-

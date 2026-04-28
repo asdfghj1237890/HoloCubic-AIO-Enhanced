@@ -1,90 +1,75 @@
-# AIO Tool - PC Companion Software for HoloCubic AIO Firmware
+# AIO Tool — PC companion for HoloCubic AIO firmware
 
-[中文文档](README_zh-CN.md) | English
+[中文文檔](README_zh-CN.md) | English
 
-HoloCubic_AIO Open Source Repository: https://github.com/ClimbSnail/HoloCubic_AIO
+A modernised desktop tool for flashing and configuring [HoloCubic AIO firmware](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced).
+This is the **Enhanced fork** — the original upstream is at [ClimbSnail/HoloCubic_AIO](https://github.com/ClimbSnail/HoloCubic_AIO).
 
-[^_^]:
-	![AIO_TOOL](Image/holocubic_aio_tool.png)
+<p align="center">
+  <img src="image/holo_256.png" alt="AIO Tool icon" width="160">
+</p>
 
-![AIO_TOOL](https://gitee.com/ClimbSnailQ/Project_Image/raw/master/OtherProject/holocubic_aio_tool.png)
+---
 
-## Architecture
+## Features
 
-### AIO Tool Flowchart
+- **Firmware flashing** via [esptool](https://github.com/espressif/esptool) (4 partitions × 4-row form, address + path + checkbox + select)
+- **Serial debugging** with live receive console
+- **Image / video / file conversion** for the HoloCubic SD card
+- **Dark theme** powered by [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) — Windows 11 dark title bar included
+- **Responsive layout** — drag the window or maximise; the right and bottom panels resize live
+- **Multi-language UI** — Simplified Chinese / Traditional Chinese / English (`util/i18n` reads JSON files in `i18n/`)
+- **Online version check** — compares against [pyproject.toml](pyproject.toml) and [common.h](../AIO_Firmware_PIO/src/common.h) on `main`
 
-![AIO Tool Flowchart](../Image/AIO-Tool-flowchart.png)
-
-The flowchart above illustrates the architecture and data flow of the AIO Tool application, showing how different modules interact with each other.
-
-## Quick Start
+## Quick start
 
 ### Prerequisites
-- [uv](https://github.com/astral-sh/uv) - Fast Python package manager (recommended)
+- **Python 3.11+** (3.13 tested in CI)
+- **[uv](https://github.com/astral-sh/uv)** — fast Python package manager (replaces pip + venv + virtualenv)
 
-### One-Click Installation (Recommended)
-
-Use the automated script to quickly set up the environment:
-
-```bash
-# Windows PowerShell
-.\setup.ps1
+```powershell
+# Windows
+winget install astral-sh.uv
+# or:  powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### Manual Installation
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-#### Method 1: Using uv (Recommended)
+### Install + run
 
 ```bash
-# 1. Install uv (if not already installed)
-# Windows (PowerShell)
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# 2. Create virtual environment
-uv venv
-
-# 3. Install all dependencies (including local esptool)
-uv pip install -r requirements.txt
-
-# 4. Run the application
+cd AIO_Tool
+uv sync --all-groups          # creates .venv, installs runtime + dev tools
 uv run python CubicAIO_Tool.py
 ```
 
-#### Method 2: Traditional Approach
+Or use the bundled PowerShell helper:
 
-```bash
-# 1. Create virtual environment
-python -m venv venv
-
-# 2. Activate virtual environment
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-
-# 3. Install all dependencies (including local esptool)
-pip install -r requirements.txt
-
-# 4. Run the application
-python CubicAIO_Tool.py
+```powershell
+.\setup.ps1
 ```
 
-### Dependencies
+Or via Makefile:
 
-The `requirements.txt` includes:
-- **Runtime dependencies**: pillow, requests, pyserial
-- **esptool v4.1**: Installed from local `esptool_v41/` directory
-- **Build tools**: pyinstaller (for packaging executable)
+```bash
+make dev    # uv sync --all-groups
+make run    # launch the GUI
+make test   # pytest (38 tests)
+make lint   # ruff check
+make build  # PyInstaller -> dist/CubicAIO_Tool.exe
+```
 
-All esptool dependencies (bitstring, cryptography, ecdsa, reedsolo) will be installed automatically.
+## Pre-built binaries
 
-## Important Note
-This project contains all PC software code and resource files, but is missing the video conversion tool `ffmpeg` (file too large). If you need video conversion functionality, you can download it from the official `ffmpeg` repository at https://github.com/FFmpeg/FFmpeg and place the `ffmpeg.exe` file in the project root directory.
+Each `vX.Y.Z` git tag triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml) which builds the firmware `.bin` + the Windows tool `.exe` and publishes them to the [Releases page](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/releases).
 
-Or install using a package manager (recommended):
+## ffmpeg (optional, for video conversion)
+
+The video conversion tab shells out to `ffmpeg`. If you only flash firmware, you can skip this step.
+
 ```bash
 # Windows (Chocolatey)
 choco install ffmpeg -y
@@ -92,124 +77,130 @@ choco install ffmpeg -y
 # macOS (Homebrew)
 brew install ffmpeg
 
-# Linux (Ubuntu/Debian)
+# Ubuntu / Debian
 sudo apt install ffmpeg
 ```
 
-## Building Executable
+Or drop `ffmpeg.exe` next to `CubicAIO_Tool.py` (or `CubicAIO_Tool.exe` after PyInstaller build).
 
-### Using spec File (Recommended)
-
-This project includes an optimized `CubicAIO_Tool.spec` file that correctly packages all dependencies (including esptool):
-
-```bash
-# Using uv (recommended)
-uv run pyinstaller CubicAIO_Tool.spec
-
-# Or clean rebuild
-uv run pyinstaller --clean CubicAIO_Tool.spec
-```
-
-### Quick Build (Not Recommended)
-
-```bash
-# Using uv
-uv run pyinstaller --icon ./image/holo_256.ico -w -F CubicAIO_Tool.py
-
-# Traditional way
-pyinstaller --icon ./image/holo_256.ico -w -F CubicAIO_Tool.py
-```
-
-**⚠️ Note**: Quick build may not correctly include the esptool module. It's recommended to use the `.spec` file.
-
-**Parameter Description:**
-- `--icon ./image/holo_256.ico` - Set application icon
-- `-w` - Hide console window (GUI only)
-- `-F` - Package into a single executable file
-
-**Output Location:** `dist/CubicAIO_Tool.exe`
-
-## Troubleshooting
-
-### "No module named 'esptool'" Error
-
-If you encounter this error:
-
-1. **Check if esptool is installed**:
-   ```bash
-   uv pip list | findstr esptool  # Windows
-   uv pip list | grep esptool     # macOS/Linux
-   ```
-
-2. **Reinstall all dependencies**:
-   ```bash
-   uv pip install --force-reinstall -r requirements.txt
-   ```
-
-3. **Rebuild the executable**:
-   ```bash
-   uv run pyinstaller --clean CubicAIO_Tool.spec
-   ```
-
-### Other Common Issues
-
-- **Virtual environment activation failed**: Ensure you're using the correct activation command (see installation instructions above)
-- **Dependency installation failed**: Try upgrading pip/uv to the latest version
-- **Build failed**: Ensure all dependencies are correctly installed
-
-## Developer Notes
-
-### About Flashing
-After developing for ESP32, flashing requires extracting four files: two boot loader files `bootloader_qio_80m.bin` and `boot_app0.bin`, one flash partition file `partitions.bin`, and one firmware file `firmware.bin` (named `HoloCubic_AIO固件_vX.X.X.bin` in this project). https://github.com/ClimbSnail/HoloCubic_AIO/releases/tag/v2.1.0%E5%9B%BA%E4%BB%B6
-
-
-###### File Locations and Flash Addresses (Windows example):
-1. `bootloader_qio_80m.bin` is located in `.platformio\packages\framework-arduinoespressif32\tools\sdk\bin` under the PlatformIO installation directory, with flash address 0x1000.
-2. `boot_app0.bin` is located in `platformio\packages\framework-arduinoespressif32\tools\partitions` under the PlatformIO installation directory, with flash address 0xe000.
-3. `partitions.bin` is located in `.pioenvs\[board]` under the code project directory, with flash address 0x8000. The `partitions.csv` in `platformio\packages\framework-arduinoespressif32\tools\partitions` is the partition configuration file that varies with board selection. It can be edited in Excel and recompiled using PIO. It can also be compiled and decompiled using the `gen_esp32part.py` script: `python C:\SPB_Data\.platformio\packages\framework-arduinoespressif32\tools\gen_esp32part.py --verify xxx.csv xxx.bin` (converting csv to bin, or vice versa by swapping positions).
-4. `firmware.bin` is located in `.pioenvs\[board]` under the code project directory. This is the compiled firmware with flash address 0x10000. If the partition file hasn't been modified, only this file needs to be flashed at the corresponding address for firmware updates. This file is manually named `HoloCubic_AIO固件_vX.X.X.bin` and is frequently updated with source code changes.
-
-### Flash Reference Script
-1. `python tool-esptoolpy\esptool.py --port COM7 --baud 921600 write_flash -fm dio -fs 4MB 0x1000 bootloader_qio_80m.bin 0x00008000 partitions.bin 0x0000e000 boot_app0.bin 0x00010000 HoloCubic_AIO固件_v1.3.bin`
-2. Erase flash command: `python tool-esptoolpy\esptool.py erase_flash`
-
-Available baud rates:
-* 115200
-* 230400
-* 460800
-* 576000
-* 921600
-* 1152000
-
-
-### Image Conversion Key Points
-https://lvgl.io/assets/images/logo_lvgl.png
-
-Using LVGL's official converter https://lvgl.io/tools/imageconverter, images can be converted to (True color with alpha, select Binary RGB565) bin files for storage on SD card.
-
-## Project Structure
+## Project layout
 
 ```
 AIO_Tool/
-├── CubicAIO_Tool.py          # Main program entry
-├── CubicAIO_Tool.spec         # PyInstaller config file (includes esptool config)
-├── requirements.txt           # Python dependencies (including local esptool)
-├── setup.ps1                  # Windows automated installation script
-├── esptool_v41/              # Local esptool v4.1 package
-├── page/                      # UI page modules
-│   ├── download_debug.py     # Download debug page (uses esptool)
-│   ├── videotool.py          # Video tool
-│   ├── images_converter.py   # Image converter
-│   └── ...
-├── util/                      # Utility modules
-├── image/                     # Icon resources
-├── base_bin/                  # Base firmware files
-└── dist/                      # Build output directory
-    └── CubicAIO_Tool.exe     # Final executable
+├── CubicAIO_Tool.py        # main entry; Engine class wires up the 7 tabs
+├── CubicAIO_Tool.spec      # PyInstaller spec (bundles image/, i18n/, cubictool.json)
+├── pyproject.toml          # deps + ruff/ty/pytest config
+├── uv.lock                 # locked dependency versions
+├── Makefile                # dev/lint/format/typecheck/test/build/run targets
+├── setup.ps1               # one-line Windows installer wrapper around uv sync
+├── i18n/
+│   ├── zh_CN.json          # 134 translation keys per language
+│   ├── zh_TW.json
+│   └── en_US.json
+├── image/
+│   ├── holo_256.ico        # window icon (multi-res 16/32/48/64/128/256)
+│   └── holo_256.png        # README preview
+├── page/                   # one module per tab
+│   ├── download_debug.py   # firmware flash + serial debug
+│   ├── setting.py          # device parameter setting
+│   ├── filemanager.py      # SD card file browser
+│   ├── images_converter.py # PNG/JPG -> LVGL image format
+│   ├── videotool.py        # mp4 -> rgb565be / mjpeg
+│   ├── tool_settings.py    # language switcher
+│   └── help.py             # in-app docs
+├── util/                   # shared helpers
+│   ├── common.py           # constants + get_resource_path
+│   ├── logger.py           # centralised logging -> OutFile/aio_tool.log
+│   ├── i18n.py             # JSON-driven translator (singleton)
+│   ├── massagehead.py      # network message protocol (IntEnum + MsgHead)
+│   ├── file_info.py        # file-op message subclasses
+│   ├── robotsocket.py      # TCP server/client with cooperative shutdown
+│   ├── tkutils.py          # tkinter helpers
+│   ├── widget_base.py      # CTkEntry placeholder wrapper
+│   └── convertor_core.py   # LVGL image converter
+├── tests/                  # 38 pytest tests
+│   ├── test_massagehead.py # protocol wire format + IntEnum stability
+│   ├── test_i18n.py        # JSON loading + language switching + fallbacks
+│   ├── test_logger.py      # logger setup + file output
+│   └── test_robotsocket.py # graceful shutdown via threading.Event
+├── scripts/
+│   └── make_logo.py        # regenerates image/holo_256.{ico,png}
+├── base_bin/               # bundled bootloader / partitions / boot_app0
+├── partitions/             # custom partition tables
+└── dist/                   # PyInstaller output (gitignored)
+    └── CubicAIO_Tool.exe   # ~25 MB single-file
 ```
 
-## Acknowledgments
-* Firmware download tool: https://github.com/espressif/esptool
-* Video transcoding tool: https://github.com/FFmpeg/FFmpeg
-* LVGL offline conversion tool: https://github.com/W-Mai/lvgl_image_converter
+## Development workflow
 
+### Running tests
+
+```bash
+uv run pytest -v
+```
+
+The test suite locks down:
+- `MsgHead.encode/decode` byte-format (4 byte orders)
+- `IntEnum` integer values (protocol stability)
+- `i18n` JSON loading + language switching
+- `RobotSocket` graceful shutdown (server + client)
+- `logger` setup and file output
+
+### Linting + formatting
+
+```bash
+uv run ruff check .         # 0 warnings expected
+uv run ruff format --check . # style consistency
+uv run ty check .           # type checker (informational)
+```
+
+CI ([`.github/workflows/aio-tool.yml`](../.github/workflows/aio-tool.yml)) runs all three on every PR that touches `AIO_Tool/`.
+
+### Building the executable
+
+```bash
+uv run pyinstaller CubicAIO_Tool.spec --noconfirm --clean
+# Output: dist/CubicAIO_Tool.exe (~25 MB single-file)
+```
+
+The `.spec` file bundles:
+- `cubictool.json` (settings schema)
+- `image/` (icon + UI graphics)
+- `i18n/` (translation JSON files)
+
+## Troubleshooting
+
+### "No module named X" after upgrading
+```bash
+uv sync --all-groups --frozen   # re-pin to uv.lock
+```
+
+### Title bar shows "[請到 GitHub 查看最新版本]"
+Means the version-check URL `https://raw.githubusercontent.com/asdfghj1237890/HoloCubic-AIO-Enhanced/main/AIO_Tool/pyproject.toml` returned non-200. Either:
+- The file isn't on `main` yet (check the [latest commit](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/commits/main))
+- Network is blocked
+
+After `pyproject.toml` lands on `main`, the badge will become `[已是最新版本]` or `[推荐升级最新版本 vX.Y.Z]`.
+
+### Build fails with esptool import error
+We depend on the upstream PyPI `esptool>=4.1,<5.0`, not the vendored `esptool_v41/` directory (which remains in the repo as legacy reference). If `import esptool` fails, run `uv sync --all-groups --frozen`.
+
+## Flash addresses (reference)
+
+| File | Address | Source |
+|---|---|---|
+| `bootloader_qio_80m.bin` | `0x1000` | `~/.platformio/packages/framework-arduinoespressif32/tools/sdk/bin/` |
+| `partitions.bin` | `0x8000` | `AIO_Firmware_PIO/.pio/build/<board>/` |
+| `boot_app0.bin` | `0xe000` | `~/.platformio/packages/framework-arduinoespressif32/tools/partitions/` |
+| `firmware.bin` | `0x10000` | `AIO_Firmware_PIO/.pio/build/<board>/` |
+
+The four files are pre-bundled under `base_bin/`; the GUI flash tab points at them by default.
+
+## Related
+
+- Firmware repo (this fork): https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced
+- Original AIO firmware: https://github.com/ClimbSnail/HoloCubic_AIO
+- Original HoloCubic hardware: https://github.com/peng-zhihui/HoloCubic
+- esptool: https://github.com/espressif/esptool
+- ffmpeg: https://github.com/FFmpeg/FFmpeg
+- LVGL image converter: https://github.com/W-Mai/lvgl_image_converter
