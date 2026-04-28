@@ -245,7 +245,7 @@ class Setting:
         if self.m_connect_button.cget("text") == self.i18n.t("open_serial"):
             port = self.m_com_select.get().strip()
             baud = self.m_baud_select.get().strip()
-            if self.ser != None:
+            if self.ser is not None:
                 self.ser.close()  # 关闭串口
             self.ser = serial.Serial(port, baud, timeout=10)
 
@@ -267,7 +267,7 @@ class Setting:
             self.m_com_select["state"] = tk.NORMAL
             self.m_baud_select["state"] = tk.NORMAL
 
-            if self.ser != None:
+            if self.ser is not None:
                 self.ser.close()  # 关闭串口
                 del self.ser
                 self.ser = None
@@ -318,7 +318,7 @@ class Setting:
             logger.debug("set_param type bytes: %s", send_data.type)
             send_data.value = bytes(value, encoding="utf8")
             logger.debug("set_param encoded: %s", send_data.encode())
-            if self.ser != None:
+            if self.ser is not None:
                 self.ser.write(send_data.encode())
         except Exception as err:
             logger.error("set_param failed:\n%s", traceback.format_exc())
@@ -349,7 +349,7 @@ class Setting:
             send_data.type = value_type[info["type"]].to_bytes(1, byteorder="little", signed=True)
             logger.debug("get_param type bytes: %s", send_data.type)
             logger.debug("send_data --> %s", send_data.encode(">"))
-            if self.ser != None:
+            if self.ser is not None:
                 self.ser.write(send_data.encode(">"))
         except Exception as err:
             logger.error("get_param failed:\n%s", traceback.format_exc())
@@ -368,7 +368,7 @@ class Setting:
 
     def __del__(self):
         """資源釋放：通知 receive_thread 停止並等待結束。"""
-        if self.ser != None:
+        if self.ser is not None:
             self.ser.close()  # 关闭串口
             self.ser = None
         # 合作式停止 receive_thread

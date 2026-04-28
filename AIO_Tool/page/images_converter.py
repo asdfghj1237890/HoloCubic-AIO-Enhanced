@@ -264,7 +264,7 @@ class ImagesConverter:
                 (self.i18n.t("all_files"), ".* .*"),
             ],
         )
-        if filepath == None or filepath == "":
+        if filepath is None or filepath == "":
             return None
         else:
             filepaths = ";".join(filepath)
@@ -279,7 +279,7 @@ class ImagesConverter:
         self.m_tip_label.configure(text=self.i18n.t("converting"))
         self.__father.update()
         images_path = self.m_image_path_val.get().strip()
-        if images_path == None:
+        if images_path is None:
             self.log_message("Error: could not load image", "error")
             return 0
 

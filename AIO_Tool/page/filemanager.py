@@ -226,7 +226,7 @@ class FileManager:
                 logger.error("connect_holocubic failed: %s", err)
         else:
             self.conn_botton.configure(text=self.i18n.t("connect"))
-            if self.__clientsocket != None:
+            if self.__clientsocket is not None:
                 self.__clientsocket.__del__()
                 # del self.__clientsocket
                 self.__clientsocket = None
@@ -317,7 +317,7 @@ class FileManager:
         :param fileObj: 当前要更新的文件父对象
         :return: None
         """
-        if fileObj["sub_file"] == None:
+        if fileObj["sub_file"] is None:
             logger.debug("文件元素不需要显示")
             return None  # 文件元素不需要显示
 
@@ -398,7 +398,7 @@ class FileManager:
             logger.debug("open---> %s", self.tree.item(item, "open"))
             if self.__tree_map_file[item]["type"] == "file":
                 return None
-            if self.__clientsocket != None:
+            if self.__clientsocket is not None:
                 path = self.__tree_map_file[item]["path"]
                 path = path if path == "/" else path.rstrip("/")
                 send_data = DirList(path).encode()
@@ -439,7 +439,7 @@ class FileManager:
         #                               mh.A_FILE_CREATE, self.m_model_filepath)
 
     def __del__(self):
-        if self.__clientsocket != None:
+        if self.__clientsocket is not None:
             self.__clientsocket.close()
             self.__clientsocket.__del__()
             self.__clientsocket = None

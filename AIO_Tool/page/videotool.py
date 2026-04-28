@@ -147,7 +147,7 @@ class VideoTool:
                 (self.i18n.t("all_files"), ".* .*"),
             ],
         )
-        if filepath == None or filepath == "":
+        if filepath is None or filepath == "":
             return None
         else:
             # self.m_src_path_entry["state"] = tk.NORMAL
@@ -161,7 +161,7 @@ class VideoTool:
         # defaultextension 为选取保存类型中的拓展名为文件名
         # filetypes为文件拓展名
         filepath = filedialog.askdirectory()
-        if filepath == None or filepath == "":
+        if filepath is None or filepath == "":
             return None
         else:
             self.m_dst_path_entry.delete(0, tk.END)  # 清空文本框

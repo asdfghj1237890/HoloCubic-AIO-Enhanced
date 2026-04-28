@@ -334,7 +334,7 @@ class DownloadDebug:
             defaultextension=".espace",
             filetypes=[("BIN", ".bin .Bin")],
         )
-        if filepath == None or filepath == "":
+        if filepath is None or filepath == "":
             return None
         else:
             self.__firmware_path_entry[num].delete(0, tk.END)  # 清空文本框
@@ -398,7 +398,7 @@ class DownloadDebug:
         """
         取消下载固件
         """
-        if self.download_thread != None:
+        if self.download_thread is not None:
             try:
                 # 杀线程
                 if self.download_thread.is_alive():
@@ -414,7 +414,7 @@ class DownloadDebug:
         self.m_clean_flash_botton["state"] = tk.NORMAL
         self.m_download_botton["state"] = tk.NORMAL
 
-        if self.progress_bar_thread != None:
+        if self.progress_bar_thread is not None:
             self._stop_progress_thread()
 
         # 复位进度条
@@ -501,7 +501,7 @@ class DownloadDebug:
             self.m_clean_flash_botton["state"] = tk.NORMAL
             self.m_download_botton["state"] = tk.NORMAL
 
-            if self.progress_bar_thread != None:
+            if self.progress_bar_thread is not None:
                 self._stop_progress_thread()
 
             # 复位进度条
@@ -729,7 +729,7 @@ class DownloadDebug:
     def com_connect(self):
         if self.m_connect_button["text"] == self.i18n.t("open_serial"):
             down_flag, param = self.get_download_param()
-            if self.ser != None:
+            if self.ser is not None:
                 self.ser.close()
             self.ser = serial.Serial(param["port"], param["baud"], timeout=10)
 
@@ -763,7 +763,7 @@ class DownloadDebug:
             self.m_clean_flash_botton["state"] = tk.NORMAL
             self.m_download_botton["state"] = tk.NORMAL
 
-            if self.ser != None:
+            if self.ser is not None:
                 self.ser.close()  # 关闭串口
                 del self.ser
                 self.ser = None
@@ -848,7 +848,7 @@ class DownloadDebug:
 
     def __del__(self):
         """資源釋放：通知 receive_thread 停止；esptool download_thread 仍以 _async_raise 中斷。"""
-        if self.ser != None:
+        if self.ser is not None:
             self.ser.close()  # 关闭串口
             self.ser = None
         # receive_thread 改為合作式停止
@@ -857,8 +857,8 @@ class DownloadDebug:
             self.receive_thread.join(timeout=1.0)
         # esptool 的 download_thread 沒有合作式中斷點，仍以 _async_raise 強制終止
         # TODO: 改用 esptool API 的 stub-loader cancel 介面（需上游支援）
-        if self.download_thread != None:
+        if self.download_thread is not None:
             if self.download_thread.is_alive():
                 common._async_raise(self.download_thread)
-        if self.progress_bar_thread != None:
+        if self.progress_bar_thread is not None:
             self._stop_progress_thread(wait=False)

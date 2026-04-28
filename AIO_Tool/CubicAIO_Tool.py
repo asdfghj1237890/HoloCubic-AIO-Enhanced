@@ -140,7 +140,7 @@ class Engine:
         Trigger function when closing main window
         :return: None
         """
-        if self.m_file_tab_windows != None:
+        if self.m_file_tab_windows is not None:
             self.m_file_tab_windows.__del__()
             del self.m_file_tab_windows
             self.m_file_tab_windows = None
@@ -148,15 +148,15 @@ class Engine:
         # if messagebox.askokcancel("Quit", "Do you want to quit?"):
         self.root.destroy()
 
-        if self.m_debug_tab_windows != None:
+        if self.m_debug_tab_windows is not None:
             del self.m_debug_tab_windows
             self.m_debug_tab_windows = None
 
-        if self.m_setting_tab_windows != None:
+        if self.m_setting_tab_windows is not None:
             del self.m_setting_tab_windows
             self.m_setting_tab_windows = None
 
-        if self.m_tool_settings_tab_windows != None:
+        if self.m_tool_settings_tab_windows is not None:
             del self.m_tool_settings_tab_windows
             self.m_tool_settings_tab_windows = None
 
@@ -167,12 +167,12 @@ class Engine:
         # del self.m_debug_tab_windows
         self.m_debug_tab_windows = None
 
-        if self.m_file_tab_windows != None:
+        if self.m_file_tab_windows is not None:
             self.m_file_tab_windows.__del__()
             del self.m_file_tab_windows
             self.m_file_tab_windows = None
 
-        if self.m_tool_settings_tab_windows != None:
+        if self.m_tool_settings_tab_windows is not None:
             del self.m_tool_settings_tab_windows
             self.m_tool_settings_tab_windows = None
 
