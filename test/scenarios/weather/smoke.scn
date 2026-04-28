@@ -10,7 +10,11 @@ app weather
 
 wait_ms 800
 action UP
-wait_ms 600
+# No wait_ms here — the action's built-in tick_for(50) is enough for
+# display_weather to render with the parsed values, and it minimises
+# the window during which the clock label keeps ticking. Earlier
+# wait_ms 600 made the screenshot 1.2% flaky between CI runs because
+# the seconds digit in the clock could roll over.
 screenshot 01_with_data
 assert_no_crash
 
