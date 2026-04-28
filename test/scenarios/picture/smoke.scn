@@ -1,12 +1,17 @@
-# Smoke test for picture. On host the SD-card stub's tf.listDir returns
-# nullptr, so the app's first process tick takes the
-# `if (NULL == image_file) sys->app_exit()` path. This scenario just
-# asserts init + that auto-exit + a follow-up RETURN don't crash.
+# Smoke test for picture. With test/fixtures/sd/image/sample.bin in
+# place, tf.listDir("/image") returns a one-entry File_Info list, so
+# init no longer takes the auto-exit fast path. The follow-up
+# `action TURN_RIGHT` flips refreshFlag, which routes through
+# display_photo -> lv_scr_load_anim onto image_scr (the actual SD/LVGL
+# image load fails since "S:" filesystem isn't registered on host —
+# we get a black image_scr panel rather than the controller's icon).
 
 app picture
 
 wait_ms 400
-screenshot 01_initial
+action TURN_RIGHT
+wait_ms 400
+screenshot 01_after_turn_right
 assert_no_crash
 
 action RETURN

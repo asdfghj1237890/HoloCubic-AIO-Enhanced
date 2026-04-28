@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <dirent.h>
+#include <stdlib.h>
 
 #include "ESPmDNS.h"
 #include "TJpg_Decoder.h"
@@ -134,6 +136,56 @@ void FlashFS::appendFile(const char *path, const char *message) {
 void FlashFS::deleteFile(const char *path) {
     String full = flash_path(path);
     remove(full.c_str());
+}
+
+// ---------- SdCard::listDir: route to test/fixtures/sd/ ----------
+//
+// Mirrors the firmware's File_Info layout (driver/sd_card.cpp:183):
+// head node is a FOLDER named after the dirname, followed by a circular
+// doubly-linked list of FILE nodes — one per regular file in the
+// fixture directory. Subdirectories are ignored (no recursion).
+//
+// Apps without a fixture directory get the same nullptr the old stub
+// returned, so picture/file_manager/media that haven't grown a fixture
+// stay on their no-files fast path.
+static const char *SD_FIXTURE_DIR = "../test/fixtures/sd";
+
+File_Info *SdCard::listDir(const char *dirname) {
+    if (!dirname) return nullptr;
+    String path(SD_FIXTURE_DIR);
+    if (dirname[0] != '/') path += "/";
+    path += dirname;
+
+    DIR *dir = opendir(path.c_str());
+    if (!dir) return nullptr;
+
+    File_Info *head = (File_Info *)malloc(sizeof(File_Info));
+    head->file_type = FILE_TYPE_FOLDER;
+    head->file_name = strdup(dirname);
+    head->front_node = nullptr;
+    head->next_node = nullptr;
+
+    File_Info *tail = head;
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        if (entry->d_name[0] == '.') continue;  // skip . / ..
+        File_Info *node = (File_Info *)malloc(sizeof(File_Info));
+        node->file_type = FILE_TYPE_FILE;
+        node->file_name = strdup(entry->d_name);
+        node->front_node = tail;
+        node->next_node = nullptr;
+        tail->next_node = node;
+        tail = node;
+    }
+    closedir(dir);
+
+    // Make the file list circular (firmware does this so get_next_file
+    // can walk forward/backward indefinitely).
+    if (head->next_node) {
+        tail->next_node = head->next_node;
+        head->next_node->front_node = tail;
+    }
+    return head;
 }
 
 // ---------- HTTPClient stub: route GET() to test/fixtures/http/ ----------

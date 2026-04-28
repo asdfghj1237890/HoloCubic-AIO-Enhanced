@@ -31,7 +31,11 @@ class SdCard {
 public:
     void init() {}
     void listDir(const char *, uint8_t) {}
-    File_Info *listDir(const char *) { return nullptr; }
+    // Out-of-line: scans test/fixtures/sd/<dirname>/ on the host
+    // filesystem and returns a File_Info linked list mirroring what
+    // the firmware's SdCard::listDir builds (head=folder node, then
+    // a circular doubly-linked list of file nodes).
+    File_Info *listDir(const char *dirname);
     void createDir(const char *) {}
     void removeDir(const char *) {}
     void readFile(const char *) {}
