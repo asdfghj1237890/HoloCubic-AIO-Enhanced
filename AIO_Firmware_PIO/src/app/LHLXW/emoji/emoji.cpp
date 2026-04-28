@@ -70,8 +70,11 @@ static void close_player(void){
 }
 /* 开启播放 */
 static void start_player(void){
-    char *path = (char*)malloc(38);//必须用char*类型，不能用uint8_t*
-    sprintf(path,"/LH&LXW/emoji/videos/video%d.mjpeg",emj_run->emoji_var);//图标路径
+    // path buffer cap (38) is the malloc size above; snprintf uses it
+    // explicitly because sizeof(path) on a char* would return pointer size.
+    const size_t path_cap = 38;
+    char *path = (char*)malloc(path_cap);//必须用char*类型，不能用uint8_t*
+    snprintf(path, path_cap, "/LH&LXW/emoji/videos/video%d.mjpeg", emj_run->emoji_var);//图标路径
     emj_run->emoji_file = tf.open(path);
     emj_run->emoji_decoder = new MjpegPlayDecoder(&emj_run->emoji_file, true);
     free(path);  
