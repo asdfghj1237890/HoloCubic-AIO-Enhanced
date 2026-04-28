@@ -188,6 +188,69 @@ File_Info *SdCard::listDir(const char *dirname) {
     return head;
 }
 
+// ---------- WiFiClient stub: route connect() to test/fixtures/socket/ ----------
+//
+// Used by pc_resource's raw HTTP GET against cfg_data.pc_ipaddr (default
+// "0.0.0.0"). The fixture file for host H is test/fixtures/socket/H.txt
+// — typically an HTTP-style payload (status line, headers, blank line,
+// body). connect() loads it into the client's read buffer so the
+// downstream find()/readStringUntil() walk it like a real reply.
+static const char *SOCKET_FIXTURE_DIR = "../test/fixtures/socket";
+
+static bool load_socket_fixture(const char *host, String *out) {
+    if (!host) return false;
+    String path(SOCKET_FIXTURE_DIR);
+    path += "/";
+    path += host;
+    path += ".txt";
+    FILE *f = fopen(path.c_str(), "rb");
+    if (!f) return false;
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (sz < 0) { fclose(f); return false; }
+    std::string buf(sz, '\0');
+    if (sz > 0) fread(&buf[0], 1, sz, f);
+    fclose(f);
+    *out = String(buf);
+    return true;
+}
+
+int WiFiClient::connect(const char *host, uint16_t /*port*/) {
+    if (!load_socket_fixture(host, &m_buf)) return 0;
+    m_pos = 0;
+    m_connected = true;
+    return 1;
+}
+
+int WiFiClient::connect(const char *host, uint16_t port, int /*timeout_ms*/) {
+    return connect(host, port);
+}
+
+bool WiFiClient::find(const char *needle) {
+    if (!needle) return false;
+    size_t hit = m_buf.s.find(needle, m_pos);
+    if (hit == std::string::npos) return false;
+    m_pos = hit + strlen(needle);
+    return true;
+}
+
+String WiFiClient::readStringUntil(char terminator) {
+    if (m_pos >= m_buf.length()) return String("");
+    size_t hit = m_buf.s.find(terminator, m_pos);
+    size_t end = (hit == std::string::npos) ? m_buf.length() : hit;
+    std::string slice = m_buf.s.substr(m_pos, end - m_pos);
+    m_pos = (hit == std::string::npos) ? end : hit + 1;
+    return String(slice);
+}
+
+String WiFiClient::readString() {
+    if (m_pos >= m_buf.length()) return String("");
+    std::string slice = m_buf.s.substr(m_pos);
+    m_pos = m_buf.length();
+    return String(slice);
+}
+
 // ---------- HTTPClient stub: route GET() to test/fixtures/http/ ----------
 //
 // Maps URL host + path to a fixture file mirroring the URL structure:

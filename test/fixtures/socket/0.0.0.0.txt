@@ -1,0 +1,6 @@
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: close
+
+CPU usage 45.0% CPU temp 65.0C CPU freq 3500.0MHz CPU power 75.0W GPU usage 35.0% GPU temp 60.0C GPU power 120.0W RAM usage 50.0% RAM use 8000.0MB NET upload speed 100.0KB/s NET download speed 500.0KB/s

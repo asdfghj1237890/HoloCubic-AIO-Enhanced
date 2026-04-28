@@ -1,10 +1,16 @@
-# Smoke test for pc_resource (PC system stats over Serial). No serial
-# input arrives in the harness so values stay at init defaults.
+# Smoke test for pc_resource (PC system stats via raw HTTP GET to a
+# local sensor server). The WiFiClient stub now reads
+# test/fixtures/socket/0.0.0.0.txt as the canned reply (default
+# pc_ipaddr is "0.0.0.0"), so on the first wait the
+# doDelayMillisTime tick fires WIFI_CONN -> get_pc_resource_data ->
+# parse, and the follow-up `action UP` rerenders display_pc_resource
+# with CPU 45% / 65°C / GPU 35% / RAM 50% etc.
 
 app pc_resource
 
-wait_ms 400
-screenshot 01_initial
+wait_ms 1200
+action UP
+screenshot 01_with_data
 assert_no_crash
 
 action RETURN
