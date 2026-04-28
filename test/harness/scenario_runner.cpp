@@ -13,6 +13,9 @@
 #include <ctype.h>
 #include <string>
 #include <vector>
+#include <dirent.h>
+#include <unistd.h>
+#include <utility>
 
 namespace {
 
@@ -109,6 +112,11 @@ int run_scenario(const char *path,
     // while(1) tick loop and never return; we can only verify their init
     // path under that constraint.
     bool init_only = false;
+    // flash_seed entries: (path, content) pairs written into FlashFS
+    // before app_init runs. Lets a scenario boot the app under test
+    // with non-default config (e.g. CN-market stockmarket) without
+    // reaching for a per-test write_config call.
+    std::vector<std::pair<std::string, std::string>> flash_seeds;
 
     char raw[512];
     int line_no = 0;
@@ -151,6 +159,37 @@ int run_scenario(const char *path,
             steps.push_back(s);
         } else if (cmd == "init_only") {
             init_only = true;
+        } else if (cmd == "flash_seed") {
+            // Format: flash_seed <path> <content>
+            // <content> may contain literal "\n" / "\\" / "\"" escapes.
+            size_t sp2 = arg.find_first_of(" \t");
+            if (sp2 == std::string::npos) {
+                fprintf(stderr, "[scenario] line %d: flash_seed needs <path> <content>\n", line_no);
+                fclose(f);
+                return 3;
+            }
+            std::string seed_path = arg.substr(0, sp2);
+            std::string raw_content = arg.substr(sp2 + 1);
+            trim(raw_content);
+            // Strip surrounding double quotes if present.
+            if (raw_content.size() >= 2 &&
+                raw_content.front() == '"' && raw_content.back() == '"') {
+                raw_content = raw_content.substr(1, raw_content.size() - 2);
+            }
+            // Decode \n / \\ / \" escapes into the actual chars.
+            std::string content;
+            for (size_t k = 0; k < raw_content.size(); ++k) {
+                if (raw_content[k] == '\\' && k + 1 < raw_content.size()) {
+                    char nx = raw_content[k + 1];
+                    if (nx == 'n')      content.push_back('\n');
+                    else if (nx == 't') content.push_back('\t');
+                    else                content.push_back(nx);
+                    ++k;
+                } else {
+                    content.push_back(raw_content[k]);
+                }
+            }
+            flash_seeds.emplace_back(std::move(seed_path), std::move(content));
         } else {
             fprintf(stderr, "[scenario] line %d: unknown command '%s'\n", line_no, cmd.c_str());
             fclose(f);
@@ -176,6 +215,33 @@ int run_scenario(const char *path,
         fprintf(stderr, "[scenario] app '%s' not registered in this build\n", app_name.c_str());
         return 4;
     }
+    // Wipe the FlashFS fixture dir so each scenario boots with the
+    // default-init code paths unless it explicitly seeds otherwise.
+    // Without this, a previous scenario's writeFile (e.g. a default
+    // config write on first boot) would leak into the next.
+    // Path matches FLASH_FIXTURE_DIR in test/stubs/stubs_runtime.cpp.
+    {
+        const char *flash_dir = "../test/fixtures/flash";
+        DIR *dh = opendir(flash_dir);
+        if (dh) {
+            struct dirent *ent;
+            while ((ent = readdir(dh)) != nullptr) {
+                if (ent->d_name[0] == '.') continue;
+                std::string p(flash_dir);
+                p += "/";
+                p += ent->d_name;
+                unlink(p.c_str());
+            }
+            closedir(dh);
+        }
+    }
+
+    // Apply flash_seed directives so app_init's read_config sees the
+    // intended state instead of writing fresh defaults.
+    for (auto const &seed : flash_seeds) {
+        g_flashCfg.writeFile(seed.first.c_str(), seed.second.c_str());
+    }
+
     controller->app_install(target, APP_TYPE_REAL_TIME);
 
     // Boot into the app the way the real firmware does: a GO_FORWORD frame

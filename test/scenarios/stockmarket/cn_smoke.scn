@@ -1,0 +1,27 @@
+# Smoke test for stockmarket on the CN (Sina) parser path. Default
+# scenario uses Yahoo (US/AAPL); this one uses flash_seed to write a
+# /stockmarket.cfg before app_init runs so read_config picks the
+# CN-market branch and routes to the Sina endpoint.
+#
+# Fixture: test/fixtures/http/hq.sinajs.cn/list=sh603019.json
+# (Sina-format payload — `var hq_str_X="name,open,close,now,max,min,
+# bid,ask,vol,turnover,..."`).
+#
+# After fetch, parse_sina_data populates run_data->stockdata.
+# `action UP` rerenders display_stockmarket with 海得控制 / 11.65 etc.
+
+app stockmarket
+flash_seed /stockmarket.cfg "603019\nCN\n10000\n"
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+action UP
+wait_ms 400
+screenshot 02_with_data
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
