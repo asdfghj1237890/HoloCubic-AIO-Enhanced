@@ -154,8 +154,12 @@ static void game_2048_process(AppController *sys,
         Serial.println("you lose!");
     }
 
-    // 程序需要时可以适当加延时
-    delay(300);
+    // (was: delay(300) — pure throttle removed; AppController already
+    //  rate-limits main_process via its 200ms loop timer.)
+    // The earlier delay(700) calls inside the move branches stay because they
+    // pace the LVGL move-animation completion before showNewBorn fires;
+    // converting those to a real animation-state machine is filed as a
+    // follow-up.
 }
 
 static void game_2048_background_task(AppController *sys,
