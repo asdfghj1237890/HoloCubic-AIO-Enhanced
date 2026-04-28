@@ -562,7 +562,7 @@ void sys_setting()
     // 主要为了处理启停MPU自动校准的单选框
     if (0 == cfg.auto_calibration_mpu)
     {
-        sprintf(buf, SYS_SETTING,
+        snprintf(buf, sizeof(buf), SYS_SETTING,
                 ssid_0, password_0,
                 power_mode, backLight, rotation,
                 mpu_order, "checked=\"checked\"", "",
@@ -570,7 +570,7 @@ void sys_setting()
     }
     else
     {
-        sprintf(buf, SYS_SETTING,
+        snprintf(buf, sizeof(buf), SYS_SETTING,
                 ssid_0, password_0,
                 power_mode, backLight, rotation,
                 mpu_order, "", "checked=\"checked\"",
@@ -595,7 +595,7 @@ void rgb_setting()
                             (void *)"max_brightness", max_brightness);
     app_controller->send_to(SERVER_APP_NAME, "AppCtrl", APP_MESSAGE_GET_PARAM,
                             (void *)"time", time);
-    sprintf(buf, RGB_SETTING,
+    snprintf(buf, sizeof(buf), RGB_SETTING,
             min_brightness, max_brightness, time);
     webpage = buf;
     Send_HTML(webpage);
@@ -627,7 +627,7 @@ void weather_setting()
     const char *lang0_checked = (lang == 0) ? "checked" : "";
     const char *lang1_checked = (lang == 1) ? "checked" : "";
     
-    sprintf(buf, WEATHER_SETTING,
+    snprintf(buf, sizeof(buf), WEATHER_SETTING,
             api_key,
             city_name,
             weatherUpdataInterval,
@@ -659,7 +659,7 @@ void weather_old_setting()
                             (void *)"weatherUpdataInterval", weatherUpdataInterval);
     app_controller->send_to(SERVER_APP_NAME, "Weather Old", APP_MESSAGE_GET_PARAM,
                             (void *)"timeUpdataInterval", timeUpdataInterval);
-    sprintf(buf, WEATHER_OLD_SETTING,
+    snprintf(buf, sizeof(buf), WEATHER_OLD_SETTING,
             cityname,
             language,
             weather_key,
@@ -681,7 +681,7 @@ void bili_setting()
                             (void *)"bili_uid", bili_uid);
     app_controller->send_to(SERVER_APP_NAME, "Bili", APP_MESSAGE_GET_PARAM,
                             (void *)"updataInterval", updataInterval);
-    sprintf(buf, BILIBILI_SETTING, bili_uid, updataInterval);
+    snprintf(buf, sizeof(buf), BILIBILI_SETTING, bili_uid, updataInterval);
     webpage = buf;
     Send_HTML(webpage);
 }
@@ -707,7 +707,7 @@ void stock_setting()
     const char* cn_selected = (strcmp(market_type, "CN") == 0) ? "selected" : "";
     const char* hk_selected = (strcmp(market_type, "HK") == 0) ? "selected" : "";
     
-    sprintf(buf, STOCK_SETTING, stock_symbol, us_selected, cn_selected, hk_selected, updataInterval);
+    snprintf(buf, sizeof(buf), STOCK_SETTING, stock_symbol, us_selected, cn_selected, hk_selected, updataInterval);
     webpage = buf;
     Send_HTML(webpage);
 }
@@ -721,7 +721,7 @@ void picture_setting()
                             NULL, NULL);
     app_controller->send_to(SERVER_APP_NAME, "Picture", APP_MESSAGE_GET_PARAM,
                             (void *)"switchInterval", switchInterval);
-    sprintf(buf, PICTURE_SETTING, switchInterval);
+    snprintf(buf, sizeof(buf), PICTURE_SETTING, switchInterval);
     webpage = buf;
     Send_HTML(webpage);
 }
@@ -738,7 +738,7 @@ void media_setting()
                             (void *)"switchFlag", switchFlag);
     app_controller->send_to(SERVER_APP_NAME, "Media", APP_MESSAGE_GET_PARAM,
                             (void *)"powerFlag", powerFlag);
-    sprintf(buf, MEDIA_SETTING, switchFlag, powerFlag);
+    snprintf(buf, sizeof(buf), MEDIA_SETTING, switchFlag, powerFlag);
     webpage = buf;
     Send_HTML(webpage);
 }
@@ -752,7 +752,7 @@ void screen_setting()
                             NULL, NULL);
     app_controller->send_to(SERVER_APP_NAME, "Screen share", APP_MESSAGE_GET_PARAM,
                             (void *)"powerFlag", powerFlag);
-    sprintf(buf, SCREEN_SETTING, powerFlag);
+    snprintf(buf, sizeof(buf), SCREEN_SETTING, powerFlag);
     webpage = buf;
     Send_HTML(webpage);
 }
@@ -786,7 +786,7 @@ void heartbeat_setting()
     app_controller->send_to(SERVER_APP_NAME, "Heartbeat", APP_MESSAGE_GET_PARAM,
                             (void *)"mqtt_password", mqtt_password);
 
-    sprintf(buf, HEARTBEAT_SETTING, role, qq_num, mqtt_server,
+    snprintf(buf, sizeof(buf), HEARTBEAT_SETTING, role, qq_num, mqtt_server,
             mqtt_port, mqtt_user, mqtt_password);
     webpage = buf;
     Send_HTML(webpage);
@@ -810,7 +810,7 @@ void anniversary_setting()
                             (void *)"event_name1", event_name1);
     app_controller->send_to(SERVER_APP_NAME, "Anniversary", APP_MESSAGE_GET_PARAM,
                             (void *)"target_date1", target_date1);
-    sprintf(buf, ANNIVERSARY_SETTING, event_name0, target_date0, event_name1, target_date1);
+    snprintf(buf, sizeof(buf), ANNIVERSARY_SETTING, event_name0, target_date0, event_name1, target_date1);
     webpage = buf;
     Send_HTML(webpage);
 }
@@ -827,7 +827,7 @@ void pc_resource_setting()
                             (void *)"pc_ipaddr", pc_ipaddr);
     app_controller->send_to(SERVER_APP_NAME, "PC Resource", APP_MESSAGE_GET_PARAM,
                             (void *)"sensorUpdataInterval", sensorUpdataInterval);
-    sprintf(buf, REMOTR_SENSOR_SETTING, pc_ipaddr, sensorUpdataInterval);
+    snprintf(buf, sizeof(buf), REMOTR_SENSOR_SETTING, pc_ipaddr, sensorUpdataInterval);
     webpage = buf;
     Send_HTML(webpage);
 }
