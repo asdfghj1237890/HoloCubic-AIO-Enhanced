@@ -1,5 +1,6 @@
 Docs/LvglFontTool
 .idea/
+.worktrees/
 AIO_Firmware_PIO/src/app/app_conf.h
 AIO_Firmware_PIO/platformio.ini
 Docs/*

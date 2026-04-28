@@ -10,6 +10,12 @@
 
 #define WEATHER_APP_NAME "Weather"
 
+// Placeholder default for the AccuWeather API key. Real keys must be supplied
+// at runtime via the web settings page; this string is used both as the seeded
+// default in fresh flash configs and as the sentinel checked before any HTTP
+// request is issued.
+#define WEATHER_API_KEY_PLACEHOLDER "YOUR_ACCUWEATHER_API_KEY"
+
 // Old Amap API (commented out, kept for reference)
 // #define WEATHER_NOW_API "https://www.yiketianqi.com/free/day?appid=%s&appsecret=%s&unescape=1&city=%s"
 // v1.yiketianqi.com/api?unescape=1&version=v61
@@ -99,7 +105,7 @@ static void read_config(WT_Config *cfg)
     if (size == 0)
     {
         // 默认值
-        cfg->api_key = "xxxxxxxxxx";
+        cfg->api_key = WEATHER_API_KEY_PLACEHOLDER;
         cfg->city_name = "Beijing";          // Default to Beijing (change via WebServer if needed)
         cfg->location_key = "";              // Will be fetched on first run
         cfg->weatherUpdataInterval = 900000; // 天气更新的时间间隔900000(900s)
@@ -272,11 +278,25 @@ static int windLevelAnalyse(String str)
     return ret;
 }
 
+// Returns true once the user has supplied a real AccuWeather key (i.e. the
+// stored value is non-empty and not equal to the seeded placeholder).
+static bool weather_api_key_configured(void)
+{
+    return cfg_data.api_key.length() > 0
+        && cfg_data.api_key != WEATHER_API_KEY_PLACEHOLDER;
+}
+
 // New function for AccuWeather: Get location key (auto-detect by IP or search by city name)
 static bool get_location_key(void)
 {
     if (WL_CONNECTED != WiFi.status())
         return false;
+
+    if (!weather_api_key_configured())
+    {
+        Serial.println("[Weather] API key not set; configure via web settings");
+        return false;
+    }
 
     // If location key is already cached, check if we need to refresh
     if (cfg_data.location_key.length() > 0)
