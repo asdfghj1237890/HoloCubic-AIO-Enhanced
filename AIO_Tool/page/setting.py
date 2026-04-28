@@ -60,15 +60,10 @@ class Setting:
         self.data_info = json.load(fp)
         fp.close()
 
-        # Serial connection
-        self.uart_father = ctk.CTkFrame(self.__father, fg_color="transparent")
-        self.uart_father.place(x=self.__father.winfo_width() + 250, y=10)
-        self.connect_uart(self.uart_father)
-        self.uart_father.update()
-
-        # WiFi settings frame —— CTk 沒有 LabelFrame，改用 CTkFrame + 標題 CTkLabel
-        self.wifi_grid_frame = ctk.CTkFrame(self.__father)
-        self.wifi_grid_frame.place(x=self.__father.winfo_width() + 10, y=10)
+        # WiFi settings frame —— 左上角固定 (11, 10)，寬度跟著視窗變化
+        self.wifi_grid_frame = ctk.CTkFrame(self.__father, width=600, height=400)
+        self.wifi_grid_frame.place(x=11, y=10)
+        self.wifi_grid_frame.pack_propagate(False)
         wifi_title = ctk.CTkLabel(
             self.wifi_grid_frame,
             text=self.i18n.t("wifi_settings"),
@@ -76,7 +71,15 @@ class Setting:
         )
         wifi_title.pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.create_wifi(self.wifi_grid_frame)
-        self.wifi_grid_frame.update()
+
+        # UART connection frame —— 右上角，靠右對齊，寬 540
+        self.uart_father = ctk.CTkFrame(self.__father, width=540, height=80)
+        self.uart_father.place(x=620, y=10)
+        self.uart_father.pack_propagate(False)
+        self.connect_uart(self.uart_father)
+
+        # 響應式佈局：tab 父容器尺寸變化時，更新 frame 寬高
+        self.__father.bind("<Configure>", self._on_father_resize)
 
     def createConfig(self, filename: str) -> bool:
         """
@@ -370,6 +373,17 @@ class Setting:
             height=28,
         )
         get_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=8)
+
+    def _on_father_resize(self, event: tk.Event) -> None:
+        """父容器尺寸變化時，WiFi 框跟著伸縮、UART 框靠右對齊保持固定寬度。"""
+        pw, ph = event.width, event.height
+        # WiFi 框：左 11 邊距，右邊到 uart 框左邊（保留 uart 寬 540 + 10 px gap + 11 px 右邊距）
+        wifi_w = max(300, pw - 540 - 10 - 22)
+        wifi_h = max(200, ph - 20)
+        self.wifi_grid_frame.configure(width=wifi_w, height=wifi_h)
+        # UART 框：靠右，x = 視窗寬 - 540 - 11
+        uart_x = max(620, pw - 540 - 11)
+        self.uart_father.place_configure(x=uart_x)
 
     def __del__(self) -> None:
         """資源釋放：通知 receive_thread 停止並等待結束。"""

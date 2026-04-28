@@ -53,21 +53,24 @@ class FileManager:
         self.__is_freestatus = False
         self.i18n = get_i18n()
 
-        # 连接器相关控件
+        # 連線控制（最上方一條，pack 自然響應寬度）
         self.m_conn_frame = ctk.CTkFrame(self.__father, fg_color="transparent")
         self.init_connect(self.m_conn_frame)
         self.m_conn_frame.pack(side=tk.TOP, pady=5)
 
-        # 目录树
-        self.path_tree_frame = ctk.CTkFrame(father, fg_color="transparent")
+        # 目錄樹（左半，固定起點 x=10、y=50；寬高隨視窗變化）
+        self.path_tree_frame = ctk.CTkFrame(father, width=600, height=600)
         self.path_tree_frame.place(x=10, y=50)
-        self.path_tree_frame.update()
+        self.path_tree_frame.pack_propagate(False)
         self.init_path_tree(self.path_tree_frame)
 
-        # 视图区
+        # 視圖區（目前空殼，預留給檔案內容預覽）
         self.view_file_frame = ctk.CTkFrame(father, fg_color="transparent")
         self.init_view_file(self.view_file_frame)
-        self.view_file_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5)
+        self.view_file_frame.place(x=620, y=50)
+
+        # 響應式佈局：tab 父容器尺寸變化時，目錄樹跟著伸縮
+        self.__father.bind("<Configure>", self._on_father_resize)
 
         # 初始化右击操作项(默认不显示)
         self.init_section(father)
@@ -442,6 +445,14 @@ class FileManager:
         logger.debug("click_model_create")
         # self.__engine.OnThreadMessage(mh.M_CTRLMENU, mh.M_MODEL_FILEMANAGER,
         #                               mh.A_FILE_CREATE, self.m_model_filepath)
+
+    def _on_father_resize(self, event: tk.Event) -> None:
+        """父容器尺寸變化時，目錄樹寬高跟著伸縮（連線列由 pack 自動處理）。"""
+        pw, ph = event.width, event.height
+        # 目錄樹從 x=10、y=50 起，左右各 10 px、底部 10 px 邊距
+        tree_w = max(400, pw - 20)
+        tree_h = max(300, ph - 60)
+        self.path_tree_frame.configure(width=tree_w, height=tree_h)
 
     def __del__(self) -> None:
         if self.__clientsocket is not None:

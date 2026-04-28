@@ -31,7 +31,7 @@ def get_resource_path(relative_path: str | Path) -> Path:
     return base_path / relative_path
 
 
-TOOL_VERSION: str = "v1.6.2"
+TOOL_VERSION: str = "v2.5.0"
 #: GitHub raw URL — pyproject.toml 內含 ``version = "X.Y.Z"`` 可抓取比對
 TOOL_VERSION_INFO_URL: str = (
     "https://raw.githubusercontent.com/asdfghj1237890/"

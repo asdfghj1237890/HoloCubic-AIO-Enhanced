@@ -1,6 +1,6 @@
 [project]
 name = "cubic-aio-tool"
-version = "1.6.2"
+version = "2.5.0"
 description = "HoloCubic AIO firmware flashing and configuration tool"
 requires-python = ">=3.11"
 dependencies = [
