@@ -107,12 +107,12 @@ static void read_config(HeartbeatAppForeverData *cfg)
         // 设置了mqtt服务器才能运行！
         Serial.println("Please config mqtt first!");
         // 默认值
-        strcpy(cfg->mqtt_server, DEFALUT_MQTT_ADDR);
+        snprintf(cfg->mqtt_server, sizeof(cfg->mqtt_server), "%s", DEFALUT_MQTT_ADDR);
         cfg->mqtt_port = DEFALUT_MQTT_PORT; // mqtt服务端口
-        strcpy(cfg->mqtt_user, DEFALUT_MQTT_USERNAME);
-        strcpy(cfg->mqtt_password, DEFALUT_MQTT_PASSWD);
+        snprintf(cfg->mqtt_user, sizeof(cfg->mqtt_user), "%s", DEFALUT_MQTT_USERNAME);
+        snprintf(cfg->mqtt_password, sizeof(cfg->mqtt_password), "%s", DEFALUT_MQTT_PASSWD);
         cfg->role = 0; // 角色
-        strcpy(cfg->qq_num, "77318186");
+        snprintf(cfg->qq_num, sizeof(cfg->qq_num), "%s", "77318186");
         write_config(cfg);
     }
     else
@@ -122,22 +122,25 @@ static void read_config(HeartbeatAppForeverData *cfg)
         int ind = 0;
         analyseParam(info, 6, param);
 
-        strcpy(cfg->mqtt_server, param[ind++]);
+        // Each field-from-flash copy uses sizeof(dst) so a malformed config
+        // (oversize value, missing newline, etc) can't blow past the struct
+        // member it's writing into.
+        snprintf(cfg->mqtt_server, sizeof(cfg->mqtt_server), "%s", param[ind++]);
         Serial.printf("mqtt_server %s\n", cfg->mqtt_server);
 
         cfg->mqtt_port = atol(param[ind++]);
         Serial.printf("mqtt_port %u\n", cfg->mqtt_port);
 
-        strcpy(cfg->mqtt_user, param[ind++]);
+        snprintf(cfg->mqtt_user, sizeof(cfg->mqtt_user), "%s", param[ind++]);
         Serial.printf("mqtt_mqtt_user %s\n", cfg->mqtt_user);
 
-        strcpy(cfg->mqtt_password, param[ind++]);
+        snprintf(cfg->mqtt_password, sizeof(cfg->mqtt_password), "%s", param[ind++]);
         Serial.printf("mqtt_mqtt_password %s\n", cfg->mqtt_password);
 
         cfg->role = atoi(param[ind++]);
         Serial.printf(HEARTBEAT_APP_NAME " role %d\n", cfg->role);
 
-        strcpy(cfg->qq_num, param[ind++]);
+        snprintf(cfg->qq_num, sizeof(cfg->qq_num), "%s", param[ind++]);
         Serial.printf("qq_num %s\n", cfg->qq_num);
     }
 

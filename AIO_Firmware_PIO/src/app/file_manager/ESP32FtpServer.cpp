@@ -104,7 +104,7 @@ void FtpServer::iniVariables()
     dataPassiveConn = true;
 
     // Set the root directory
-    strcpy(cwdName, "/");
+    snprintf(cwdName, sizeof(cwdName), "/");
 
     rnfrCmd = false;
     transferStatus = 0;
@@ -230,7 +230,7 @@ boolean FtpServer::userIdentity()
     else
     {
         client.println("331 OK. Password required");
-        strcpy(cwdName, "/");
+        snprintf(cwdName, sizeof(cwdName), "/");
         return true;
     }
     millisDelay = millis() + 100; // delay of 100 ms
@@ -311,7 +311,7 @@ boolean FtpServer::processCommand()
         // 以下是兼容windows自带的ftp
         if (makePath(path, NULL) && SD.exists(path))
         {
-            strcpy(cwdName, path);
+            snprintf(cwdName, sizeof(cwdName), "%s", path);
             client.println("250 Ok. Current directory is " + String(cwdName));
         }
         Serial.print("cwdName -> ");
@@ -960,7 +960,7 @@ int8_t FtpServer::readChar()
                     else if (strlen(cmdLine) > 4)
                         rc = -2; // Syntax error.
                     else
-                        strcpy(command, cmdLine);
+                        snprintf(command, sizeof(command), "%s", cmdLine);
                     iCL = 0;
                 }
             }
@@ -996,22 +996,24 @@ boolean FtpServer::makePath(char *fullName, char *param)
     if (param == NULL)
         param = parameters;
 
+    // Caller contract (every makePath call site): fullName points at a
+    // char[FTP_CWD_SIZE] buffer, so the FTP_CWD_SIZE cap below is sound.
     // Root or empty?
     if (strcmp(param, "/") == 0 || strlen(param) == 0)
     {
-        strcpy(fullName, "/");
+        snprintf(fullName, FTP_CWD_SIZE, "/");
         return true;
     }
     // If relative path, concatenate with current dir
     if (param[0] != '/')
     {
-        strcpy(fullName, cwdName);
+        snprintf(fullName, FTP_CWD_SIZE, "%s", cwdName);
         if (fullName[strlen(fullName) - 1] != '/')
             strncat(fullName, "/", FTP_CWD_SIZE);
         strncat(fullName, param, FTP_CWD_SIZE);
     }
     else
-        strcpy(fullName, param);
+        snprintf(fullName, FTP_CWD_SIZE, "%s", param);
     // If ends with '/', remove it
     uint16_t strl = strlen(fullName) - 1;
     if (fullName[strl] == '/' && strl > 1)
