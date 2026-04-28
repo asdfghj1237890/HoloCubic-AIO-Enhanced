@@ -24,7 +24,12 @@ class VideoTool:
     视频转化页类
     """
 
-    def __init__(self, father, engine, lock=None):
+    def __init__(
+        self,
+        father: tk.Misc,
+        engine: object,  # Engine (avoid circular type import)
+        lock: object | None = None,
+    ) -> None:
         """
         VideoTool初始化
         :param father:父类窗口
@@ -77,7 +82,7 @@ class VideoTool:
         self.log_text.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
         log_frame.pack(side=tk.TOP, pady=5, fill=tk.BOTH, expand=True)
 
-    def init_path(self, father):
+    def init_path(self, father: tk.Misc) -> None:
         """
         初始化输入文件路径 输出文件路径
         :param father: 父容器
@@ -128,7 +133,7 @@ class VideoTool:
         self.trans_botton.pack(side=tk.TOP, fill=tk.X, padx=5)
         button_frame.pack(side=tk.TOP, pady=5)
 
-    def choose_src_file(self):
+    def choose_src_file(self) -> None:
         """
         点击"打开"菜单项触发的函数
         :return:
@@ -155,7 +160,7 @@ class VideoTool:
             self.m_src_path_entry.insert(tk.END, filepath)
             # self.m_src_path_entry["state"] = tk.DISABLED
 
-    def choose_dst_path(self):
+    def choose_dst_path(self) -> None:
 
         # 打开文件对话框 获取文件路径
         # defaultextension 为选取保存类型中的拓展名为文件名
@@ -167,17 +172,17 @@ class VideoTool:
             self.m_dst_path_entry.delete(0, tk.END)  # 清空文本框
             self.m_dst_path_entry.insert(tk.END, filepath)
 
-    def log(self, message):
+    def log(self, message: str) -> None:
         """Add message to log display"""
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
         self.log_text.update()
 
-    def clear_log(self):
+    def clear_log(self) -> None:
         """Clear log display"""
         self.log_text.delete(1.0, tk.END)
 
-    def run_ffmpeg_command(self, cmd, description):
+    def run_ffmpeg_command(self, cmd: str, description: str) -> bool:
         """Run ffmpeg command and capture output in real-time"""
         self.log(f"\n{'=' * 60}")
         self.log(f"[{description}]")
@@ -226,7 +231,7 @@ class VideoTool:
             self.log(f"\n✗ Error: {str(e)}\n")
             return False
 
-    def trans_format(self):
+    def trans_format(self) -> None:
         """
         格式转化
         """
@@ -235,7 +240,7 @@ class VideoTool:
         thread.daemon = True
         thread.start()
 
-    def _trans_format_thread(self):
+    def _trans_format_thread(self) -> None:
         """
         Actual conversion logic running in thread
         """
@@ -335,7 +340,7 @@ class VideoTool:
 
         self.trans_botton.configure(text=self.i18n.t("start_conversion"), state=tk.NORMAL)
 
-    def init_options(self, father):
+    def init_options(self, father: tk.Misc) -> None:
         """
         初始化模型菜单子项
         :param father: 父容器
@@ -403,7 +408,7 @@ class VideoTool:
 
         self.radio_select()
 
-    def radio_select(self):
+    def radio_select(self) -> None:
         """根據單選按鈕選擇啟用/停用各輸入欄位。"""
         new_state = tk.DISABLED if self.m_radio_val.get() == 0 else tk.NORMAL
         self.m_width_entry.configure(state=new_state)
@@ -413,7 +418,7 @@ class VideoTool:
         self.m_quality_select["state"] = "readonly" if new_state == tk.NORMAL else tk.DISABLED
         self.m_format_select["state"] = "readonly" if new_state == tk.NORMAL else tk.DISABLED
 
-    def get_output_param(self):
+    def get_output_param(self) -> dict[str, str]:
         """
         得到输出参数
         """

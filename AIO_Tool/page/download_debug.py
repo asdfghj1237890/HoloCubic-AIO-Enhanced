@@ -36,7 +36,12 @@ class DownloadDebug:
     菜单栏类
     """
 
-    def __init__(self, father, engine, lock=None):
+    def __init__(
+        self,
+        father: tk.Misc,
+        engine: object,  # Engine (avoid circular type import)
+        lock: object | None = None,
+    ) -> None:
         """
         DownloadDebug initialization
         :param father: Parent window
@@ -126,7 +131,7 @@ class DownloadDebug:
         self.get_version_thread = threading.Thread(target=self.display_version)
         self.get_version_thread.start()
 
-    def api(self, action, param=None):
+    def api(self, action: str, param: object = None) -> None:
         """
         下载模块对外的api接口
         """
@@ -135,8 +140,8 @@ class DownloadDebug:
             self.m_connect_button["text"] == "关闭串口"
             self.com_connect()
 
-    def display_version(self):
-        def update_ui(version_text):
+    def display_version(self) -> None:
+        def update_ui(version_text: str) -> None:
             self.m_version_info["state"] = tk.DISABLED
             self.m_version_var.set(version_text)
 
@@ -154,7 +159,7 @@ class DownloadDebug:
         else:
             self.__father.after(0, lambda: update_ui(version_text))
 
-    def init_firmware(self, father):
+    def init_firmware(self, father: tk.Misc) -> None:
         """
         固件操作
         """
@@ -294,7 +299,7 @@ class DownloadDebug:
         self.progress_bar.pack(side=tk.TOP, pady=0)
         progress_frame.pack(side=tk.TOP, pady=0)
 
-    def _stop_progress_thread(self, wait=True):
+    def _stop_progress_thread(self, wait: bool = True) -> None:
         if self.progress_bar_thread is not None:
             self._progress_stop_event.set()
             if wait and self.progress_bar_thread.is_alive():
@@ -304,7 +309,7 @@ class DownloadDebug:
                     pass
             self.progress_bar_thread = None
 
-    def schedule_display(self, all_time, update_interval):
+    def schedule_display(self, all_time: float, update_interval: float) -> None:
         """
         进度条处理动画，原则上启动一个线程来执行本函数
         all_time：进度条的总时间(s)
@@ -320,7 +325,7 @@ class DownloadDebug:
             if self._progress_stop_event.wait(update_interval):
                 break
 
-    def choose_file(self, num):
+    def choose_file(self, num: int) -> None:
         """
         点击"选择"文件触发的函数
         :pos: 为触发”选择“按钮的编号
@@ -340,12 +345,12 @@ class DownloadDebug:
             self.__firmware_path_entry[num].delete(0, tk.END)  # 清空文本框
             self.__firmware_path_entry[num].insert(tk.END, filepath)
 
-    def clean_flash(self):
+    def clean_flash(self) -> None:
         """
         擦除闪存
         """
 
-        def clean_func():
+        def clean_func() -> None:
             self.m_clean_flash_botton["text"] = "清空中"
             self.m_connect_button["state"] = tk.DISABLED
             self.m_reboot_button["state"] = tk.DISABLED
@@ -385,7 +390,7 @@ class DownloadDebug:
             self.m_download_botton["state"] = tk.NORMAL
             self.__father.update()
 
-    def down_and_canle(self):
+    def down_and_canle(self) -> None:
         """
         下载与取消按钮
         """
@@ -394,7 +399,7 @@ class DownloadDebug:
         elif self.m_download_botton["text"] == self.i18n.t("cancel_flash"):
             self.canle_download_firmware()
 
-    def canle_download_firmware(self):
+    def canle_download_firmware(self) -> None:
         """
         取消下载固件
         """
@@ -420,7 +425,7 @@ class DownloadDebug:
         # 复位进度条
         self.progress_bar.coords(self.progress_bar_fill, (3, 3, 0, 25))
 
-    def download_firmware(self):
+    def download_firmware(self) -> None:
         """
         下载固件
         """
@@ -477,7 +482,7 @@ class DownloadDebug:
         self.progress_bar_thread.start()
         self.download_thread.start()
 
-    def down_action(self, cmd):
+    def down_action(self, cmd: list[str]) -> None:
         cmd_str = " ".join(cmd)
         self.print_log("-" * 15)
         self.print_log(cmd_str)
@@ -512,7 +517,7 @@ class DownloadDebug:
             else:
                 self.print_log("Flash firmware failed, please check the serial port.")
 
-    def init_log(self, father):
+    def init_log(self, father: tk.Misc) -> None:
         """初始化日誌打印框（保留 tk.Text 給彩色標記）。"""
         info_width = 39
         info_height = 15
@@ -544,14 +549,14 @@ class DownloadDebug:
 
         self.m_log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    def print_log(self, msg):
+    def print_log(self, msg: object) -> None:
         msg = str(msg) + "\n"
         self.m_log.config(state=tk.NORMAL)
         self.m_log.insert(tk.END, msg)
         self.m_log.config(state=tk.DISABLED)
         self.m_log.yview_moveto(1)
 
-    def clear_log(self):
+    def clear_log(self) -> None:
         """
         清空日志按钮
         :return: None
@@ -560,7 +565,7 @@ class DownloadDebug:
         self.m_log.delete(1.0, tk.END)
         self.m_log.config(state=tk.DISABLED)
 
-    def init_serial_receive(self, father):
+    def init_serial_receive(self, father: tk.Misc) -> None:
         info_width = 135
         info_height = 27
 
@@ -591,7 +596,7 @@ class DownloadDebug:
 
         self.m_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    def clear_msg(self):
+    def clear_msg(self) -> None:
         """
         清空日志按钮
         :return: None
@@ -600,7 +605,7 @@ class DownloadDebug:
         self.m_msg.delete(1.0, tk.END)
         self.m_msg.config(state=tk.DISABLED)
 
-    def create_com(self, father):
+    def create_com(self, father: tk.Misc) -> None:
         """
         创建Comm相关控件
         :param father: 父类窗口
@@ -707,7 +712,7 @@ class DownloadDebug:
 
         botton_frame.pack(side=tk.TOP, pady=5)
 
-    def com_pull_down(self, event):
+    def com_pull_down(self, event: tk.Event) -> None:
         """
         comm口下拉框被点击的时候 触发端口扫描
         """
@@ -726,7 +731,7 @@ class DownloadDebug:
         # 更改下拉框中的内容
         self.m_com_select.current(choose_index)
 
-    def com_connect(self):
+    def com_connect(self) -> None:
         if self.m_connect_button["text"] == self.i18n.t("open_serial"):
             down_flag, param = self.get_download_param()
             if self.ser is not None:
@@ -774,7 +779,7 @@ class DownloadDebug:
                 self.receive_thread = None
                 self.print_log("Receive_thread stop")
 
-    def read_data(self, ser):
+    def read_data(self, ser: serial.Serial) -> None:
         """背景接收序列埠資料；stop event 觸發時跳出迴圈。"""
         self.print_log("Receive_thread start")
         while not self._serial_stop_event.is_set():
@@ -789,7 +794,7 @@ class DownloadDebug:
                     logger.debug("read_data ignored: %s", err)
             time.sleep(0.1)
 
-    def get_download_param(self):
+    def get_download_param(self) -> tuple[str, dict[str, str]]:
         """
         获取下载参数
         """
@@ -818,7 +823,7 @@ class DownloadDebug:
 
         return down_flag, data_map
 
-    def esp_reset(self):
+    def esp_reset(self) -> None:
         """
         重启芯片
         """
@@ -846,7 +851,7 @@ class DownloadDebug:
         self.m_clean_flash_botton["state"] = tk.NORMAL
         self.m_download_botton["state"] = tk.NORMAL
 
-    def __del__(self):
+    def __del__(self) -> None:
         """資源釋放：通知 receive_thread 停止；esptool download_thread 仍以 _async_raise 中斷。"""
         if self.ser is not None:
             self.ser.close()  # 关闭串口

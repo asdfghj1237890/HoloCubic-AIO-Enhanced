@@ -54,7 +54,12 @@ class ImagesConverter:
     菜单栏类
     """
 
-    def __init__(self, father, engine, lock=None):
+    def __init__(
+        self,
+        father: tk.Misc,
+        engine: object,  # Engine (avoid circular type import)
+        lock: object | None = None,
+    ) -> None:
         """
         VideoTool初始化
         :param father:父类窗口
@@ -85,7 +90,7 @@ class ImagesConverter:
         self.init_info(self.m_info_frame)
         self.m_info_frame.pack(side=tk.TOP, pady=5, fill=tk.BOTH, expand=True)
 
-    def init_setting(self, father):
+    def init_setting(self, father: tk.Misc) -> None:
         """
         初始化设置条
         :param father: 父容器
@@ -183,7 +188,7 @@ class ImagesConverter:
         # 设置默认值输出分辨率
         self.default_ratio()
 
-    def default_ratio(self):
+    def default_ratio(self) -> None:
         """
         设置默认值输出分辨率
         :return: None
@@ -192,7 +197,7 @@ class ImagesConverter:
         self.m_height_val.set("240")
         # self.m_boot_path_entry.refresh()
 
-    def init_image_path(self, father):
+    def init_image_path(self, father: tk.Misc) -> None:
         """
         初始化设置条
         :param father: 父容器
@@ -240,7 +245,7 @@ class ImagesConverter:
 
         image_path_frame.pack(side=tk.LEFT, pady=5)
 
-    def enable_jpg(self):
+    def enable_jpg(self) -> None:
         if self.__jpg_enable_val.get() == 1:
             self.m_color_select["state"] = tk.DISABLED
             self.m_output_select["state"] = tk.DISABLED
@@ -248,7 +253,7 @@ class ImagesConverter:
             self.m_color_select["state"] = tk.NORMAL
             self.m_output_select["state"] = tk.NORMAL
 
-    def choose_image_files(self):
+    def choose_image_files(self) -> None:
         """
         点击"user_data"文件触发的函数
         :return:

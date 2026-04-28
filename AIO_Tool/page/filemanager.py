@@ -32,7 +32,12 @@ class FileManager:
     菜单栏类
     """
 
-    def __init__(self, father, engine, lock=None):
+    def __init__(
+        self,
+        father: tk.Misc,
+        engine: object,  # Engine (avoid circular type import)
+        lock: object | None = None,
+    ) -> None:
         """
         FileManager initialization
         :param father: Parent window
@@ -69,25 +74,25 @@ class FileManager:
 
         # legacy debug snippets removed (replaced by logger calls elsewhere)
 
-    def init_section(self, father):
+    def init_section(self, father: tk.Misc) -> None:
         """
         初始化右击的操作栏(实现右键菜单)
         :param father: 父容器
         """
 
-        def op_file_download():
+        def op_file_download() -> None:
             logger.debug("Enter op_file_download")
             pass
 
-        def op_file_rename():
+        def op_file_rename() -> None:
             logger.debug("Enter op_rename")
             pass
 
-        def op_file_delect():
+        def op_file_delect() -> None:
             logger.debug("Enter op_delect")
             pass
 
-        def op_file_read_param():
+        def op_file_read_param() -> None:
             logger.debug("Enter op_read_param")
             pass
 
@@ -101,19 +106,19 @@ class FileManager:
         self.__file_op_menu.add_separator()
         self.__file_op_menu.add_command(label=self.i18n.t("properties"), command=op_file_read_param)
 
-        def op_folder_upload_file():
+        def op_folder_upload_file() -> None:
             logger.debug("Enter op_folder_upload_file")
             pass
 
-        def op_folder_create_subfolder():
+        def op_folder_create_subfolder() -> None:
             logger.debug("Enter op_folder_create_subfolder")
             pass
 
-        def op_folder_rename():
+        def op_folder_rename() -> None:
             logger.debug("Enter op_folder_rename")
             pass
 
-        def op_folder_delect():
+        def op_folder_delect() -> None:
             logger.debug("Enter op_folder_delect")
             pass
 
@@ -131,7 +136,7 @@ class FileManager:
         self.__folder_op_menu.add_separator()
         self.__folder_op_menu.add_command(label=self.i18n.t("delete"), command=op_folder_delect)
 
-    def init_connect(self, father):
+    def init_connect(self, father: tk.Misc) -> None:
         """
         初始化连接
         :param father: 父容器
@@ -159,9 +164,9 @@ class FileManager:
 
         ip_frame.pack(side=tk.TOP, pady=5)
 
-    def connect_holocubic(self):
+    def connect_holocubic(self) -> None:
         # 客户端范例
-        def myRecvHandle(dat):  # 接收函数
+        def myRecvHandle(dat: bytes) -> None:  # 接收函数
             msg_head = MsgHead()
             msg_head.decode(dat)
             logger.debug("Massages Len = %s", msg_head.msg_len)
@@ -231,14 +236,14 @@ class FileManager:
                 # del self.__clientsocket
                 self.__clientsocket = None
 
-    def init_path_tree(self, father):
+    def init_path_tree(self, father: tk.Misc) -> None:
         """
         初始化连接
         :param father: 父容器
         :return: None
         """
 
-        def display_op_menu(event):
+        def display_op_menu(event: tk.Event) -> None:
             """
             显示一个文件操作框
             """
@@ -310,7 +315,7 @@ class FileManager:
         # path_tree_frame.pack(side=tk.TOP, pady=5)
         path_tree_frame.pack(side=tk.RIGHT, fill=tk.Y)
 
-    def display_path_tree(self, cur_tree_root, fileObj):
+    def display_path_tree(self, cur_tree_root: str, fileObj: dict[str, object]) -> None:
         """
         显示目录树
         :param cur_tree_root: 当前树根
@@ -348,7 +353,7 @@ class FileManager:
             sub_file["tree"] = sub_tree
             # self.__file_map_tree[sub_file["path"]] = sub_tree
 
-    def reflush_folder(self, updata_path, sub_file_list):
+    def reflush_folder(self, updata_path: str, sub_file_list: list[str]) -> None:
         """
         刷新目录
 
@@ -389,7 +394,7 @@ class FileManager:
             self.__path_map_file[updata_path]["tree"], self.__path_map_file[updata_path]
         )
 
-    def tree_open(self):
+    def tree_open(self) -> None:
         """
         Tree元素被打开
         """
@@ -406,12 +411,12 @@ class FileManager:
                 # 发送查询数据
                 self.__clientsocket.send_to_ser(send_data)
 
-    def init_view_file(self, father):
+    def init_view_file(self, father: tk.Misc) -> None:
         """初始化視圖區（目前空容器）。"""
         view_file_frame = ctk.CTkFrame(father, fg_color="transparent")
         view_file_frame.pack(side=tk.TOP, pady=5)
 
-    def init_modelBar(self, menuBar):
+    def init_modelBar(self, menuBar: tk.Menu) -> None:
         """
         初始化模型菜单子项
         :param menuBar: 主菜单
@@ -429,7 +434,7 @@ class FileManager:
         # 创建分割线
         self.modelBar.add_separator()
 
-    def click_model_create(self):
+    def click_model_create(self) -> None:
         """
         点击模型"创建"菜单项触发的函数
         :return: None
@@ -438,7 +443,7 @@ class FileManager:
         # self.__engine.OnThreadMessage(mh.M_CTRLMENU, mh.M_MODEL_FILEMANAGER,
         #                               mh.A_FILE_CREATE, self.m_model_filepath)
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self.__clientsocket is not None:
             self.__clientsocket.close()
             self.__clientsocket.__del__()
