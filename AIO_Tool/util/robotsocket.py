@@ -14,31 +14,7 @@ import time
 import ctypes
 import inspect
 
-
-def _async_raise(thread):
-    """
-    释放进程
-    :param thread: 进程对象
-    :param exctype:
-    :return:
-    """
-    try:
-        tid = thread.ident
-        tid = ctypes.c_long(tid)
-        exctype = SystemExit
-        """raises the exception, performs cleanup if needed"""
-        if not inspect.isclass(exctype):
-            exctype = type(exctype)
-        res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
-        if res == 0:
-            raise ValueError("invalid thread id")
-        elif res != 1:
-            # """if it returns a number greater than one, you're in trouble,
-            # and you should call it again with exc=NULL to revert the effect"""
-            ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
-            raise SystemError("PyThreadState_SetAsyncExc failed")
-    except Exception as err:
-        print(err)
+from util.common import _async_raise
 
 
 class RobotSocket(object):
