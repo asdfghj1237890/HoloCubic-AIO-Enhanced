@@ -1,14 +1,18 @@
-# Smoke test for media_player. tf.listDir("/movie") returns nullptr on
-# host so media_player_init's video_start(false) early-returns without
-# allocating any decoder, and the first process tick takes the
-# `if (NULL == pfile) sys->app_exit()` fast path. media_player has no
-# LVGL screen of its own (it draws raw frames to TFT), so the first
-# screenshot captures the controller's app icon screen.
+# Smoke test for media_player. With test/fixtures/sd/movie/sample.mjpeg
+# in place, tf.listDir("/movie") returns a one-entry File_Info list, so
+# init's video_start(false) actually constructs an MjpegPlayDecoder
+# (mallocs buffers, calls tft->initDMA) instead of returning early.
+# media_player has no LVGL screen of its own — frames go straight to
+# tft->pushImageDMA, which is a stub no-op on host — so the captured
+# screen is the controller's app icon. The test value is "init +
+# decoder construction + first process tick survive".
 
 app media
 
 wait_ms 400
-screenshot 01_initial
+action TURN_RIGHT
+wait_ms 400
+screenshot 01_after_turn_right
 assert_no_crash
 
 action RETURN

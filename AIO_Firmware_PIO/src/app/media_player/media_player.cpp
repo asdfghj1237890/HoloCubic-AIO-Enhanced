@@ -5,6 +5,7 @@
 #include "driver/sd_card.h"
 #include "decoder.h"
 #include "DMADrawer.h"
+#include <new>  // placement new in init() — see comment there
 
 #define MEDIA_PLAYER_APP_NAME "Media"
 
@@ -150,6 +151,14 @@ static int media_player_init(AppController *sys)
     // run_data = (MediaAppRunData *)malloc(sizeof(MediaAppRunData));
     // memset(run_data, 0, sizeof(MediaAppRunData));
     run_data = (MediaAppRunData *)calloc(1, sizeof(MediaAppRunData));
+    // MediaAppRunData::file is a fs::File (which contains a String);
+    // calloc leaves it as zero memory but never runs its constructor,
+    // so the upcoming `run_data->file = tf.open(...)` move-assign
+    // accesses an unconstructed object -> UB. (Worked on ESP32 because
+    // its Arduino String tolerates zero-initialized state; segfaults
+    // on the host harness against std::string-backed File.) Placement-
+    // new the File so subsequent assignment is well-defined.
+    new (&run_data->file) File();
     run_data->player_decoder = NULL;
     run_data->movie_pos_increate = 1;
     run_data->movie_file = NULL; // movie文件夹下的文件指针头
