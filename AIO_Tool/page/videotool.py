@@ -188,7 +188,7 @@ class VideoTool:
         self.log(f"[{description}]")
         try:
             self.log(f"Command: {cmd}")
-        except:
+        except UnicodeEncodeError:
             self.log("Command: [Command contains non-ASCII characters]")
         self.log(f"{'=' * 60}\n")
 
@@ -269,14 +269,15 @@ class VideoTool:
         self.log(f"Format: {param['format']}")
 
         cmd_resize = 'ffmpeg -y -i "%s" -vf scale=%s:%s "%s"'  # 缩放转化
-        cmd_to_rgb = 'ffmpeg -y -i "%s" -vf "fps=%s,scale=-1:%s:flags=lanczos,crop=%s:in_h:(in_w-%s)/2:0" -c:v rawvideo -pix_fmt rgb565be -q:v %s "%s"'
-        cmd_to_mjpeg = 'ffmpeg -y -i "%s" -vf "fps=%s,scale=-1:%s:flags=lanczos,crop=%s:in_h:(in_w-%s)/2:0" -q:v %s "%s"'
+        # ffmpeg 命令長字串若硬斷會降低可讀性，明確標註 noqa
+        cmd_to_rgb = 'ffmpeg -y -i "%s" -vf "fps=%s,scale=-1:%s:flags=lanczos,crop=%s:in_h:(in_w-%s)/2:0" -c:v rawvideo -pix_fmt rgb565be -q:v %s "%s"'  # noqa: E501
+        cmd_to_mjpeg = (
+            'ffmpeg -y -i "%s" -vf "fps=%s,scale=-1:%s:flags=lanczos,crop=%s:in_h:(in_w-%s)/2:0" -q:v %s "%s"'  # noqa: E501
+        )
 
         name_suffix = os.path.basename(param["src_path"]).split(".")
         suffix = name_suffix[-1]  # 后缀名
-        video_cache_name = (
-            name_suffix[0] + "_" + param["width"] + "x" + param["height"] + "_cache." + suffix
-        )
+        video_cache_name = name_suffix[0] + "_" + param["width"] + "x" + param["height"] + "_cache." + suffix
         video_cache = os.path.join(cur_dir, ROOT_PATH, CACHE_PATH, video_cache_name)
 
         if param["format"] == "rgb565be":

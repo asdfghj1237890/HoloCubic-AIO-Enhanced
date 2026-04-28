@@ -15,9 +15,7 @@ logger = get_logger(__name__)
 
 class FileSystem(MsgHead):
     def __init__(self, action_type: int = AT.AT_FREE_STATUS) -> None:
-        MsgHead.__init__(
-            self, MT.MODULE_TYPE_C_FILE_MANAGER, MT.MODULE_TYPE_CUBIC_FILE_MANAGER
-        )  # 一定要初始化父类
+        MsgHead.__init__(self, MT.MODULE_TYPE_C_FILE_MANAGER, MT.MODULE_TYPE_CUBIC_FILE_MANAGER)  # 一定要初始化父类
         self.action_type = action_type
         self.fmt = self.fmt + "1B"
 
@@ -68,7 +66,7 @@ class DirList(FileSystem):
         FileSystem.__init__(self, AT.AT_DIR_LIST)  # 一定要初始化父类
         self.dir_path: bytes = bytes(dir_path, encoding="utf8")
         self.dir_info: bytes = bytes(dir_info, encoding="utf8")
-        self.fmt = self.fmt + "99s%ds" % len(self.dir_info)
+        self.fmt = self.fmt + f"99s{len(self.dir_info)}s"
         logger.debug("self.fmt = %s", self.fmt)
 
     def decode(self, network_data: bytes, byte_order: str = "!") -> None:
@@ -101,7 +99,7 @@ class FileWrite(FileSystem):
     def __init__(self, data: str = "") -> None:
         FileSystem.__init__(self, AT.AT_FILE_WRITE)  # 一定要初始化父类
         self.data: bytes = bytes(data, encoding="utf8")
-        self.fmt = self.fmt + "%ds" % len(self.data)
+        self.fmt = self.fmt + f"{len(self.data)}s"
         logger.debug("self.fmt = %s", self.fmt)
 
     def decode(self, network_data: bytes, byte_order: str = "!") -> None:
@@ -121,7 +119,7 @@ class FileRead(FileSystem):
     def __init__(self, data: str = "") -> None:
         FileSystem.__init__(self, AT.AT_FILE_READ)  # 一定要初始化父类
         self.data: bytes = bytes(data, encoding="utf8")
-        self.fmt = self.fmt + "%ds" % len(self.data)
+        self.fmt = self.fmt + f"{len(self.data)}s"
         logger.debug("self.fmt = %s", self.fmt)
 
     def decode(self, network_data: bytes, byte_order: str = "!") -> None:
@@ -167,7 +165,7 @@ class FileGetInfo(FileSystem):
         FileSystem.__init__(self, AT.AT_DIR_LIST)  # 一定要初始化父类
         self.file_name: bytes = bytes(file_name, encoding="utf8")
         self.file_info: bytes = bytes(file_info, encoding="utf8")
-        self.fmt = self.fmt + "99s%ds" % len(self.file_info)
+        self.fmt = self.fmt + f"99s{len(self.file_info)}s"
         logger.debug("self.fmt = %s", self.fmt)
 
     def decode(self, network_data: bytes, byte_order: str = "!") -> None:

@@ -60,9 +60,7 @@ class _Const:
     CF_RAW_ALPHA = 13
     CF_RAW_CHROMA = 12
 
-    CF_TRUE_COLOR = (
-        100  # Helper formats is C arrays contains all true color formats (using in "download")
-    )
+    CF_TRUE_COLOR = 100  # Helper formats is C arrays contains all true color formats (using in "download")
     CF_TRUE_COLOR_ALPHA = 101
     CF_TRUE_COLOR_CHROMA = 102
 
@@ -152,9 +150,7 @@ class Converter:
             img_tmp.paste(img_tmp, self.img.size)
             # img_tmp.paste(img_tmp, self.img)
             self.img = self.img.convert(mode="P", colors=palette_size)
-            real_palette_size = len(
-                self.img.getcolors()
-            )  # The real number of colors in the image's palette
+            real_palette_size = len(self.img.getcolors())  # The real number of colors in the image's palette
             real_palette = self.img.getpalette()
             # self.img.show()
             for i in range(palette_size):
@@ -199,7 +195,7 @@ class Converter:
         elif self.cf == self.FLAG.CF_TRUE_COLOR_565_SWAP:
             c_array += "\n#if LV_COLOR_DEPTH == 16 && LV_COLOR_16_SWAP != 0"
             c_array += (
-                "\n  /*Pixel format:  Blue: 5 bit Green: 6 bit, Red: 5 bit, Alpha 8 bit  BUT the 2  color bytes are swapped*/"
+                "\n  /*Pixel format:  Blue: 5 bit Green: 6 bit, Red: 5 bit, Alpha 8 bit  BUT the 2  color bytes are swapped*/"  # noqa: E501
                 if self.alpha
                 else "\n  /*Pixel format: Blue: 5 bit, Green: 6 bit, Red: 5 bit BUT the 2 bytes are swapped*/"
             )
@@ -249,7 +245,7 @@ class Converter:
             tmp_arr.append(f"0x{self.d_out[i]:02X}")
             i += 1
 
-        for y in range(y_end):
+        for _y in range(y_end):
             for x in range(x_end):
                 if self.cf == self.FLAG.CF_TRUE_COLOR_332:
                     append_and_increase()
@@ -296,13 +292,10 @@ class Converter:
 
         if self.cf in (self.FLAG.CF_RAW, self.FLAG.CF_RAW_ALPHA, self.FLAG.CF_RAW_CHROMA):
             tmp_str = "\n  " + ", \n  ".join(
-                ", ".join(tmp_arr[(x_end // 16) * x : (x_end // 16) * x + 16])
-                for x in range(x_end // 16)
+                ", ".join(tmp_arr[(x_end // 16) * x : (x_end // 16) * x + 16]) for x in range(x_end // 16)
             )
         else:
-            tmp_str = "\n  " + ", \n  ".join(
-                ", ".join(tmp_arr[y * x_end : (y + 1) * x_end]) for y in range(y_end)
-            )
+            tmp_str = "\n  " + ", \n  ".join(", ".join(tmp_arr[y * x_end : (y + 1) * x_end]) for y in range(y_end))
 
         c_array += tmp_str
         if self.cf in (
@@ -373,9 +366,7 @@ const lv_img_dsc_t {self.out_name} = {{
             f.close()
         return out
 
-    def get_bin_file(
-        self, cf: int = -1, content: list[int] | bytes | None = None, outpath: str = ""
-    ) -> bytes:
+    def get_bin_file(self, cf: int = -1, content: list[int] | bytes | None = None, outpath: str = "") -> bytes:
         if not content:
             content = self.d_out
         if cf < 0:
@@ -533,10 +524,7 @@ const lv_img_dsc_t {self.out_name} = {{
                 if self.b_act > 0xC0:
                     self.b_act = 0xC0
 
-            elif (
-                self.cf == self.FLAG.CF_TRUE_COLOR_565
-                or self.cf == self.FLAG.CF_TRUE_COLOR_565_SWAP
-            ):
+            elif self.cf == self.FLAG.CF_TRUE_COLOR_565 or self.cf == self.FLAG.CF_TRUE_COLOR_565_SWAP:
                 self.r_act = self._classify_pixel(self.r_act, 5)
                 self.g_act = self._classify_pixel(self.g_act, 6)
                 self.b_act = self._classify_pixel(self.b_act, 5)

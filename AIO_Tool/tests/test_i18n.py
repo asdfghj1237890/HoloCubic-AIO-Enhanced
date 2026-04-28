@@ -42,9 +42,7 @@ class TestJsonLoading:
         get_i18n()  # forces load
         # Each language should have a non-trivial number of keys
         for lang_code in ("zh_CN", "zh_TW", "en_US"):
-            assert len(I18n.TRANSLATIONS[lang_code]) > 50, (
-                f"{lang_code} should have >50 translation keys"
-            )
+            assert len(I18n.TRANSLATIONS[lang_code]) > 50, f"{lang_code} should have >50 translation keys"
 
     def test_language_files_have_same_keys(self) -> None:
         """All three languages should expose the same key set (no missing translations)."""
@@ -53,12 +51,10 @@ class TestJsonLoading:
         zh_tw_keys = set(I18n.TRANSLATIONS["zh_TW"].keys())
         en_us_keys = set(I18n.TRANSLATIONS["en_US"].keys())
         assert zh_cn_keys == zh_tw_keys, (
-            f"zh_CN and zh_TW differ: only_in_cn={zh_cn_keys - zh_tw_keys}, "
-            f"only_in_tw={zh_tw_keys - zh_cn_keys}"
+            f"zh_CN and zh_TW differ: only_in_cn={zh_cn_keys - zh_tw_keys}, only_in_tw={zh_tw_keys - zh_cn_keys}"
         )
         assert zh_cn_keys == en_us_keys, (
-            f"zh_CN and en_US differ: only_in_cn={zh_cn_keys - en_us_keys}, "
-            f"only_in_en={en_us_keys - zh_cn_keys}"
+            f"zh_CN and en_US differ: only_in_cn={zh_cn_keys - en_us_keys}, only_in_en={en_us_keys - zh_cn_keys}"
         )
 
 
@@ -89,9 +85,7 @@ class TestTranslation:
         zh_tw = t("tab_help")
         i.set_language("en_US")
         en_us = t("tab_help")
-        assert zh_cn != zh_tw or zh_cn != en_us, (
-            "tab_help should differ across at least two languages"
-        )
+        assert zh_cn != zh_tw or zh_cn != en_us, "tab_help should differ across at least two languages"
         assert en_us == "Help"
 
     def test_missing_key_falls_back_to_key_name(self) -> None:

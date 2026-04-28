@@ -108,9 +108,7 @@ class Engine:
 
         self.m_tab_manager.pack(expand=True, fill=tk.BOTH)
 
-    def on_thread_message(
-        self, fromwho: str, towho: str, action: str, param: object = None
-    ) -> None:
+    def on_thread_message(self, fromwho: str, towho: str, action: str, param: object = None) -> None:
         """
         引擎調度函數，各模組透過此函數間接操作或取得其他模組的資源。
         :param fromwho: 發送方識別字串
@@ -118,9 +116,7 @@ class Engine:
         :param action:  操作類型
         :param param:   操作參數
         """
-        logger.debug(
-            "on_thread_message from=%s to=%s action=%s param=%s", fromwho, towho, action, param
-        )
+        logger.debug("on_thread_message from=%s to=%s action=%s param=%s", fromwho, towho, action, param)
 
         if towho == mh.M_DOWNLOAD_DEBUG:
             self.m_debug_tab_windows.api(action, param)
@@ -282,9 +278,7 @@ if __name__ == "__main__":
 
     def _fetch_version() -> None:
         hint = get_version()
-        tool_windows.after(
-            0, lambda: tool_windows.title(f"HoloCubic_AIO Tools\t  {TOOL_VERSION} {hint}")
-        )
+        tool_windows.after(0, lambda: tool_windows.title(f"HoloCubic_AIO Tools\t  {TOOL_VERSION} {hint}"))
 
     threading.Thread(target=_fetch_version, daemon=True).start()
     tool_windows.mainloop()

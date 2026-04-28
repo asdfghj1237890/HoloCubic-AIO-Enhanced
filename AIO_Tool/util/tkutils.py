@@ -25,7 +25,7 @@ def center_window(win: tk.Wm, width: int | None = None, height: int | None = Non
     screenheight = win.winfo_screenheight()
     if width is None:
         width, height = get_window_size(win)[:2]
-    size = "%dx%d+%d+%d" % (width, height, (screenwidth - width) / 2, (screenheight - height) / 3)
+    size = f"{width}x{height}+{(screenwidth - width) // 2}+{(screenheight - height) // 3}"
     win.geometry(size)
 
 
@@ -105,9 +105,7 @@ def h_seperator(parent: tk.Misc, height: int = 2) -> None:  # height 单位为�
     tk.Frame(parent, height=height, bg="whitesmoke").pack(fill=tk.X)
 
 
-def v_seperator(
-    parent: tk.Misc, width: int, bg: str = "whitesmoke"
-) -> tk.Frame:  # width 单位为像素值
+def v_seperator(parent: tk.Misc, width: int, bg: str = "whitesmoke") -> tk.Frame:  # width 单位为像素值
     """垂直分割线 , fill=tk.Y, 但如何定位不确定，直接返回对象，由容器决定"""
     frame = tk.Frame(parent, width=width, bg=bg)
     return frame

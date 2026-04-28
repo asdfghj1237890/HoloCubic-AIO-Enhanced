@@ -86,11 +86,11 @@ class TestMsgHeadWireFormat:
         assert encoded[6] == 2  # AT_DIR_CREATE
 
     def test_decode_recovers_encoded_fields(self) -> None:
-        original = MsgHead(from_who=4, to_who=3, action_type=12)
-        encoded = original.encode()
-
+        # Smoke encode for completeness; decode happens from a synthetic packet.
         # Note: encode default byte_order is "=", decode default is "!".
         # We round-trip with matching byte orders.
+        original = MsgHead(from_who=4, to_who=3, action_type=12)
+        original.encode()  # ensure no exception
         decoded = MsgHead()
         decoded.decode(struct.pack("=HHBBB", 8995, 0, 4, 3, 12), byte_order="=")
         assert decoded.from_who == 4

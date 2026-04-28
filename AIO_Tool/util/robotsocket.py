@@ -158,7 +158,7 @@ class RobotSocketServer(RobotSocket):
             self.__sersocket.close()
         except OSError as err:
             logger.error("server socket close failed: %s", err)
-        for addr, info in list(self.__client_link_dict.items()):
+        for info in self.__client_link_dict.values():
             connfd = info.get("fd")
             if isinstance(connfd, socket.socket):
                 try:
@@ -302,7 +302,7 @@ if __name__ == "__main__":
     # 服务器端范例
     def my_recv_handle(dat: bytes, addr: tuple[str, int]) -> None:  # 接收函数
         sersocket.send_to_client(dat, addr)
-        dat = ("Server recv %s from %s\n" % (dat, addr)).encode(encoding="utf-8")
+        dat = f"Server recv {dat} from {addr}\n".encode()
         logger.info("server demo received: %s", dat)
 
     # 初始化端口并设置接收数据的函数(当接收到数据，自动被调用)
