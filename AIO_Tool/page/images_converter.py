@@ -8,8 +8,7 @@
 #
 ################################################################################
 
-from util import *
-from util.common import *
+from util.common import CACHE_PATH, ROOT_PATH
 from util.widget_base import EntryWithPlaceholder
 from util.convertor_core import Converter
 from util.convertor_core import _const

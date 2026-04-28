@@ -11,7 +11,7 @@
 ##############################################################
 
 
-from typing import *
+from typing import Any, AnyStr, List, NoReturn
 import math
 from PIL import Image
 import struct

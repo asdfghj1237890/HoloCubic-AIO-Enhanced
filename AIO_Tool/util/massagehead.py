@@ -8,7 +8,7 @@
 #
 ################################################################################
 
-from ctypes import *
+from ctypes import Array, Structure, c_byte, c_char_p, c_uint, cast
 from util.logger import get_logger
 import struct
 

@@ -12,10 +12,10 @@ import tkinter as tk
 from tkinter.constants import COMMAND
 import util.tkutils as tku
 from tkinter import ttk
-from util.common import *
-from ctypes import *
-from util.file_info import *
-from util.robotsocket import *
+from util.common import get_resource_path
+from util.file_info import DirList, FileGetInfo, FileRead, FileSystem
+from util.massagehead import AT, MsgHead
+from util.robotsocket import RobotSocketClient
 from util.i18n import get_i18n
 from util.logger import get_logger
 import sys

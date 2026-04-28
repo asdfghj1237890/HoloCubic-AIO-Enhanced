@@ -10,7 +10,6 @@
 
 from util.massagehead import MT, AT, MsgHead, MsgHead_TT
 from util.logger import get_logger
-from ctypes import *
 import struct
 
 logger = get_logger(__name__)

@@ -8,7 +8,7 @@
 #
 ################################################################################
 
-from util.common import *
+from util.common import CACHE_PATH, ROOT_PATH
 from util.i18n import get_i18n
 
 import os

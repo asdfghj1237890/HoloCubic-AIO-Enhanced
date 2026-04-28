@@ -8,7 +8,6 @@
 #
 ################################################################################
 
-from util.massagehead import AT, MsgHead
 from util.logger import get_logger
 import binascii
 import ctypes
