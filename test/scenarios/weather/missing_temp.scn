@@ -1,0 +1,29 @@
+# Weather missing-field guard: feed an AccuWeather currentconditions
+# response that omits Temperature, Wind, and UVIndex. Without the
+# `| fallback` operators on each .as<>() access, the previous code
+# would have invoked DynamicJsonDocument's undefined conversion path
+# and (best case) returned garbage values into run_data->wea, possibly
+# crashing during a later strcpy on an empty const char *.
+#
+# This scenario seeds /weather_accu.cfg with location_key = MISSINGTEMP
+# so the URL becomes
+#   .../currentconditions/v1/MISSINGTEMP?apikey=TEST_KEY
+# which the harness routes to the matching fixture under
+#   test/fixtures/http/dataservice.accuweather.com/currentconditions/v1/MISSINGTEMP.json
+# The forecast endpoint deliberately has NO fixture for MISSINGTEMP,
+# so it returns -1 (no-fixture sentinel) and the firmware exercises
+# the network-failure branch as well.
+
+app weather
+flash_seed /weather_accu.cfg "TEST_KEY\nBeijing\nMISSINGTEMP\n900000\n900000\n0\n"
+
+wait_ms 800
+assert_no_crash
+
+action TURN_RIGHT
+wait_ms 200
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
