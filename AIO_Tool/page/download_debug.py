@@ -27,8 +27,11 @@ from util.logger import get_logger
 from util.widget_base import EntryWithPlaceholder
 
 logger = get_logger(__name__)
-# VERSION_INFO_URL = "https://gitee.com/ClimbSnailQ/HoloCubic_AIO/blob/main/AIO_Firmware_PIO/src/common.h"
-VERSION_INFO_URL = "http://climbsnail.cn:5001/holocubicAIO/sn/v1/version/firmware"
+# GitHub raw common.h —— 包含 ``#define AIO_VERSION "X.Y"`` 行
+VERSION_INFO_URL = (
+    "https://raw.githubusercontent.com/asdfghj1237890/"
+    "HoloCubic-AIO-Enhanced/main/AIO_Firmware_PIO/src/common.h"
+)
 
 
 class DownloadDebug:
@@ -147,10 +150,14 @@ class DownloadDebug:
 
         version_text = self.i18n.t("unknown")
         try:
-            response = requests.get(VERSION_INFO_URL, timeout=3)  # , verify=False
-            version_info = re.findall(r"AIO_VERSION v\d{1,2}\.\d{1,2}\.\d{1,2}", response.text)
-            if version_info:
-                version_text = version_info[0].split(" ")[1]
+            response = requests.get(VERSION_INFO_URL, timeout=5)
+            # common.h 內 ``#define AIO_VERSION "X.Y"`` 或 ``"X.Y.Z"``
+            match = re.search(
+                r'#define\s+AIO_VERSION\s+"(\d+(?:\.\d+){1,2})"',
+                response.text,
+            )
+            if match:
+                version_text = "v" + match.group(1)
         except Exception as err:
             logger.error("fetch firmware version failed: %s", err)
 
@@ -284,7 +291,7 @@ class DownloadDebug:
             progress_frame,
             width=450,
             height=15,
-            bg="white",
+            bg="#1f1f1f",
             highlightthickness=0,
             borderwidth=0,
         )
@@ -524,7 +531,7 @@ class DownloadDebug:
 
         # CTk Scrollbar
         self.m_log_scrollbar = ctk.CTkScrollbar(father, orientation="vertical")
-        # tk.Text — CTkTextbox 不支援 font tag，這裡保留原生
+        # tk.Text — CTkTextbox 不支援 font tag，這裡保留原生（深色主題）
         self.m_log = tk.Text(
             father,
             width=info_width,
@@ -533,6 +540,9 @@ class DownloadDebug:
             state=tk.DISABLED,
             borderwidth=0,
             highlightthickness=0,
+            bg="#1f1f1f",
+            fg="#dcdcdc",
+            insertbackground="#dcdcdc",
         )
         self.m_log_scrollbar.configure(command=self.m_log.yview)
         self.m_log.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)
@@ -571,7 +581,7 @@ class DownloadDebug:
 
         # CTk Scrollbar
         self.m_scrollbar = ctk.CTkScrollbar(father, orientation="vertical")
-        # tk.Text — 保留原生支援 yview_moveto
+        # tk.Text — 保留原生支援 yview_moveto（深色主題）
         self.m_msg = tk.Text(
             father,
             width=info_width,
@@ -580,6 +590,9 @@ class DownloadDebug:
             state=tk.DISABLED,
             borderwidth=0,
             highlightthickness=0,
+            bg="#1f1f1f",
+            fg="#dcdcdc",
+            insertbackground="#dcdcdc",
         )
         self.m_scrollbar.configure(command=self.m_msg.yview)
         self.m_msg.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)

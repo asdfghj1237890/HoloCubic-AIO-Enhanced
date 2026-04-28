@@ -179,13 +179,18 @@ class Engine:
 
 def get_version() -> str:
     try:
-        response = requests.get(TOOL_VERSION_INFO_URL, timeout=3)
-        new_version_info = re.findall(r"AIO_TOOL_VERSION v\d{1,2}\.\d{1,2}\.\d{1,2}", response.text)
-        new_version = new_version_info[0].split(" ")[1]
+        response = requests.get(TOOL_VERSION_INFO_URL, timeout=5)
+        if response.status_code != 200:
+            logger.warning("tool version URL returned %s", response.status_code)
+            return "[请到 GitHub 查看最新版本]"
+        # pyproject.toml 內 ``version = "X.Y.Z"`` 行
+        match = re.search(r'^version\s*=\s*"(\d+\.\d+\.\d+)"', response.text, re.MULTILINE)
+        if match is None:
+            return "[无法解析最新版本]"
+        new_version = "v" + match.group(1)
         if TOOL_VERSION == new_version:
             return "[已是最新版本]"
-        else:
-            return "[推荐升级最新版本 " + new_version + "]"
+        return "[推荐升级最新版本 " + new_version + "]"
     except Exception as err:
         logger.error("get_version failed: %s", err)
         return "[无法获取到最新版本]"
@@ -197,15 +202,64 @@ if __name__ == "__main__":
     setup_logging()
     logger = get_logger(__name__)
 
-    # CustomTkinter 主題設定（系統淺/深色 + 預設藍色主題）。
-    # 注意：當前頁面內元件仍為原生 tk/ttk，未來會逐步遷移到 CTk 元件。
-    ctk.set_appearance_mode("System")
+    # CustomTkinter：強制深色主題（Windows 11 標題列也會跟著深色）
+    ctk.set_appearance_mode("Dark")
     ctk.set_default_color_theme("blue")
 
     tool_windows = ctk.CTk()
     tool_windows.title("HoloCubic_AIO Tools\t  " + TOOL_VERSION)
     tool_windows.geometry("1000x655+10+10")
     tool_windows.resizable(False, False)
+
+    # 將 ttk 元件（Notebook、Combobox、Treeview、Scrollbar）也染成深色，
+    # 讓未遷移到 CTk 的部份不會出現白底突兀感
+    _DARK_BG = "#2b2b2b"
+    _DARK_PANEL = "#1f1f1f"
+    _DARK_FG = "#dcdcdc"
+    _DARK_ACCENT = "#1f6aa5"
+    _DARK_HOVER = "#144870"
+    _ttk_style = ttk.Style(tool_windows)
+    _ttk_style.theme_use("default")
+    _ttk_style.configure(
+        "TNotebook", background=_DARK_BG, borderwidth=0, tabmargins=[2, 5, 2, 0],
+    )
+    _ttk_style.configure(
+        "TNotebook.Tab",
+        background=_DARK_BG, foreground=_DARK_FG,
+        padding=[12, 4], borderwidth=0,
+    )
+    _ttk_style.map(
+        "TNotebook.Tab",
+        background=[("selected", _DARK_ACCENT), ("active", _DARK_HOVER)],
+        foreground=[("selected", "#ffffff"), ("active", "#ffffff")],
+    )
+    _ttk_style.configure(
+        "TCombobox",
+        fieldbackground=_DARK_PANEL, background=_DARK_PANEL,
+        foreground=_DARK_FG, arrowcolor=_DARK_FG, bordercolor=_DARK_BG,
+        lightcolor=_DARK_BG, darkcolor=_DARK_BG, selectbackground=_DARK_ACCENT,
+    )
+    _ttk_style.map(
+        "TCombobox",
+        fieldbackground=[("readonly", _DARK_PANEL), ("disabled", _DARK_BG)],
+        foreground=[("disabled", "#888888")],
+    )
+    # 下拉清單本身要在 option_add 設定（ttk 不直接管）
+    tool_windows.option_add("*TCombobox*Listbox.background", _DARK_PANEL)
+    tool_windows.option_add("*TCombobox*Listbox.foreground", _DARK_FG)
+    tool_windows.option_add("*TCombobox*Listbox.selectBackground", _DARK_ACCENT)
+    tool_windows.option_add("*TCombobox*Listbox.selectForeground", "#ffffff")
+    _ttk_style.configure(
+        "Treeview",
+        background=_DARK_PANEL, foreground=_DARK_FG,
+        fieldbackground=_DARK_PANEL, borderwidth=0,
+    )
+    _ttk_style.map(
+        "Treeview",
+        background=[("selected", _DARK_ACCENT)],
+        foreground=[("selected", "#ffffff")],
+    )
+
     engine = Engine(tool_windows)
     tku.center_window(tool_windows)
 

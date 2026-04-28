@@ -374,6 +374,9 @@ class ImagesConverter:
             wrap=tk.WORD,
             borderwidth=0,
             highlightthickness=0,
+            bg="#1f1f1f",
+            fg="#dcdcdc",
+            insertbackground="#dcdcdc",
         )
         self.m_project_info.tag_configure(
             "bold_italics",
