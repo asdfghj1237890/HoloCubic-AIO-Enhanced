@@ -13,10 +13,14 @@ import threading
 import time
 from collections.abc import Callable
 
-from util.common import _async_raise
 from util.logger import get_logger
 
 logger = get_logger(__name__)
+
+#: How often recv loops wake up to re-check the stop event (seconds).
+_RECV_TIMEOUT_SEC: float = 0.5
+#: Max time to wait for a thread to exit before giving up in __del__.
+_THREAD_JOIN_TIMEOUT_SEC: float = 1.0
 
 # Callback signature for received data on the server side
 ServerRecvCallback = Callable[[bytes, tuple[str, int]], None]
@@ -24,7 +28,8 @@ ServerRecvCallback = Callable[[bytes, tuple[str, int]], None]
 ClientRecvCallback = Callable[[bytes], None]
 
 
-class RobotSocket(object):
+class RobotSocket:
+    """Base class for socket helpers, providing cooperative shutdown via Event."""
 
     def __init__(
         self,
@@ -37,13 +42,12 @@ class RobotSocket(object):
         self._ip = ip
         self._port = port
         self._callback_func = callback_func
+        # Cooperative shutdown signal — threads check periodically.
+        self._stop_event: threading.Event = threading.Event()
 
-    def close(self) -> None:
-        try:
-            self.connfd.close()  # 关闭连接
-            self.connfd = None
-        except Exception as err:
-            logger.error("close failed: %s", err)
+    def stop(self) -> None:
+        """Request graceful shutdown of all worker threads."""
+        self._stop_event.set()
 
     @property
     def callback_func(self) -> Callable[..., None] | None:
@@ -55,9 +59,6 @@ class RobotSocket(object):
 
     def start(self) -> None:
         # override
-        pass
-
-    def __del__():  # type: ignore[no-untyped-def]  # noqa: ANN  # original signature missing self
         pass
 
 
@@ -80,46 +81,61 @@ class RobotSocketServer(RobotSocket):
         :param name: socket实例名称
         """
         super().__init__(ip, port, callback_func, name)
-        self.__sersocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # 定义socket类型，网络通信，TCP
-        self.__sersocket.bind((self._ip, self._port))  # 套接字绑定的IP与端口
+        self.__sersocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP
+        self.__sersocket.settimeout(_RECV_TIMEOUT_SEC)
+        self.__sersocket.bind((self._ip, self._port))
         self.__max_bind = max_bind
         self.__client_link_dict: dict[tuple[str, int], dict[str, object]] = {}
-        self.__sersocket.listen(self.__max_bind)  # 开始TCP监听
+        self.__sersocket.listen(self.__max_bind)
         self.__recv_buff = 1024 * 128
+        self._scanner_thread: threading.Thread | None = None
 
     def start(self) -> None:
-        '''
-        启动socket实例
-        :return:
-        '''
+        """啟動 server，建立背景 accept 迴圈。"""
 
         def scanner() -> None:
-            while True:
-                connfd, addr = self.__sersocket.accept()  # 接受TCP连接，并返回新的套接字与IP地址
-                logger.info("Connected by %s", addr)  # 输出客户端的IP地址
-                run_thread = threading.Thread(target=self.recvfrom_client, args=(connfd, addr))
+            while not self._stop_event.is_set():
+                try:
+                    connfd, addr = self.__sersocket.accept()
+                except socket.timeout:
+                    continue
+                except OSError as err:
+                    if self._stop_event.is_set():
+                        return
+                    logger.error("accept failed: %s", err)
+                    continue
+                logger.info("Connected by %s", addr)
+                run_thread = threading.Thread(
+                    target=self.recvfrom_client,
+                    args=(connfd, addr),
+                    daemon=True,
+                )
                 run_thread.start()
-                self.__client_link_dict[addr] = {"fd": connfd, 'pthread': run_thread}
+                self.__client_link_dict[addr] = {"fd": connfd, "pthread": run_thread}
 
-        run_thread = threading.Thread(target=scanner, args=())
-        run_thread.start()
+        self._scanner_thread = threading.Thread(target=scanner, daemon=True)
+        self._scanner_thread.start()
 
     def recvfrom_client(self, connfd: socket.socket, addr: tuple[str, int]) -> None:
-        """
-        客户端连接状态的数据处理
-        :param connfd: 连接客户端的文件句柄
-        :param addr: 客户端的地址
-        :return:
-        """
+        """處理已連線客戶端的資料。stop_event 觸發時跳出迴圈。"""
+        connfd.settimeout(_RECV_TIMEOUT_SEC)
         try:
-            while True:
-                recv = connfd.recv(self.__recv_buff)  # 把接收的数据实例化
-                if recv == b'':  # 断开连接
+            while not self._stop_event.is_set():
+                try:
+                    recv = connfd.recv(self.__recv_buff)
+                except socket.timeout:
+                    continue
+                if recv == b"":
                     break
                 if self.callback_func is not None:
                     self.callback_func(recv, addr)
         except Exception as err:
             logger.info("Client disconnected, recv thread exiting: %s", err)
+        finally:
+            try:
+                connfd.close()
+            except OSError:
+                pass
 
     def send_to_client(self, dat: bytes, addr: tuple[str, int]) -> None:
         """
@@ -136,13 +152,29 @@ class RobotSocketServer(RobotSocket):
         except Exception as err:
             logger.error("send_to_client failed: %s", err)
 
+    def stop(self) -> None:
+        """請求 server 與所有 worker 執行緒優雅關閉。"""
+        super().stop()
+        try:
+            self.__sersocket.close()
+        except OSError as err:
+            logger.error("server socket close failed: %s", err)
+        for addr, info in list(self.__client_link_dict.items()):
+            connfd = info.get("fd")
+            if isinstance(connfd, socket.socket):
+                try:
+                    connfd.close()
+                except OSError:
+                    pass
+            pthread = info.get("pthread")
+            if isinstance(pthread, threading.Thread):
+                pthread.join(timeout=_THREAD_JOIN_TIMEOUT_SEC)
+        if self._scanner_thread is not None:
+            self._scanner_thread.join(timeout=_THREAD_JOIN_TIMEOUT_SEC)
+
     def __del__(self) -> None:
         try:
-            for conninfo in self.__client_link_dict.items():
-                connfd = conninfo["fd"]
-                connfd.close()  # 关闭连接
-                _async_raise(conninfo['pthread'])
-                del conninfo
+            self.stop()
         except Exception as err:
             logger.error("server cleanup failed: %s", err)
 
@@ -167,83 +199,101 @@ class RobotSocketClient(RobotSocket):
         super().__init__(ip, port, callback_func, name)
         self.__clientsocket: socket.socket | None = None
         self.__connFlag = False  # 连接状态
-        self.__disconntime = disconntime  # 掉线重连的时间
+        self.__disconntime = disconntime  # 掉線重連的時間（秒）
         self.__recv_buff = 1024 * 128
+        self.reconner_thread: threading.Thread | None = None
+        self.recvfrom_ser_thread: threading.Thread | None = None
 
     def start(self) -> None:
-        '''
-        启动socket实例
-        :return:
-        '''
+        """啟動 client，建立 reconnect 與 recv 兩條背景執行緒。"""
 
         def reconner() -> None:
-            while True:
+            while not self._stop_event.is_set():
                 try:
                     addr = (self._ip, self._port)
                     if self.__connFlag is False:
                         logger.info("Try to reconnect......")
-                        del self.__clientsocket
-                        self.__clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # 定义socket类型，网络通信，TCP
+                        if self.__clientsocket is not None:
+                            try:
+                                self.__clientsocket.close()
+                            except OSError:
+                                pass
+                        self.__clientsocket = socket.socket(
+                            socket.AF_INET, socket.SOCK_STREAM,
+                        )
+                        self.__clientsocket.settimeout(_RECV_TIMEOUT_SEC)
                         self.__clientsocket.connect(addr)
-                        logger.info("Connected by %s", addr)  # 输出客户端的IP地址
+                        logger.info("Connected by %s", addr)
                         self.__connFlag = True
                 except Exception as err:
                     logger.error("reconnect failed: %s", err)
-                    time.sleep(self.__disconntime)
+                # 用 wait 取代 sleep，可被 stop_event 提前喚醒
+                if self._stop_event.wait(timeout=self.__disconntime):
+                    return
 
-        self.reconner_thread = threading.Thread(target=reconner, args=())
+        self.reconner_thread = threading.Thread(target=reconner, daemon=True)
         self.reconner_thread.start()
-        self.recvfrom_ser_thread = threading.Thread(target=self.recvfrom_ser, args=())
+        self.recvfrom_ser_thread = threading.Thread(target=self.recvfrom_ser, daemon=True)
         self.recvfrom_ser_thread.start()
 
     def recvfrom_ser(self) -> None:
-        """
-        客户端连接状态的数据处理
-        :param client: 连接客户端的文件句柄
-        :param addr: 客户端的地址
-        :return:
-        """""
-        try:
-            while True:
-                try:
-                    if self.__connFlag is True:
-                        recv = self.__clientsocket.recv(self.__recv_buff)  # 把接收的数据实例化
-                        if recv == b'':  # 断开连接
-                            break
-                        if self.callback_func is not None:
-                            self.callback_func(recv)
-
-                except Exception as err:
-                    self.__clientsocket.close()
-                    self.__connFlag = False
-                    logger.error("recv from server failed: %s", err)  # 发生异常所在的文件
-                    time.sleep(self.__disconntime * 0.2)
-
-        except Exception as err:
-            logger.error("recvfrom_ser outer failure: %s", err)
+        """背景接收伺服器回應，stop_event 觸發時跳出迴圈。"""
+        while not self._stop_event.is_set():
+            if not self.__connFlag or self.__clientsocket is None:
+                if self._stop_event.wait(timeout=self.__disconntime * 0.2):
+                    return
+                continue
+            try:
+                recv = self.__clientsocket.recv(self.__recv_buff)
+            except socket.timeout:
+                continue
+            except Exception as err:
+                if self.__clientsocket is not None:
+                    try:
+                        self.__clientsocket.close()
+                    except OSError:
+                        pass
+                self.__connFlag = False
+                logger.error("recv from server failed: %s", err)
+                if self._stop_event.wait(timeout=self.__disconntime * 0.2):
+                    return
+                continue
+            if recv == b"":
+                # 對端關閉連線
+                self.__connFlag = False
+                continue
+            if self.callback_func is not None:
+                self.callback_func(recv)
 
     def send_to_ser(self, dat: bytes) -> None:
-        """
-        向本次连接的客户端发送数据
-        :param dat: 要发送的数据（bytes类型）
-        :return:
-        """
+        """送出資料到伺服器。"""
+        if self.__clientsocket is None:
+            logger.warning("send_to_ser called before connection established")
+            return
         try:
             self.__clientsocket.sendall(dat)
         except Exception as err:
             logger.error("send_to_ser failed: %s", err)
 
+    def stop(self) -> None:
+        """請求 client 與 reconnect 執行緒優雅關閉。"""
+        super().stop()
+        self.__connFlag = False
+        if self.__clientsocket is not None:
+            try:
+                self.__clientsocket.close()
+            except OSError as err:
+                logger.error("client socket close failed: %s", err)
+            self.__clientsocket = None
+        for t in (self.reconner_thread, self.recvfrom_ser_thread):
+            if isinstance(t, threading.Thread):
+                t.join(timeout=_THREAD_JOIN_TIMEOUT_SEC)
+
     def __del__(self) -> None:
         try:
-            self.__clientsocket.close()  # 关闭连接
-            del self.__clientsocket
-            self.__clientsocket = None
+            self.stop()
         except Exception as err:
             logger.error("client cleanup failed: %s", err)
-
-        self.__connFlag = False
-        _async_raise(self.reconner_thread)
-        _async_raise(self.recvfrom_ser_thread)
 
 
 if __name__ == "__main__":
