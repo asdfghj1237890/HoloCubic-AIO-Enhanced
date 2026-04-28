@@ -129,9 +129,7 @@ def _draw_cube(img: Image.Image, scale: float = 0.55) -> None:
     draw = ImageDraw.Draw(img)
     for x, y in v.values():
         # Halo
-        draw.ellipse(
-            (x - dot_r * 2, y - dot_r * 2, x + dot_r * 2, y + dot_r * 2), fill=CYAN_BRIGHT + (80,)
-        )
+        draw.ellipse((x - dot_r * 2, y - dot_r * 2, x + dot_r * 2, y + dot_r * 2), fill=CYAN_BRIGHT + (80,))
         # Core
         draw.ellipse((x - dot_r, y - dot_r, x + dot_r, y + dot_r), fill=(255, 255, 255, 255))
 

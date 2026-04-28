@@ -29,8 +29,7 @@ from util.widget_base import EntryWithPlaceholder
 logger = get_logger(__name__)
 # GitHub raw common.h —— 包含 ``#define AIO_VERSION "X.Y"`` 行
 VERSION_INFO_URL = (
-    "https://raw.githubusercontent.com/asdfghj1237890/"
-    "HoloCubic-AIO-Enhanced/main/AIO_Firmware_PIO/src/common.h"
+    "https://raw.githubusercontent.com/asdfghj1237890/HoloCubic-AIO-Enhanced/main/AIO_Firmware_PIO/src/common.h"
 )
 
 
@@ -158,8 +157,9 @@ class DownloadDebug:
         下载模块对外的api接口
         """
         if action == mh.A_CLOSE_UART:  # 关闭串口
+            # 取消任何進行中的固件燒錄，然後切換串口開關狀態
+            # （com_connect 會根據按鈕當前文字自動切換 open/close）
             self.canle_download_firmware()
-            self.m_connect_button["text"] == "关闭串口"
             self.com_connect()
 
     def display_version(self) -> None:
@@ -237,10 +237,11 @@ class DownloadDebug:
             self.__firmware_path_val[pos].set(self.__pre_down_param_list[pos]["bin_path"])
             self.__firmware_path_entry[pos].pack(side=tk.LEFT, padx=border_padx)
             # 選擇按鈕
+            # default-arg trick captures pos at lambda creation (avoids late-binding)
             self.__firmware_choose_botton[pos] = ctk.CTkButton(
                 firmware_frame[pos],
                 text=self.i18n.t("select_button"),
-                command=lambda: self.choose_file(pos.copy()),
+                command=lambda p=pos: self.choose_file(p),
                 width=60,
                 height=28,
             )
@@ -315,12 +316,8 @@ class DownloadDebug:
             borderwidth=0,
         )
         # 进度条的矩形框
-        self.progress_bar_circle = self.progress_bar.create_rectangle(
-            3, 3, 450, 14, outline="green", width=1
-        )
-        self.progress_bar_fill = self.progress_bar.create_rectangle(
-            3, 3, 20, 14, outline="", width=1, fill="green"
-        )
+        self.progress_bar_circle = self.progress_bar.create_rectangle(3, 3, 450, 14, outline="green", width=1)
+        self.progress_bar_fill = self.progress_bar.create_rectangle(3, 3, 20, 14, outline="", width=1, fill="green")
         self.progress_bar.coords(self.progress_bar_fill, (3, 3, 0, 25))
         self.progress_bar.pack(side=tk.TOP, pady=0)
         progress_frame.pack(side=tk.TOP, pady=0)
@@ -833,11 +830,7 @@ class DownloadDebug:
         for pos in range(firmware_num):
             firmware_addr = self.__firmware_addr_val[pos].get().strip()
             firmware_path = self.__firmware_path_entry[pos].get().strip()
-            if (
-                self.__firmware_enable_val[pos].get() == 1
-                and firmware_addr != ""
-                and firmware_path != ""
-            ):
+            if self.__firmware_enable_val[pos].get() == 1 and firmware_addr != "" and firmware_path != "":
                 data_map[firmware_addr] = firmware_path
 
         if data_map == {}:  # 无下载内容

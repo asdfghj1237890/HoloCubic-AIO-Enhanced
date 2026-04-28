@@ -21,7 +21,9 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 100
+# 120 is the modern wide-monitor default; long ffmpeg cmd templates and
+# C-array generation strings in convertor_core didn't fit in 100.
+line-length = 120
 target-version = "py311"
 extend-exclude = [
     "esptool_v41",  # vendored upstream — we depend on PyPI esptool now

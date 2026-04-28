@@ -32,8 +32,7 @@ def get_resource_path(relative_path: str | Path) -> Path:
 TOOL_VERSION: str = "v2.5.0"
 #: GitHub raw URL — pyproject.toml 內含 ``version = "X.Y.Z"`` 可抓取比對
 TOOL_VERSION_INFO_URL: str = (
-    "https://raw.githubusercontent.com/asdfghj1237890/"
-    "HoloCubic-AIO-Enhanced/main/AIO_Tool/pyproject.toml"
+    "https://raw.githubusercontent.com/asdfghj1237890/HoloCubic-AIO-Enhanced/main/AIO_Tool/pyproject.toml"
 )
 #: GitHub repo URL — 使用者下載最新版工具與韌體的入口
 GITHUB_REPO_URL: str = "https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced"

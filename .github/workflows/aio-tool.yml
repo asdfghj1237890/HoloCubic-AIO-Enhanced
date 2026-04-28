@@ -45,8 +45,5 @@ jobs:
       - name: ruff format --check
         run: uv run ruff format --check .
 
-      # Lint is informational for now — 35 legacy warnings (mostly E501 long
-      # Chinese-comment lines + a few %-format strings) are tracked but
-      # non-blocking. Tighten by removing `|| true` once those are cleaned up.
-      - name: ruff check (informational)
-        run: uv run ruff check . || true
+      - name: ruff check
+        run: uv run ruff check .

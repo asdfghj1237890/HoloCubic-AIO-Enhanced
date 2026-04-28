@@ -141,14 +141,12 @@ class MsgHead:
         members = [
             attr
             for attr in self.__dir__()
-            if not callable(getattr(self, attr))
-            and not attr.startswith("__")
-            and not attr.startswith("fmt")
+            if not callable(getattr(self, attr)) and not attr.startswith("__") and not attr.startswith("fmt")
         ]
         # 取得當前實例（可能是子類別）的 struct 大小
         size = struct.Struct(self.fmt).size
         get_data = struct.unpack(byte_order + self.fmt, network_data[:size])
-        for attr, value in zip(members, get_data):
+        for attr, value in zip(members, get_data, strict=False):
             setattr(self, attr, value)
         return size
 
@@ -182,16 +180,7 @@ class SettingMsg(MsgHead):
         return size
 
     def encode(self, byte_order: str = "=") -> bytes:
-        info = (
-            self.prefs_name
-            + b"\x00"
-            + self.key
-            + b"\x00"
-            + self.type
-            + b"\x00"
-            + self.value
-            + b"\r\n"
-        )
+        info = self.prefs_name + b"\x00" + self.key + b"\x00" + self.type + b"\x00" + self.value + b"\r\n"
         self.msg_len = struct.Struct(self.fmt).size + len(info)
         return super().encode(byte_order) + info
 
@@ -204,9 +193,10 @@ def dump_dict(obj: Structure) -> dict[str, object]:
     info: dict[str, object] = {}
     for k, v in obj._fields_:
         av = getattr(obj, k)
-        if type(v) == type(Structure):
+        # ctypes 欄位型別本身是 metaclass instance；用 isinstance 比 type==type 安全
+        if isinstance(v, type(Structure)):
             logger.debug("dump_dict struct field: %s", av)
-        elif type(v) == type(Array):
+        elif isinstance(v, type(Array)):
             av = cast(av, c_char_p).value.decode()
         info[k] = av
     return info
