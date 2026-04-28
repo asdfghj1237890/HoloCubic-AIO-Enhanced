@@ -1,21 +1,18 @@
-# Smoke test for weather. With WiFi.status() reporting WL_CONNECTED
-# and HTTP fixtures under test/fixtures/http/dataservice.accuweather.com/
-# (locations search + currentconditions + 5-day forecast for Beijing,
-# location key 101924), the first process tick fires WIFI_CONN, the
-# message handler runs the location-key + current-weather + forecast
-# fetch chain, and the follow-up `action UP` rerenders display_weather
-# with the parsed values (temperature 23°C, humidity 45%, etc).
+# Smoke test for weather. Page 0 (the current-conditions panel)
+# embeds a live clock label that ticks every render — fundamentally
+# unsuitable for golden-image diff. So this scenario navigates to
+# page 1 (`display_curve`, the 5-day forecast plot — no clock) via
+# action TURN_RIGHT and screenshots there. The HTTP fixture chain
+# (location search -> currentconditions -> forecast) has already
+# populated run_data->wea by the time we get there, so the curve
+# uses the canned daily_max/daily_min values.
 
 app weather
 
 wait_ms 800
-action UP
-# No wait_ms here — the action's built-in tick_for(50) is enough for
-# display_weather to render with the parsed values, and it minimises
-# the window during which the clock label keeps ticking. Earlier
-# wait_ms 600 made the screenshot 1.2% flaky between CI runs because
-# the seconds digit in the clock could roll over.
-screenshot 01_with_data
+action TURN_RIGHT
+wait_ms 200
+screenshot 01_curve
 assert_no_crash
 
 action RETURN
