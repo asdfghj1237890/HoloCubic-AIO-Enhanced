@@ -9,6 +9,7 @@
 ################################################################################
 
 from ctypes import Array, Structure, c_byte, c_char_p, c_uint, cast
+from enum import IntEnum
 from util.logger import get_logger
 import struct
 
@@ -30,33 +31,23 @@ A_CLOSE_UART = "A_CLOSE_UART"
 A_OPEN_UART = "A_OPEN_UART"
 
 
-class ModuleType:
-    class ConstError(TypeError): pass
+class ModuleType(IntEnum):
+    """Module identifiers for inter-module messaging."""
 
     # 模块名 未知
     MODULE_TYPE_UNKNOW = 0
-
     # 模块名 Holocubic
     MODULE_TYPE_CUBIC_FILE_MANAGER = 1
-
     # 上位机控制器
     MODULE_TYPE_C_FILE_MANAGER = 2
-
     # Holocubic的settings模块
     MODULE_TYPE_CUBIC_SETTINGS = 3
-
     # 上位机控制器的settings模块
     MODULE_TYPE_TOOL_SETTINGS = 4
 
-    def __setattr__(self, name, value):
-        raise self.ConstError(f"Can't rebind const {name}")
 
-
-MT = ModuleType()  # 模块类型
-
-
-class ActionType:
-    class ConstError(TypeError): pass
+class ActionType(IntEnum):
+    """Action identifiers for messages."""
 
     # 未知类型
     AT_UNKNOWN = 0
@@ -76,35 +67,27 @@ class ActionType:
     AT_FILE_RENAME = 10  # 重命名
     AT_FILE_GET_INFO = 11  # 查询文件大小
 
-    AT_SETTING_SET = 12 # 设置属性
-    AT_SETTING_GET = 13 # 获取属性
-
-    def __setattr__(self, name, value):
-        raise self.ConstError(f"Can't rebind const {name}")
+    AT_SETTING_SET = 12  # 设置属性
+    AT_SETTING_GET = 13  # 获取属性
 
 
-AT = ActionType()
-
-class ValueType:
-    class ConstError(TypeError): pass
+class ValueType(IntEnum):
+    """Value type identifiers for setting messages."""
 
     # 值类型 未知
     VALUE_TYPE_UNKNOWN = 0
-
     # int
     VALUE_TYPE_INT = 1
-
     # uchar
     VALUE_TYPE_UCHAR = 2
-
     # String
     VALUE_TYPE_STRING = 3
 
-    def __setattr__(self, name, value):
-        raise self.ConstError(f"Can't rebind const {name}")
 
-
-VT = ValueType()  # Setting中值的类型
+# Backward-compatible aliases (the IntEnum class itself acts as namespace)
+MT = ModuleType  # 模块类型
+AT = ActionType
+VT = ValueType  # Setting中值的类型
 
 
 class MsgHead_TT(Structure):
