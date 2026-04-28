@@ -17,7 +17,12 @@ from util.i18n import get_i18n
 class Helper:
     """帮助信息页类。"""
 
-    def __init__(self, father, engine, lock=None):
+    def __init__(
+        self,
+        father: tk.Misc,
+        engine: object,
+        lock: object | None = None,
+    ) -> None:
         """
         :param father: 父类窗口
         :param engine: 引擎对象，用于推送与其他控件的请求
@@ -28,7 +33,7 @@ class Helper:
         self.i18n = get_i18n()
         self.init_info(self.m_father)
 
-    def init_info(self, father):
+    def init_info(self, father: tk.Misc) -> None:
         """初始化信息打印框。"""
         info = self.i18n.t("help_info")
 

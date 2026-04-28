@@ -32,7 +32,12 @@ class Setting:
     参数设置类
     """
 
-    def __init__(self, father, engine, lock=None):
+    def __init__(
+        self,
+        father: tk.Misc,
+        engine: object,
+        lock: object | None = None,
+    ) -> None:
         """
         Setting initialization
         :param father: Parent window
@@ -73,7 +78,7 @@ class Setting:
         self.create_wifi(self.wifi_grid_frame)
         self.wifi_grid_frame.update()
 
-    def createConfig(self, filename):
+    def createConfig(self, filename: str) -> bool:
         """
         创建配置文件
         :param filename: 文件路径
@@ -161,7 +166,7 @@ class Setting:
         fp.close()
         return True
 
-    def connect_uart(self, father):
+    def connect_uart(self, father: tk.Misc) -> None:
         """
         创建串口连接控件
         :param father: 父类窗口
@@ -219,7 +224,7 @@ class Setting:
 
         botton_frame.pack(side=tk.LEFT, pady=5)
 
-    def com_pull_down(self, event):
+    def com_pull_down(self, event: tk.Event) -> None:
         """
         comm口下拉框被点击的时候 触发端口扫描
         """
@@ -238,7 +243,7 @@ class Setting:
         # 更改下拉框中的内容
         self.m_com_select.current(choose_index)
 
-    def com_connect(self):
+    def com_connect(self) -> None:
         # 先关闭下载页的串口
         self.m_engine.OnThreadMessage(mh.M_SETTING, mh.M_DOWNLOAD_DEBUG, mh.A_CLOSE_UART, None)
 
@@ -278,7 +283,7 @@ class Setting:
                 self.receive_thread = None
                 self.print_log("Receive_thread stop")
 
-    def read_data(self, ser):
+    def read_data(self, ser: serial.Serial) -> None:
         """背景接收序列埠資料；stop event 觸發時跳出迴圈。"""
         self.print_log("Receive_thread start")
         while not self._serial_stop_event.is_set():
@@ -287,7 +292,7 @@ class Setting:
                 logger.debug("Receive---> %s", data)
             time.sleep(0.2)
 
-    def print_log(self, msg):
+    def print_log(self, msg: str) -> None:
         logger.info(msg)
         self.set_param("ssid_1", "12345678")
 
@@ -295,7 +300,7 @@ class Setting:
     # 帧头0x2323（2字节）+ 帧长度（2字节）+ 发送者（2字节）
     #                  + 接收者（2字节）+ 消息类型（2字节）
     #                   + 消息数据（帧长度-10）+ 帧尾/r/n（2字节）
-    def set_param(self, key, value):
+    def set_param(self, key: str, value: str) -> None:
         """
         设置参数
         :param key: 设置的key
@@ -328,7 +333,7 @@ class Setting:
     # 帧头0x2323（2字节）+ 帧长度（2字节）+ 发送者（2字节）
     #                  + 接收者（2字节）+ 消息类型（2字节）
     #                   + 消息数据（帧长度-10）+ 帧尾/r/n（2字节）
-    def get_param(self, key):
+    def get_param(self, key: str) -> None:
         """
         获取参数
         :param key:
@@ -355,7 +360,7 @@ class Setting:
             logger.error("get_param failed:\n%s", traceback.format_exc())
             logger.error("get_param error: %s", err)
 
-    def create_wifi(self, father):
+    def create_wifi(self, father: tk.Misc) -> None:
         """建立 WiFi 控件。"""
         get_botton = ctk.CTkButton(
             father,
@@ -366,7 +371,7 @@ class Setting:
         )
         get_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=8)
 
-    def __del__(self):
+    def __del__(self) -> None:
         """資源釋放：通知 receive_thread 停止並等待結束。"""
         if self.ser is not None:
             self.ser.close()  # 关闭串口

@@ -40,7 +40,7 @@ class Engine:
     引擎
     """
 
-    def __init__(self, root):
+    def __init__(self, root: ctk.CTk) -> None:
         """
         Engine initialization
         :param root: Window widget
@@ -135,7 +135,7 @@ class Engine:
                 if hasattr(page, "api"):
                     page.api(mh.A_UPDATALANG)
 
-    def on_closing(self):
+    def on_closing(self) -> None:
         """
         Trigger function when closing main window
         :return: None
@@ -160,7 +160,7 @@ class Engine:
             del self.m_tool_settings_tab_windows
             self.m_tool_settings_tab_windows = None
 
-    def __del__(self):
+    def __del__(self) -> None:
         """
         Release resources
         """
@@ -177,7 +177,7 @@ class Engine:
             self.m_tool_settings_tab_windows = None
 
 
-def get_version():
+def get_version() -> str:
     try:
         response = requests.get(TOOL_VERSION_INFO_URL, timeout=3)
         new_version_info = re.findall(r"AIO_TOOL_VERSION v\d{1,2}\.\d{1,2}\.\d{1,2}", response.text)

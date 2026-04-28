@@ -16,7 +16,12 @@ from util.i18n import get_i18n
 class ToolSettings:
     """工具設定頁（語系選擇等偏好設定）。"""
 
-    def __init__(self, father, engine, lock=None):
+    def __init__(
+        self,
+        father: tk.Misc,
+        engine: object,
+        lock: object | None = None,
+    ) -> None:
         self.m_engine = engine
         self.m_father = father
         self.i18n = get_i18n()
@@ -24,7 +29,7 @@ class ToolSettings:
 
         self.init_ui(self.m_father)
 
-    def init_ui(self, father):
+    def init_ui(self, father: tk.Misc) -> None:
         """初始化設定 UI。"""
         # Main container with padding
         main_frame = ctk.CTkFrame(father, fg_color="transparent")
@@ -55,7 +60,7 @@ class ToolSettings:
         )
         tip_label.pack(anchor=tk.W)
 
-    def create_language_section(self, parent):
+    def create_language_section(self, parent: tk.Misc) -> None:
         """建立語系選擇區塊。"""
         # CTk 沒有 LabelFrame，用 CTkFrame + 標題 CTkLabel 模擬
         section_frame = ctk.CTkFrame(parent)
@@ -116,7 +121,7 @@ class ToolSettings:
         # Initially disable the apply button
         self.apply_button.configure(state=tk.DISABLED)
 
-    def on_language_change(self):
+    def on_language_change(self) -> None:
         """當使用者切換語系 radio 時，依照是否異動啟用 Apply 鍵。"""
         selected_language = self.language_var.get()
         if selected_language != self.current_language:
@@ -124,7 +129,7 @@ class ToolSettings:
         else:
             self.apply_button.configure(state=tk.DISABLED)
 
-    def apply_language_change(self):
+    def apply_language_change(self) -> None:
         """套用使用者選擇的語系。"""
         selected_language = self.language_var.get()
 
@@ -147,5 +152,5 @@ class ToolSettings:
                 "Failed to save language preference",
             )
 
-    def __del__(self):
+    def __del__(self) -> None:
         pass
