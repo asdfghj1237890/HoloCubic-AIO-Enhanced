@@ -195,7 +195,9 @@ static void picture_process(AppController *sys,
         // 重置更新的时间标记
         run_data->pic_perMillis = GET_SYS_MILLIS();
     }
-    delay(300);
+    // (was: delay(300) — pure throttle removed; photo switching is already
+    //  millis-gated via pic_perMillis + switchInterval above, and
+    //  AppController's main loop runs main_process at its own cadence.)
 }
 
 static void picture_background_task(AppController *sys,
