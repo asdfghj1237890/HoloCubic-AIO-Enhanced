@@ -8,45 +8,51 @@
 #
 ################################################################################
 
-import tkinter as tk
+from __future__ import annotations
+
+import customtkinter as ctk
+
+#: tk.Entry kwargs that ctk.CTkEntry does NOT accept — silently filtered out
+#: so existing call sites passing these don't have to be rewritten yet.
+_TK_ONLY_ENTRY_KWARGS: frozenset[str] = frozenset({
+    "highlightcolor", "highlightthickness", "highlightbackground",
+    "relief", "bd", "borderwidth", "bg", "fg", "selectbackground",
+    "selectforeground", "insertbackground", "disabledbackground",
+    "disabledforeground", "readonlybackground",
+})
 
 
-class EntryWithPlaceholder(tk.Entry):
+def _sanitize_ctk_entry_kwargs(kwargs: dict[str, object]) -> dict[str, object]:
+    """Strip tk-only kwargs so call sites written for tk.Entry still work."""
+    return {k: v for k, v in kwargs.items() if k not in _TK_ONLY_ENTRY_KWARGS}
+
+
+class EntryWithPlaceholder(ctk.CTkEntry):
+    """CTkEntry-backed entry that shows placeholder text natively.
+
+    Maintains backward compatibility with the old tk.Entry-based class:
+    ``placeholder`` and ``placeholder_color`` kwargs map to CTkEntry's
+    built-in ``placeholder_text`` / ``placeholder_text_color`` arguments.
+    Tk-only kwargs (e.g. ``highlightcolor``) are silently ignored so
+    existing call sites don't need to change.
+    """
+
     def __init__(
         self,
-        master: tk.Misc | None = None,
+        master: ctk.CTkBaseClass | None = None,
         *,
-        placeholder: str = "PLACEHOLDER",
+        placeholder: str = "",
         placeholder_color: str = "grey",
         **attribute: object,
     ) -> None:
-        super().__init__(master, attribute)
-
-        self.placeholder = placeholder.strip()
-        self.placeholder_color = placeholder_color
-        self.default_fg_color = self['fg']
-
-        self.bind("<FocusIn>", self.foc_in)
-        self.bind("<FocusOut>", self.foc_out)
-
-    def get(self) -> str:
-        if super().get().strip() == self.placeholder:
-            return ""
-        return super().get().strip()
+        clean_kwargs = _sanitize_ctk_entry_kwargs(attribute)
+        super().__init__(
+            master,
+            placeholder_text=placeholder.strip(),
+            placeholder_text_color=placeholder_color,
+            **clean_kwargs,
+        )
 
     def refresh(self) -> None:
-        """
-        若输入框带有其他默认值（非提示词）时 需要手动调用刷新
-        """
-        if not self.get():
-            self.insert(0, self.placeholder)
-            self['fg'] = self.placeholder_color
-
-    def foc_in(self, *args: object) -> None:
-        if self.placeholder == super().get():
-            if self['fg'] == self.placeholder_color:
-                self.delete('0', 'end')
-                self['fg'] = self.default_fg_color
-
-    def foc_out(self, *args: object) -> None:
-        self.refresh()
+        """No-op kept for backward compatibility — CTkEntry refreshes natively."""
+        return None
