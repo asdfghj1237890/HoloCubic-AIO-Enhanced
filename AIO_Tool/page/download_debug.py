@@ -567,7 +567,11 @@ class DownloadDebug:
 
         # 排版：先放底部清空鈕（保留小尺寸不撐滿）+ 右側捲軸，最後文字框 expand 填滿剩餘空間
         m_clear = ctk.CTkButton(
-            father, text="X", command=self.clear_log, width=24, height=24,
+            father,
+            text="X",
+            command=self.clear_log,
+            width=24,
+            height=24,
         )
         m_clear.pack(side=tk.BOTTOM, anchor=tk.E, padx=3, pady=(0, 3))
         self.m_log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 3), pady=3)
@@ -612,7 +616,11 @@ class DownloadDebug:
 
         # 排版：先放底部清空鈕（保留小尺寸不撐滿）+ 右側捲軸，最後文字框 expand 填滿剩餘空間
         self.m_clear = ctk.CTkButton(
-            father, text="X", command=self.clear_msg, width=24, height=24,
+            father,
+            text="X",
+            command=self.clear_msg,
+            width=24,
+            height=24,
         )
         self.m_clear.pack(side=tk.BOTTOM, anchor=tk.E, padx=3, pady=(0, 3))
         self.m_scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 3), pady=3)

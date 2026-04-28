@@ -8,7 +8,7 @@
 ################################################################################
 
 import struct
-from ctypes import Array, Structure, c_byte, c_char_p, c_uint, cast
+from ctypes import Array, Structure, c_char_p, cast
 from enum import IntEnum
 
 from util.logger import get_logger
@@ -90,15 +90,6 @@ AT = ActionType
 VT = ValueType  # Setting中值的类型
 
 
-class MsgHead_TT(Structure):
-    _fields_ = [
-        ("header_mark", c_byte * 2),
-        ("from_who", c_byte),
-        ("to_who", c_byte),
-        ("msg_len", c_uint),
-    ]
-
-
 class MsgHead:
     """网络通信的消息头.
 
@@ -145,7 +136,7 @@ class MsgHead:
         """Return wire-order field names. Subclasses extend this list."""
         return list(self._FIELD_ORDER)
 
-    def decode(self, network_data: bytes, byteOrder: str = "!") -> int:
+    def decode(self, network_data: bytes, byte_order: str = "!") -> int:
         """Decode bytes into instance attributes. Returns bytes consumed."""
         members = [
             attr
@@ -156,16 +147,16 @@ class MsgHead:
         ]
         # 取得當前實例（可能是子類別）的 struct 大小
         size = struct.Struct(self.fmt).size
-        get_data = struct.unpack(byteOrder + self.fmt, network_data[:size])
+        get_data = struct.unpack(byte_order + self.fmt, network_data[:size])
         for attr, value in zip(members, get_data):
             setattr(self, attr, value)
         return size
 
-    def encode(self, byteOrder: str = "=") -> bytes:
+    def encode(self, byte_order: str = "=") -> bytes:
         """Pack instance attributes into wire bytes."""
         members = [attr for attr in self.__dir__() if not callable(getattr(self, attr))]
         params = [getattr(self, param) for param in members]
-        return struct.pack(byteOrder + self.fmt, *params)
+        return struct.pack(byte_order + self.fmt, *params)
 
 
 class SettingMsg(MsgHead):
@@ -184,13 +175,13 @@ class SettingMsg(MsgHead):
         self.value: bytes = b""
         self.left_info: bytes = b""
 
-    def decode(self, network_data: bytes, byteOrder: str = "!") -> int:
-        size = super().decode(network_data, byteOrder)
+    def decode(self, network_data: bytes, byte_order: str = "!") -> int:
+        size = super().decode(network_data, byte_order)
         self.left_info = network_data[size:]
         logger.debug("SettingMsg left_info: %s", self.left_info)
         return size
 
-    def encode(self, byteOrder: str = "=") -> bytes:
+    def encode(self, byte_order: str = "=") -> bytes:
         info = (
             self.prefs_name
             + b"\x00"
@@ -202,7 +193,7 @@ class SettingMsg(MsgHead):
             + b"\r\n"
         )
         self.msg_len = struct.Struct(self.fmt).size + len(info)
-        return super().encode(byteOrder) + info
+        return super().encode(byte_order) + info
 
     def __dir__(self) -> list[str]:
         return super().__dir__()

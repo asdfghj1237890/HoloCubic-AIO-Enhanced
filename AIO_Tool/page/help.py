@@ -42,8 +42,15 @@ class Helper:
         wrapper.pack(fill="both", expand=True, padx=8, pady=8)
 
         self.m_project_info = tk.Text(
-            wrapper, height=45, width=140, wrap="word", borderwidth=0, highlightthickness=0,
-            bg="#1f1f1f", fg="#dcdcdc", insertbackground="#dcdcdc",
+            wrapper,
+            height=45,
+            width=140,
+            wrap="word",
+            borderwidth=0,
+            highlightthickness=0,
+            bg="#1f1f1f",
+            fg="#dcdcdc",
+            insertbackground="#dcdcdc",
         )
         self.m_project_info.tag_configure(
             "bold_italics",

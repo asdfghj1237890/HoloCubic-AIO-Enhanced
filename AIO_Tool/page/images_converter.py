@@ -17,11 +17,11 @@ import customtkinter as ctk
 from PIL import Image
 
 from util.common import CACHE_PATH, ROOT_PATH
-from util.convertor_core import Converter, _const
+from util.convertor_core import Converter, _Const
 from util.i18n import get_i18n
 from util.widget_base import EntryWithPlaceholder
 
-FLAG = _const()
+FLAG = _Const()
 
 color_dict = {
     "CF_TRUE_COLOR": FLAG.CF_TRUE_COLOR,

@@ -1,6 +1,5 @@
-
 import tkinter as tk
-import tkinter.font as tkFont
+import tkinter.font as tk_font
 from pathlib import Path
 from tkinter import messagebox
 from typing import Literal
@@ -86,19 +85,19 @@ def image_label(
 def _font(
     fname: str = "微软雅黑",
     size: int = 12,
-    bold: Literal["normal", "bold"] = tkFont.NORMAL,
-) -> tkFont.Font:
+    bold: Literal["normal", "bold"] = tk_font.NORMAL,
+) -> tk_font.Font:
     """设置字体"""
-    ft = tkFont.Font(family=fname, size=size, weight=bold)
+    ft = tk_font.Font(family=fname, size=size, weight=bold)
     return ft
 
 
-def _ft(size: int = 12, bold: bool = False) -> tkFont.Font:
+def _ft(size: int = 12, bold: bool = False) -> tk_font.Font:
     """极简字体设置函数"""
     if bold:
-        return _font(size=size, bold=tkFont.BOLD)
+        return _font(size=size, bold=tk_font.BOLD)
     else:
-        return _font(size=size, bold=tkFont.NORMAL)
+        return _font(size=size, bold=tk_font.NORMAL)
 
 
 def h_seperator(parent: tk.Misc, height: int = 2) -> None:  # height 单位为像素值

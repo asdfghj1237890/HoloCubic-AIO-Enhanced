@@ -7,10 +7,8 @@
 #
 ################################################################################
 
-import binascii
 import ctypes
 import inspect
-import re
 import sys
 import threading
 from pathlib import Path
@@ -42,30 +40,7 @@ GITHUB_REPO_URL: str = "https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced
 ROOT_PATH: str = "OutFile"
 CACHE_PATH: str = "Cache"
 
-# 字节序定义
-byteOrders: dict[str, str] = {
-    "Native order": "@",  # 本机（默认）
-    "Native standard": "=",  # 本机
-    "Little-endian": "<",  # 小端
-    "Big-endian": ">",  # 大端
-    "Network order": "!",  # network(大端)
-}
-
-
-# 关于struct格式串字节大小 https://blog.csdn.net/qq_30638831/article/details/80421019
-
-
-def getSendInfo(info: bytes) -> str:
-    """
-    打印网络数据流,
-    :param info: ctypes.create_string_buffer()
-    :return : str
-    """
-    info = binascii.hexlify(info)
-    logger.debug("send info: %s", info)
-    re_obj = re.compile(".{1,2}")  # 匹配任意字符1-2次
-    t = " ".join(re_obj.findall(str(info).upper()))
-    return t
+# 字節序對照表參考：https://docs.python.org/3/library/struct.html#byte-order-size-and-alignment
 
 
 def _async_raise(thread_obj: threading.Thread) -> None:

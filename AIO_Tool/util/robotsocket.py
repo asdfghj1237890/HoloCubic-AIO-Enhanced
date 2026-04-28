@@ -300,13 +300,13 @@ if __name__ == "__main__":
     # This is demo
 
     # 服务器端范例
-    def myRecvHandle(dat: bytes, addr: tuple[str, int]) -> None:  # 接收函数
+    def my_recv_handle(dat: bytes, addr: tuple[str, int]) -> None:  # 接收函数
         sersocket.send_to_client(dat, addr)
         dat = ("Server recv %s from %s\n" % (dat, addr)).encode(encoding="utf-8")
         logger.info("server demo received: %s", dat)
 
     # 初始化端口并设置接收数据的函数(当接收到数据，自动被调用)
-    sersocket = RobotSocketServer("192.168.123.244", 6666, myRecvHandle, max_bind=10)
+    sersocket = RobotSocketServer("192.168.123.244", 6666, my_recv_handle, max_bind=10)
     sersocket.start()  # socket开始工作
     import time
 
@@ -315,12 +315,12 @@ if __name__ == "__main__":
     # sersocket.send_to_client(b'Hello \n')
     """
     # 客户端范例
-    def myRecvHandle(dat):  # 接收函数
+    def my_recv_handle(dat):  # 接收函数
         dat = ("Client recv %s\n" % dat).encode(encoding="utf-8")
         logger.info("client demo received: %s", dat)
 
     # 初始化端口并设置接收数据的函数(当接收到数据，自动被调用)
-    clientsocket = RobotSocketClient("192.168.123.244", 6666, myRecvHandle)
+    clientsocket = RobotSocketClient("192.168.123.244", 6666, my_recv_handle)
     clientsocket.start()    # socket开始工作
     import time
     while True:

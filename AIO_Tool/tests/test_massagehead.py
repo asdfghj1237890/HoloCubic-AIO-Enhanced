@@ -89,10 +89,10 @@ class TestMsgHeadWireFormat:
         original = MsgHead(from_who=4, to_who=3, action_type=12)
         encoded = original.encode()
 
-        # Note: encode default byteOrder is "=", decode default is "!".
+        # Note: encode default byte_order is "=", decode default is "!".
         # We round-trip with matching byte orders.
         decoded = MsgHead()
-        decoded.decode(struct.pack("=HHBBB", 8995, 0, 4, 3, 12), byteOrder="=")
+        decoded.decode(struct.pack("=HHBBB", 8995, 0, 4, 3, 12), byte_order="=")
         assert decoded.from_who == 4
         assert decoded.to_who == 3
         assert decoded.action_type == 12
@@ -139,7 +139,7 @@ class TestSettingMsg:
         )
         payload = b"a\x00b\x00c\x00d\r\n"
         msg = SettingMsg()
-        msg.decode(header + payload, byteOrder="!")
+        msg.decode(header + payload, byte_order="!")
         assert msg.left_info == payload
 
 
@@ -168,7 +168,7 @@ def test_msghead_round_trip_all_byte_orders(byte_order: str) -> None:
     """encode/decode round-trip must preserve from/to/action regardless of order."""
     raw = struct.pack(byte_order + "HHBBB", 8995, 0, 7, 8, 13)
     m = MsgHead()
-    m.decode(raw, byteOrder=byte_order)
+    m.decode(raw, byte_order=byte_order)
     assert m.from_who == 7
     assert m.to_who == 8
     assert m.action_type == 13

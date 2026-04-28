@@ -19,11 +19,11 @@ W = 256 * SUPERSAMPLE  # render at 1024x1024
 H = W
 
 # Color palette (matches CTk dark theme)
-BG_TOP = (15, 23, 42)        # slate-900
-BG_BOTTOM = (2, 6, 23)       # near-black
+BG_TOP = (15, 23, 42)  # slate-900
+BG_BOTTOM = (2, 6, 23)  # near-black
 CYAN_BRIGHT = (0, 240, 255)  # primary glow
-CYAN_DEEP = (10, 130, 200)   # secondary edge
-BLUE_ACCENT = (31, 106, 165) # CTk theme blue
+CYAN_DEEP = (10, 130, 200)  # secondary edge
+BLUE_ACCENT = (31, 106, 165)  # CTk theme blue
 GRID_DIM = (30, 50, 80, 80)  # faint grid lines
 
 
@@ -35,10 +35,7 @@ def _radial_gradient_bg() -> Image.Image:
     max_r = int(math.hypot(cx, cy))
     for r in range(max_r, 0, -2):
         t = r / max_r  # 0 (centre) -> 1 (edge)
-        col = tuple(
-            int(BG_TOP[i] * (1 - t) + BG_BOTTOM[i] * t)
-            for i in range(3)
-        )
+        col = tuple(int(BG_TOP[i] * (1 - t) + BG_BOTTOM[i] * t) for i in range(3))
         draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=col + (255,))
     return img
 
@@ -77,8 +74,13 @@ def _isometric_cube_vertices(cx: int, cy: int, size: int) -> dict[str, tuple[int
     }
 
 
-def _draw_glow_line(img: Image.Image, p1: tuple[int, int], p2: tuple[int, int],
-                    color: tuple[int, int, int], width: int) -> None:
+def _draw_glow_line(
+    img: Image.Image,
+    p1: tuple[int, int],
+    p2: tuple[int, int],
+    color: tuple[int, int, int],
+    width: int,
+) -> None:
     """Draw a line with an additional thicker translucent layer for glow."""
     draw = ImageDraw.Draw(img)
     # Outer glow (wider, dimmer)
@@ -127,11 +129,11 @@ def _draw_cube(img: Image.Image, scale: float = 0.55) -> None:
     draw = ImageDraw.Draw(img)
     for x, y in v.values():
         # Halo
-        draw.ellipse((x - dot_r * 2, y - dot_r * 2, x + dot_r * 2, y + dot_r * 2),
-                     fill=CYAN_BRIGHT + (80,))
+        draw.ellipse(
+            (x - dot_r * 2, y - dot_r * 2, x + dot_r * 2, y + dot_r * 2), fill=CYAN_BRIGHT + (80,)
+        )
         # Core
-        draw.ellipse((x - dot_r, y - dot_r, x + dot_r, y + dot_r),
-                     fill=(255, 255, 255, 255))
+        draw.ellipse((x - dot_r, y - dot_r, x + dot_r, y + dot_r), fill=(255, 255, 255, 255))
 
 
 def _draw_holo_ring(img: Image.Image) -> None:
@@ -143,14 +145,17 @@ def _draw_holo_ring(img: Image.Image) -> None:
     r_in = int(W * 0.43)
     for r in range(r_in, r_out, 2):
         alpha = int(60 * (1 - (r - r_in) / max(1, r_out - r_in)))
-        draw.ellipse((cx - r, cy - r, cx + r, cy + r),
-                     outline=BLUE_ACCENT + (alpha,), width=2)
+        draw.ellipse((cx - r, cy - r, cx + r, cy + r), outline=BLUE_ACCENT + (alpha,), width=2)
     # Stronger arc segments (4 quadrant marks for tech feel)
     arc_r = int(W * 0.44)
     for start, extent in ((0, 30), (90, 30), (180, 30), (270, 30)):
-        draw.arc((cx - arc_r, cy - arc_r, cx + arc_r, cy + arc_r),
-                 start=start, end=start + extent,
-                 fill=CYAN_BRIGHT + (200,), width=4 * SUPERSAMPLE)
+        draw.arc(
+            (cx - arc_r, cy - arc_r, cx + arc_r, cy + arc_r),
+            start=start,
+            end=start + extent,
+            fill=CYAN_BRIGHT + (200,),
+            width=4 * SUPERSAMPLE,
+        )
 
 
 def _draw_text_aio(img: Image.Image) -> None:
@@ -192,9 +197,7 @@ def render() -> Image.Image:
 def save_ico(img: Image.Image, out_path: Path) -> None:
     """Write multi-resolution .ico (16/32/48/64/128/256) — Windows uses these."""
     # Downsample the rendered supersampled image to each target size
-    versions = [
-        img.resize((s, s), Image.Resampling.LANCZOS) for s in TARGET_SIZES
-    ]
+    versions = [img.resize((s, s), Image.Resampling.LANCZOS) for s in TARGET_SIZES]
     # PIL's ICO writer accepts sizes via the sizes= argument
     versions[-1].save(
         out_path,

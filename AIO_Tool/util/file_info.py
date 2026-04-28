@@ -71,11 +71,11 @@ class DirList(FileSystem):
         self.fmt = self.fmt + "99s%ds" % len(self.dir_info)
         logger.debug("self.fmt = %s", self.fmt)
 
-    def decode(self, network_data: bytes, byteOrder: str = "!") -> None:
+    def decode(self, network_data: bytes, byte_order: str = "!") -> None:
         """
         消息的解码
         """
-        size = super().decode(network_data, byteOrder)
+        size = super().decode(network_data, byte_order)
         # 处理不定长的数据
         self.dir_info = network_data[size:]
 
@@ -104,11 +104,11 @@ class FileWrite(FileSystem):
         self.fmt = self.fmt + "%ds" % len(self.data)
         logger.debug("self.fmt = %s", self.fmt)
 
-    def decode(self, network_data: bytes, byteOrder: str = "!") -> None:
+    def decode(self, network_data: bytes, byte_order: str = "!") -> None:
         """
         消息的解码
         """
-        size = super().decode(network_data, byteOrder)
+        size = super().decode(network_data, byte_order)
         # 处理不定长的数据
         self.data = network_data[size:]
 
@@ -124,11 +124,11 @@ class FileRead(FileSystem):
         self.fmt = self.fmt + "%ds" % len(self.data)
         logger.debug("self.fmt = %s", self.fmt)
 
-    def decode(self, network_data: bytes, byteOrder: str = "!") -> None:
+    def decode(self, network_data: bytes, byte_order: str = "!") -> None:
         """
         消息的解码
         """
-        size = super().decode(network_data, byteOrder)
+        size = super().decode(network_data, byte_order)
         # 处理不定长的数据
         self.data = network_data[size:]
 
@@ -170,101 +170,14 @@ class FileGetInfo(FileSystem):
         self.fmt = self.fmt + "99s%ds" % len(self.file_info)
         logger.debug("self.fmt = %s", self.fmt)
 
-    def decode(self, network_data: bytes, byteOrder: str = "!") -> None:
+    def decode(self, network_data: bytes, byte_order: str = "!") -> None:
         """
         消息的解码
         """
-        size = super().decode(network_data, byteOrder)
+        size = super().decode(network_data, byte_order)
         # 处理不定长的数据
         self.dir_info = network_data[size:]
 
     def __dir__(self) -> list[str]:
         super_param = super().__dir__()
         return super_param + ["file_name", "file_info"]
-
-
-######################################################################################
-# class FileSystem_TT(Structure):
-#     # _fields_ = [
-#     #         # ("msg_head", MsgHead),
-#     #         ("action_type",c_byte)
-#     #         ]
-#     _fields_ = MsgHead_TT._fields_
-#     _fields_.extend([("action_type",c_byte)])
-
-
-# class FileCreate(Structure):
-#     _fields_ = FileSystem._fields_
-#     extend_param = [
-#             ("file_system", FileSystem),
-#             ("file_name",c_byte*99),
-#             ("file_size",c_uint)
-#             ]
-#     _fields_.extend(extend_param)
-
-
-# class FileWrite(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("file_data",c_byte*65536)
-#             ]
-
-
-# class FileRead(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("file_data",c_byte*65536)
-#             ]
-
-
-# class FileRemove(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("file_name",c_byte*99)
-#             ]
-
-
-# class FileRename(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("file_cur_name", c_byte*99),
-#             ("file_new_name", c_byte*99)
-#             ]
-
-
-# class FileGetInfo(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("file_name",c_byte*99),
-#             ("file_info",c_byte*99)
-#             ]
-
-
-# class DirCreate(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("file_name",c_byte*99)
-#             ]
-
-
-# class DirRemove(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("file_name",c_byte*99)
-#             ]
-
-
-# class DirRename(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("dir_cur_name", c_byte*99),
-#             ("dir_new_name", c_byte*99)
-#             ]
-
-
-# class DirList(Structure):
-#     _fields_ = [
-#             ("file_system", FileSystem),
-#             ("file_name", c_byte*99),
-#             ("dir_info", c_byte*3000)
-#             ]

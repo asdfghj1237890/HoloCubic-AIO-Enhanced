@@ -17,11 +17,11 @@ import struct
 from PIL import Image
 
 
-def getColorFromPalette(palette: list[int], index: int) -> list[int]:
+def get_color_from_palette(palette: list[int], index: int) -> list[int]:
     return [palette[3 * index + i] for i in range(3)]
 
 
-def checkExist(li: list[object], index: int) -> int | None:
+def check_exist(li: list[object], index: int) -> int | None:
     if index >= len(li):
         return 0
     if index < len(li) and li[index] is None:
@@ -31,8 +31,8 @@ def checkExist(li: list[object], index: int) -> int | None:
     return None
 
 
-def forceUpdate(li: list[object], index: int, elem: object) -> None:
-    check_res = checkExist(li, index)
+def force_update(li: list[object], index: int, elem: object) -> None:
+    check_res = check_exist(li, index)
     if check_res:
         li[index] = elem
     elif check_res == 0:
@@ -40,7 +40,7 @@ def forceUpdate(li: list[object], index: int, elem: object) -> None:
         li.append(elem)
 
 
-class _const:
+class _Const:
     class ConstError(TypeError):
         pass
 
@@ -71,7 +71,7 @@ class _const:
 
 
 class Converter:
-    FLAG = _const()
+    FLAG = _Const()
 
     def __init__(
         self,
@@ -159,7 +159,7 @@ class Converter:
             # self.img.show()
             for i in range(palette_size):
                 if i < real_palette_size:
-                    c = getColorFromPalette(real_palette, i)
+                    c = get_color_from_palette(real_palette, i)
                     if self.cf_palette_bgr_en == 1:
                         c = [c[2 - i] for i in range(3)]
                     self.d_out.extend(c)
@@ -213,40 +213,40 @@ class Converter:
         elif self.cf == self.FLAG.CF_INDEXED_1_BIT:
             c_array += "\n  "
             for p in range(2):
-                tmpStr = ", ".join([f"0x{self.d_out[p * 4 + s]:02X}" for s in range(4)])
-                tmpStr = ", ".join([tmpStr, f"\t/*Color of index {p}*/\n  "])
-                c_array += tmpStr
+                tmp_str = ", ".join([f"0x{self.d_out[p * 4 + s]:02X}" for s in range(4)])
+                tmp_str = ", ".join([tmp_str, f"\t/*Color of index {p}*/\n  "])
+                c_array += tmp_str
             i = 2 * 4
         elif self.cf == self.FLAG.CF_INDEXED_2_BIT:
             c_array += "\n  "
             for p in range(4):
-                tmpStr = ", ".join([f"0x{self.d_out[p * 4 + s]:02X}" for s in range(4)])
-                tmpStr = ", ".join([tmpStr, f"\t/*Color of index {p}*/\n  "])
-                c_array += tmpStr
+                tmp_str = ", ".join([f"0x{self.d_out[p * 4 + s]:02X}" for s in range(4)])
+                tmp_str = ", ".join([tmp_str, f"\t/*Color of index {p}*/\n  "])
+                c_array += tmp_str
             i = 4 * 4
         elif self.cf == self.FLAG.CF_INDEXED_4_BIT:
             c_array += "\n  "
             for p in range(16):
-                tmpStr = ", ".join([f"0x{self.d_out[p * 4 + s]:02X}" for s in range(4)])
-                tmpStr = ", ".join([tmpStr, f"\t/*Color of index {p}*/\n  "])
-                c_array += tmpStr
+                tmp_str = ", ".join([f"0x{self.d_out[p * 4 + s]:02X}" for s in range(4)])
+                tmp_str = ", ".join([tmp_str, f"\t/*Color of index {p}*/\n  "])
+                c_array += tmp_str
             i = 16 * 4
         elif self.cf == self.FLAG.CF_INDEXED_8_BIT:
             c_array += "\n  "
             for p in range(256):
-                tmpStr = ", ".join([f"0x{self.d_out[p * 4 + s]:02X}" for s in range(4)])
-                tmpStr = ", ".join([tmpStr, f"\t/*Color of index {p}*/\n  "])
-                c_array += tmpStr
+                tmp_str = ", ".join([f"0x{self.d_out[p * 4 + s]:02X}" for s in range(4)])
+                tmp_str = ", ".join([tmp_str, f"\t/*Color of index {p}*/\n  "])
+                c_array += tmp_str
             i = 256 * 4
         elif self.cf in (self.FLAG.CF_RAW, self.FLAG.CF_RAW_ALPHA, self.FLAG.CF_RAW_CHROMA):
             y_end, x_end = 1, len(self.d_out)
             i = 1
 
-        tmpArr = []
+        tmp_arr = []
 
         def append_and_increase() -> None:
-            nonlocal i, tmpArr
-            tmpArr.append(f"0x{self.d_out[i]:02X}")
+            nonlocal i, tmp_arr
+            tmp_arr.append(f"0x{self.d_out[i]:02X}")
             i += 1
 
         for y in range(y_end):
@@ -295,16 +295,16 @@ class Converter:
         #                  + 1 if self.alpha else 0)
 
         if self.cf in (self.FLAG.CF_RAW, self.FLAG.CF_RAW_ALPHA, self.FLAG.CF_RAW_CHROMA):
-            tmpStr = "\n  " + ", \n  ".join(
-                ", ".join(tmpArr[(x_end // 16) * x : (x_end // 16) * x + 16])
+            tmp_str = "\n  " + ", \n  ".join(
+                ", ".join(tmp_arr[(x_end // 16) * x : (x_end // 16) * x + 16])
                 for x in range(x_end // 16)
             )
         else:
-            tmpStr = "\n  " + ", \n  ".join(
-                ", ".join(tmpArr[y * x_end : (y + 1) * x_end]) for y in range(y_end)
+            tmp_str = "\n  " + ", \n  ".join(
+                ", ".join(tmp_arr[y * x_end : (y + 1) * x_end]) for y in range(y_end)
             )
 
-        c_array += tmpStr
+        c_array += tmp_str
         if self.cf in (
             self.FLAG.CF_TRUE_COLOR_332,
             self.FLAG.CF_TRUE_COLOR_565,
@@ -409,7 +409,7 @@ const lv_img_dsc_t {self.out_name} = {{
         c = self.img.getpixel((x, y))
 
         if self.img.mode == "P":
-            c = getColorFromPalette(self.img.getpalette(), c)
+            c = get_color_from_palette(self.img.getpalette(), c)
 
         a = c[3] if len(c) == 4 else 0xFF
         r, g, b = c[:3]
@@ -443,8 +443,8 @@ const lv_img_dsc_t {self.out_name} = {{
             if self.w & 0x07:
                 w += 1
             p = w * y + (x >> 3)
-            if not checkExist(self.d_out, p):
-                forceUpdate(self.d_out, p, 0)  # Clear the bits first
+            if not check_exist(self.d_out, p):
+                force_update(self.d_out, p, 0)  # Clear the bits first
             if a > 0x80:
                 self.d_out[p] |= 1 << (7 - (x & 0x7))
         elif self.cf == self.FLAG.CF_ALPHA_2_BIT:
@@ -452,8 +452,8 @@ const lv_img_dsc_t {self.out_name} = {{
             if self.w & 0x03:
                 w += 1
             p = w * y + (x >> 2)
-            if not checkExist(self.d_out, p):
-                forceUpdate(self.d_out, p, 0)  # Clear the bits first
+            if not check_exist(self.d_out, p):
+                force_update(self.d_out, p, 0)  # Clear the bits first
             self.d_out[p] |= (a >> 6) << (6 - ((x & 0x3) * 2))
 
         elif self.cf == self.FLAG.CF_ALPHA_4_BIT:
@@ -462,13 +462,13 @@ const lv_img_dsc_t {self.out_name} = {{
                 w += 1
 
             p = w * y + (x >> 1)
-            if not checkExist(self.d_out, p):
-                forceUpdate(self.d_out, p, 0)  # Clear the bits first
+            if not check_exist(self.d_out, p):
+                force_update(self.d_out, p, 0)  # Clear the bits first
             self.d_out[p] |= (a >> 4) << (4 - ((x & 0x1) * 4))
 
         elif self.cf == self.FLAG.CF_ALPHA_8_BIT:
             p = self.w * y + x
-            forceUpdate(self.d_out, p, a)
+            force_update(self.d_out, p, a)
 
         elif self.cf == self.FLAG.CF_INDEXED_1_BIT:
             w = self.w >> 3
@@ -476,8 +476,8 @@ const lv_img_dsc_t {self.out_name} = {{
                 w += 1
 
             p = w * y + (x >> 3) + 8  # +8 for the palette
-            if not checkExist(self.d_out, p):
-                forceUpdate(self.d_out, p, 0)  # Clear the bits first
+            if not check_exist(self.d_out, p):
+                force_update(self.d_out, p, 0)  # Clear the bits first
             self.d_out[p] |= (cx & 0x1) << (7 - (x & 0x7))
 
         elif self.cf == self.FLAG.CF_INDEXED_2_BIT:
@@ -486,8 +486,8 @@ const lv_img_dsc_t {self.out_name} = {{
                 w += 1
 
             p = w * y + (x >> 2) + 16  # +16 for the palette
-            if not checkExist(self.d_out, p):
-                forceUpdate(self.d_out, p, 0)  # Clear the bits first
+            if not check_exist(self.d_out, p):
+                force_update(self.d_out, p, 0)  # Clear the bits first
             self.d_out[p] |= (cx & 0x3) << (6 - ((x & 0x3) * 2))
 
         elif self.cf == self.FLAG.CF_INDEXED_4_BIT:
@@ -496,13 +496,13 @@ const lv_img_dsc_t {self.out_name} = {{
                 w += 1
 
             p = w * y + (x >> 1) + 64  # +64 for the palette
-            if not checkExist(self.d_out, p):
-                forceUpdate(self.d_out, p, 0)  # Clear the bits first
+            if not check_exist(self.d_out, p):
+                force_update(self.d_out, p, 0)  # Clear the bits first
             self.d_out[p] |= (cx & 0xF) << (4 - ((x & 0x1) * 4))
 
         elif self.cf == self.FLAG.CF_INDEXED_8_BIT:
             p = self.w * y + x + 1024  # +1024 for the palette
-            forceUpdate(self.d_out, p, cx & 0xFF)
+            force_update(self.d_out, p, cx & 0xFF)
 
     def _dith_reset(self) -> None:
         if self.dith:

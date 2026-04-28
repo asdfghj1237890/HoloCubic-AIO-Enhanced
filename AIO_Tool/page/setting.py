@@ -81,94 +81,6 @@ class Setting:
         # 響應式佈局：tab 父容器尺寸變化時，更新 frame 寬高
         self.__father.bind("<Configure>", self._on_father_resize)
 
-    def createConfig(self, filename: str) -> bool:
-        """
-        创建配置文件
-        :param filename: 文件路径
-        :return: True/False
-        """
-        # 数据格式 {"ssid_1": {"namespace":"sys", "type":"String", "info":"提示信息"}}
-        data = {
-            "ssid_1": {"name": "ssid_1", "namespace": "sys", "type": "String", "info": "提示信息"},
-            "password_1": {
-                "name": "password_1",
-                "namespace": "sys",
-                "type": "String",
-                "info": "提示信息",
-            },
-            "ssid_2": {"name": "ssid_2", "namespace": "sys", "type": "String", "info": "提示信息"},
-            "password_2": {
-                "name": "password_2",
-                "namespace": "sys",
-                "type": "String",
-                "info": "提示信息",
-            },
-            "backLight": {
-                "name": "backLight",
-                "namespace": "sys",
-                "type": "UChar",
-                "info": "提示信息",
-            },
-            "rotation": {
-                "name": "rotation",
-                "namespace": "sys",
-                "type": "UChar",
-                "info": "提示信息",
-            },
-            "auto_mpu": {
-                "name": "auto_mpu",
-                "namespace": "sys",
-                "type": "UChar",
-                "info": "提示信息",
-            },
-            "cityname": {
-                "name": "cityname",
-                "namespace": "zhixin",
-                "type": "String",
-                "info": "提示信息",
-            },
-            "language": {
-                "name": "language",
-                "namespace": "zhixin",
-                "type": "String",
-                "info": "提示信息",
-            },
-            "weather_key": {
-                "name": "weather_key",
-                "namespace": "zhixin",
-                "type": "String",
-                "info": "提示信息",
-            },
-            "tianqi_aid": {
-                "name": "tianqi_aid",
-                "namespace": "tianqi",
-                "type": "String",
-                "info": "提示信息",
-            },
-            "tianqi_as": {
-                "name": "tianqi_as",
-                "namespace": "tianqi",
-                "type": "String",
-                "info": "提示信息",
-            },
-            "tianqi_addr": {
-                "name": "tianqi_addr",
-                "namespace": "tianqi",
-                "type": "String",
-                "info": "提示信息",
-            },
-            "bili_uid": {
-                "name": "bili_uid",
-                "namespace": "other",
-                "type": "String",
-                "info": "提示信息",
-            },
-        }
-        fp = codecs.open(self.cfg_name, "w", "utf8")
-        json.dump(data, fp, indent=2)
-        fp.close()
-        return True
-
     def connect_uart(self, father: tk.Misc) -> None:
         """
         创建串口连接控件
@@ -248,7 +160,7 @@ class Setting:
 
     def com_connect(self) -> None:
         # 先关闭下载页的串口
-        self.m_engine.OnThreadMessage(mh.M_SETTING, mh.M_DOWNLOAD_DEBUG, mh.A_CLOSE_UART, None)
+        self.m_engine.on_thread_message(mh.M_SETTING, mh.M_DOWNLOAD_DEBUG, mh.A_CLOSE_UART, None)
 
         if self.m_connect_button.cget("text") == self.i18n.t("open_serial"):
             port = self.m_com_select.get().strip()

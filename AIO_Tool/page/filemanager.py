@@ -169,7 +169,7 @@ class FileManager:
 
     def connect_holocubic(self) -> None:
         # 客户端范例
-        def myRecvHandle(dat: bytes) -> None:  # 接收函数
+        def my_recv_handle(dat: bytes) -> None:  # 接收函数
             msg_head = MsgHead()
             msg_head.decode(dat)
             logger.debug("Massages Len = %s", msg_head.msg_len)
@@ -226,7 +226,7 @@ class FileManager:
                 ip, port = ip_port.split(":")
                 logger.debug("connecting to %s:%s", ip, port)
                 # 初始化端口並設定接收回呼
-                self.__clientsocket = RobotSocketClient(ip, int(port), myRecvHandle)
+                self.__clientsocket = RobotSocketClient(ip, int(port), my_recv_handle)
                 self.__clientsocket.start()
 
                 self.conn_botton.configure(text=self.i18n.t("disconnect"))
@@ -318,14 +318,14 @@ class FileManager:
         # path_tree_frame.pack(side=tk.TOP, pady=5)
         path_tree_frame.pack(side=tk.RIGHT, fill=tk.Y)
 
-    def display_path_tree(self, cur_tree_root: str, fileObj: dict[str, object]) -> None:
+    def display_path_tree(self, cur_tree_root: str, file_obj: dict[str, object]) -> None:
         """
         显示目录树
         :param cur_tree_root: 当前树根
-        :param fileObj: 当前要更新的文件父对象
+        :param file_obj: 当前要更新的文件父对象
         :return: None
         """
-        if fileObj["sub_file"] is None:
+        if file_obj["sub_file"] is None:
             logger.debug("文件元素不需要显示")
             return None  # 文件元素不需要显示
 
@@ -337,7 +337,7 @@ class FileManager:
             self.tree.delete(sub_item)
 
         # 刷新显示子元素
-        for sub_file in fileObj["sub_file"]:
+        for sub_file in file_obj["sub_file"]:
             if sub_file["type"] == "folder":
                 image = self.folder_img
             else:
@@ -419,31 +419,13 @@ class FileManager:
         view_file_frame = ctk.CTkFrame(father, fg_color="transparent")
         view_file_frame.pack(side=tk.TOP, pady=5)
 
-    def init_modelBar(self, menuBar: tk.Menu) -> None:
-        """
-        初始化模型菜单子项
-        :param menuBar: 主菜单
-        :return: None
-        """
-        self.m_model_filepath = None
-        # 创建菜单项
-        self.modelBar = tk.Menu(menuBar, tearoff=0)
-        # 将菜单项添加到菜单栏
-        menuBar.add_cascade(label=self.__engine.word_map["Menu"]["Model"], menu=self.modelBar)
-        # 在菜单项中加入子菜单
-        self.modelBar.add_command(
-            label=self.__engine.word_map["Menu"]["Create"], command=self.click_model_create
-        )
-        # 创建分割线
-        self.modelBar.add_separator()
-
     def click_model_create(self) -> None:
         """
         点击模型"创建"菜单项触发的函数
         :return: None
         """
         logger.debug("click_model_create")
-        # self.__engine.OnThreadMessage(mh.M_CTRLMENU, mh.M_MODEL_FILEMANAGER,
+        # self.__engine.on_thread_message(mh.M_CTRLMENU, mh.M_MODEL_FILEMANAGER,
         #                               mh.A_FILE_CREATE, self.m_model_filepath)
 
     def _on_father_resize(self, event: tk.Event) -> None:

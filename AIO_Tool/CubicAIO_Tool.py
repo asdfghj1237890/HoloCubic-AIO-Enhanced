@@ -108,7 +108,9 @@ class Engine:
 
         self.m_tab_manager.pack(expand=True, fill=tk.BOTH)
 
-    def OnThreadMessage(self, fromwho: str, towho: str, action: str, param: object = None) -> None:
+    def on_thread_message(
+        self, fromwho: str, towho: str, action: str, param: object = None
+    ) -> None:
         """
         引擎調度函數，各模組透過此函數間接操作或取得其他模組的資源。
         :param fromwho: 發送方識別字串
@@ -117,7 +119,7 @@ class Engine:
         :param param:   操作參數
         """
         logger.debug(
-            "OnThreadMessage from=%s to=%s action=%s param=%s", fromwho, towho, action, param
+            "on_thread_message from=%s to=%s action=%s param=%s", fromwho, towho, action, param
         )
 
         if towho == mh.M_DOWNLOAD_DEBUG:
@@ -224,12 +226,17 @@ if __name__ == "__main__":
     _ttk_style = ttk.Style(tool_windows)
     _ttk_style.theme_use("default")
     _ttk_style.configure(
-        "TNotebook", background=_DARK_BG, borderwidth=0, tabmargins=[2, 5, 2, 0],
+        "TNotebook",
+        background=_DARK_BG,
+        borderwidth=0,
+        tabmargins=[2, 5, 2, 0],
     )
     _ttk_style.configure(
         "TNotebook.Tab",
-        background=_DARK_BG, foreground=_DARK_FG,
-        padding=[12, 4], borderwidth=0,
+        background=_DARK_BG,
+        foreground=_DARK_FG,
+        padding=[12, 4],
+        borderwidth=0,
     )
     _ttk_style.map(
         "TNotebook.Tab",
@@ -238,9 +245,14 @@ if __name__ == "__main__":
     )
     _ttk_style.configure(
         "TCombobox",
-        fieldbackground=_DARK_PANEL, background=_DARK_PANEL,
-        foreground=_DARK_FG, arrowcolor=_DARK_FG, bordercolor=_DARK_BG,
-        lightcolor=_DARK_BG, darkcolor=_DARK_BG, selectbackground=_DARK_ACCENT,
+        fieldbackground=_DARK_PANEL,
+        background=_DARK_PANEL,
+        foreground=_DARK_FG,
+        arrowcolor=_DARK_FG,
+        bordercolor=_DARK_BG,
+        lightcolor=_DARK_BG,
+        darkcolor=_DARK_BG,
+        selectbackground=_DARK_ACCENT,
     )
     _ttk_style.map(
         "TCombobox",
@@ -254,8 +266,10 @@ if __name__ == "__main__":
     tool_windows.option_add("*TCombobox*Listbox.selectForeground", "#ffffff")
     _ttk_style.configure(
         "Treeview",
-        background=_DARK_PANEL, foreground=_DARK_FG,
-        fieldbackground=_DARK_PANEL, borderwidth=0,
+        background=_DARK_PANEL,
+        foreground=_DARK_FG,
+        fieldbackground=_DARK_PANEL,
+        borderwidth=0,
     )
     _ttk_style.map(
         "Treeview",
