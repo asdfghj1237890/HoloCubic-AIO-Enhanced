@@ -277,7 +277,7 @@ class ImagesConverter:
             # self.m_image_path_entry.delete(0, tk.END)  # 清空文本框
             # self.m_image_path_entry.insert(tk.END, filepath)
 
-    def trans_images(self):
+    def trans_images(self) -> int | bool | None:
         """
         转化图片
         """
@@ -347,7 +347,7 @@ class ImagesConverter:
             self.m_tip_label.configure(text=self.i18n.t("convert_complete"))
             self.log_message(self.i18n.t("convert_complete"))
 
-    def log_message(self, message, tag="normal"):
+    def log_message(self, message: str, tag: str = "normal") -> None:
         """
         Append log message to the info text widget
         :param message: message to log
@@ -360,7 +360,7 @@ class ImagesConverter:
         self.m_project_info.config(state=tk.DISABLED)
         self.__father.update()
 
-    def init_info(self, father):
+    def init_info(self, father: tk.Misc) -> None:
         """初始化信息打印框（保留 tk.Text + 字型 tag，CTkTextbox 不支援 font tag）。"""
         info = self.i18n.t("image_converter_info")
 
