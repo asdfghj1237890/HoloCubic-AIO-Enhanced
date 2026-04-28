@@ -6,8 +6,17 @@
 # (location search -> currentconditions -> forecast) has already
 # populated run_data->wea by the time we get there, so the curve
 # uses the canned daily_max/daily_min values.
+#
+# flash_seed pre-writes a config whose api_key is non-empty and not
+# the WEATHER_API_KEY_PLACEHOLDER sentinel, so weather_api_key_configured()
+# returns true and the fixture chain runs (without this seed, the new
+# placeholder guard would short-circuit get_location_key and the curve
+# panel would render with empty data — diff vs the golden).
+# Six lines, matching write_config's emission order:
+# api_key / city_name / location_key / weather_interval / time_interval / language
 
 app weather
+flash_seed /weather_accu.cfg "TEST_KEY\nBeijing\n\n900000\n900000\n0\n"
 
 wait_ms 800
 action TURN_RIGHT
