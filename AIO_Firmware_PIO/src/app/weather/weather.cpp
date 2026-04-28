@@ -970,13 +970,14 @@ static void weather_process(AppController *sys,
         }
         run_data->coactusUpdateFlag = 0x00; // 取消强制更新标志
         display_space();
-        delay(30);
+        // (was: delay(30) — pure throttle removed; AppController already
+        //  rate-limits main_process via its 200ms loop timer.)
     }
     else if (run_data->clock_page == 1)
     {
         // 仅在切换界面时获取一次未来天气
         display_curve(run_data->wea.daily_max, run_data->wea.daily_min, anim_type);
-        delay(300);
+        // (was: delay(300) — pure throttle removed; same reasoning.)
     }
 }
 
