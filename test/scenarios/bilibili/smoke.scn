@@ -1,16 +1,24 @@
-# Smoke test for bilibili_fans. The harness now wires HTTP fixtures
-# (test/fixtures/http/api.bilibili.com/x/relation/stat.json) into the
-# stub HTTPClient and dispatches WIFI_CONN messages back to the
-# sender — so the first process tick fires the WIFI_CONN callback
-# which fetches + parses, and the follow-up `action UP` tick rerenders
-# display_bilibili with the fetched fans (12345) / follow (520) values.
+# Smoke test for bilibili_fans. Two screenshots:
+# - 01_initial: post-init / pre-action. The first process tick has
+#   already fired WIFI_CONN -> update_fans_num -> data is in run_data,
+#   but display_bilibili was called with the OLD (zero) values BEFORE
+#   the synchronous fetch returned, so the screen still shows "0/0".
+# - 02_with_data: after `action UP` re-runs process which now
+#   formats fans_num/follow_num from the fetched run_data
+#   (12345 -> "1.2w" / 520).
+#
+# Together these verify both the default-render path and the
+# post-fetch render path.
 
 app bilibili
 
 wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
 action UP
 wait_ms 400
-screenshot 01_with_data
+screenshot 02_with_data
 assert_no_crash
 
 action RETURN
