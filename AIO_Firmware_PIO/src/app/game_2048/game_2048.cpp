@@ -74,6 +74,11 @@ static int game_2048_init(AppController *sys)
         NULL,                         /*作为任务输入传递的参数*/
         1,                            /*任务的优先级*/
         &run_data->xHandle_task_two); /*任务句柄*/
+    if (pdPASS != run_data->xReturned_task_two)
+    {
+        Serial.printf("[2048] xTaskCreate(TaskTwo) failed (rc=%d) — running without async helper\n",
+                      run_data->xReturned_task_two);
+    }
 
     // 刷新棋盘显示
     int new1 = game.addRandom();

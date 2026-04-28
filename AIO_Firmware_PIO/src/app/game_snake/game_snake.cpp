@@ -48,6 +48,11 @@ static int game_snake_init(AppController *sys)
         NULL,                         /*参数*/
         1,                            /*优先级*/
         &run_data->xHandle_task_run); /*任务句柄*/
+    if (pdPASS != run_data->xReturned_task_run)
+    {
+        Serial.printf("[Snake] xTaskCreate(taskRun) failed (rc=%d) — game will not advance frames\n",
+                      run_data->xReturned_task_run);
+    }
 
     return 0;
 }

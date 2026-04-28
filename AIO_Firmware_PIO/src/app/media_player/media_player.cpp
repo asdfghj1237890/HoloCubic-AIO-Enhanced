@@ -100,6 +100,15 @@ static bool video_start(bool create_new)
         return false;
     }
 
+    // Defensive: if a previous decoder is still around (every existing caller
+    // already invokes release_player_decoder() first, but a future call site
+    // might not), free it here so the next `new` below can't leak.
+    if (NULL != run_data->player_decoder)
+    {
+        delete run_data->player_decoder;
+        run_data->player_decoder = NULL;
+    }
+
     if (true == create_new)
     {
         run_data->pfile = get_next_file(run_data->pfile, run_data->movie_pos_increate);
