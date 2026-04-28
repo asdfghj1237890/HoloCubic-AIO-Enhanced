@@ -97,9 +97,9 @@ class DownloadDebug:
             },
             {"bin_addr": "0x10000", "bin_path": "", "placeholder": self.i18n.t("choose_firmware")},
         ]
-        # Firmware flash section
+        # Firmware flash section — 從 x=240 開始（避開串口設定 ~220 px 寬度框）
         self.connor_firmware_frame = ctk.CTkFrame(self.__father)
-        self.connor_firmware_frame.place(x=200, y=10)
+        self.connor_firmware_frame.place(x=240, y=10)
         ctk.CTkLabel(
             self.connor_firmware_frame,
             text=self.i18n.t("firmware_flash"),
@@ -108,9 +108,9 @@ class DownloadDebug:
         self.connor_firmware_frame.update()
         self.init_firmware(self.connor_firmware_frame)
 
-        # Operation log section
+        # Operation log section — 固件框 (~516 px 寬) 自 x=240 起 ends ~756，這裡 +20 緩衝
         self.connor_log_frame = ctk.CTkFrame(self.__father)
-        self.connor_log_frame.place(x=685, y=10)
+        self.connor_log_frame.place(x=780, y=10)
         ctk.CTkLabel(
             self.connor_log_frame,
             text=self.i18n.t("operation_log"),
