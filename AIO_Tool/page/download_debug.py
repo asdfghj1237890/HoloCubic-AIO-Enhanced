@@ -35,9 +35,6 @@ import sys
 #     sys.path.append("./")
 # import esptool # sys.path.append("./esptool_v41") or pip install esptool==4.1 
 import esptool
-
-STRGLO = ""  # 读取的数据
-BOOL = True  # 读取标志位
 # VERSION_INFO_URL = "https://gitee.com/ClimbSnailQ/HoloCubic_AIO/blob/main/AIO_Firmware_PIO/src/common.h"
 VERSION_INFO_URL = "http://climbsnail.cn:5001/holocubicAIO/sn/v1/version/firmware"
 
@@ -62,6 +59,9 @@ class DownloadDebug(object):
         self.progress_bar_thread = None
         self.clean_flash_thread = None
         self._progress_stop_event = threading.Event()
+        # 序列埠讀取執行緒的停止訊號（取代舊的全域 BOOL 旗標）
+        self._serial_stop_event = threading.Event()
+        self._serial_stop_event.set()  # 預設停止狀態，com_connect 啟動時會 clear()
         self.i18n = get_i18n()
 
         # Serial settings section
@@ -630,8 +630,6 @@ class DownloadDebug(object):
         self.m_com_select.current(choose_index)
 
     def com_connect(self):
-        global STRGLO, BOOL
-
         if self.m_connect_button["text"] == self.i18n.t("open_serial"):
 
             down_flag, param = self.get_download_param()
@@ -641,9 +639,10 @@ class DownloadDebug(object):
 
             # Check if opened successfully
             if self.ser.is_open:
-                BOOL = True
-                self.receive_thread = threading.Thread(target=self.read_data,
-                                                       args=(self.ser,))
+                self._serial_stop_event.clear()
+                self.receive_thread = threading.Thread(
+                    target=self.read_data, args=(self.ser,), daemon=True,
+                )
                 self.receive_thread.start()
 
                 self.m_connect_button["text"] = self.i18n.t("close_serial")
@@ -670,28 +669,27 @@ class DownloadDebug(object):
                 self.ser.close()  # 关闭串口
                 del self.ser
                 self.ser = None
-                # 杀线程
-                common._async_raise(self.receive_thread)
+                # 通知背景執行緒停止，並等待結束
+                self._serial_stop_event.set()
+                if self.receive_thread is not None and self.receive_thread.is_alive():
+                    self.receive_thread.join(timeout=1.0)
                 self.receive_thread = None
                 self.print_log("Receive_thread stop")
-                STRGLO = ""  # 读取的数据
-                BOOL = False  # 读取标志位
 
     def read_data(self, ser):
-        global STRGLO, BOOL
-        # 循环接收数据，此为死循环，可用线程实现
+        """背景接收序列埠資料；stop event 觸發時跳出迴圈。"""
         self.print_log("Receive_thread start")
-        while BOOL:
+        while not self._serial_stop_event.is_set():
             if ser.in_waiting:
                 try:
-                    STRGLO = ser.read(ser.in_waiting).decode("utf8")
+                    data = ser.read(ser.in_waiting).decode("utf8")
                     self.m_msg.config(state=tk.NORMAL)
-                    self.m_msg.insert(tk.END, STRGLO)
+                    self.m_msg.insert(tk.END, data)
                     self.m_msg.config(state=tk.DISABLED)
                     self.m_msg.yview_moveto(1)
-                    time.sleep(0.1)
                 except Exception as err:
-                    pass
+                    logger.debug("read_data ignored: %s", err)
+            time.sleep(0.1)
                 
     def get_download_param(self):
         """
@@ -747,18 +745,17 @@ class DownloadDebug(object):
         self.m_download_botton["state"] = tk.NORMAL
 
     def __del__(self):
-        """"
-        资源释放 查杀线程
-        """
+        """資源釋放：通知 receive_thread 停止；esptool download_thread 仍以 _async_raise 中斷。"""
         if self.ser != None:
             self.ser.close()  # 关闭串口
             self.ser = None
-        if self.receive_thread != None:
-            # 杀线程
-            if self.receive_thread.is_alive():
-                common._async_raise(self.receive_thread)
+        # receive_thread 改為合作式停止
+        self._serial_stop_event.set()
+        if self.receive_thread is not None and self.receive_thread.is_alive():
+            self.receive_thread.join(timeout=1.0)
+        # esptool 的 download_thread 沒有合作式中斷點，仍以 _async_raise 強制終止
+        # TODO: 改用 esptool API 的 stub-loader cancel 介面（需上游支援）
         if self.download_thread != None:
-            # 杀线程
             if self.download_thread.is_alive():
                 common._async_raise(self.download_thread)
         if self.progress_bar_thread != None:

@@ -45,6 +45,9 @@ class Setting(object):
         self.data_info = None
         self.receive_thread = None
         self.ser = None
+        # 序列埠讀取執行緒的停止訊號（取代舊的全域 BOOL 旗標）
+        self._serial_stop_event = threading.Event()
+        self._serial_stop_event.set()  # 預設停止狀態
         self.i18n = get_i18n()
 
         fp = codecs.open(self.cfg_name, "r", "utf8")
@@ -162,11 +165,9 @@ class Setting(object):
         self.m_com_select.current(choose_index)
 
     def com_connect(self):
-        global STRGLO, BOOL
-
         # 先关闭下载页的串口
         self.m_engine.OnThreadMessage(mh.M_SETTING, mh.M_DOWNLOAD_DEBUG, mh.A_CLOSE_UART, None)
-        
+
         if self.m_connect_button["text"] == self.i18n.t("open_serial"):
 
             port = self.m_com_select.get().strip()
@@ -177,9 +178,10 @@ class Setting(object):
 
             # 判断是否打开成功
             if self.ser.is_open:
-                BOOL = True  # 读取标志位
-                self.receive_thread = threading.Thread(target=self.read_data,
-                                                    args=(self.ser,))
+                self._serial_stop_event.clear()
+                self.receive_thread = threading.Thread(
+                    target=self.read_data, args=(self.ser,), daemon=True,
+                )
                 self.receive_thread.start()
 
                 self.m_connect_button["text"] = self.i18n.t("close_serial")
@@ -194,24 +196,22 @@ class Setting(object):
                 self.ser.close()  # 关闭串口
                 del self.ser
                 self.ser = None
-                # 杀线程
-                common._async_raise(self.receive_thread)
+                # 通知背景執行緒停止，並等待結束
+                self._serial_stop_event.set()
+                if self.receive_thread is not None and self.receive_thread.is_alive():
+                    self.receive_thread.join(timeout=1.0)
                 self.receive_thread = None
                 self.print_log("Receive_thread stop")
-                STRGLO = ""  # 读取的数据
-                BOOL = False  # 读取标志位
-        
-    
+
+
     def read_data(self, ser):
-        global STRGLO, BOOL
-        pass
-        # 循环接收数据，此为死循环，可用线程实现
+        """背景接收序列埠資料；stop event 觸發時跳出迴圈。"""
         self.print_log("Receive_thread start")
-        while BOOL:
+        while not self._serial_stop_event.is_set():
             if ser.in_waiting:
-                STRGLO = ser.read(ser.in_waiting)
-                logger.debug("Receive---> %s", STRGLO)
-                time.sleep(0.2)
+                data = ser.read(ser.in_waiting)
+                logger.debug("Receive---> %s", data)
+            time.sleep(0.2)
 
     def print_log(self, msg):
         logger.info(msg)
@@ -280,12 +280,7 @@ class Setting(object):
         except Exception as err:
             logger.error("get_param failed:\n%s", traceback.format_exc())
             logger.error("get_param error: %s", err)
-        
-        # legacy debug snippet removed (replaced by logger.debug calls above)
-        # if self.ser != None and self.ser.in_waiting:
-        #     STRGLO = self.ser.read(self.ser.in_waiting)
-        #     # logger.debug("read---> %s", STRGLO)
-            
+
 
     def create_wifi(self, father):
         """
@@ -300,14 +295,13 @@ class Setting(object):
         get_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5)
 
     def __del__(self):
-        """"
-        资源释放 查杀线程
-        """
+        """資源釋放：通知 receive_thread 停止並等待結束。"""
         if self.ser != None:
             self.ser.close()  # 关闭串口
             self.ser = None
-        if self.receive_thread != None:
-            # 杀线程
-            common._async_raise(self.receive_thread)
+        # 合作式停止 receive_thread
+        self._serial_stop_event.set()
+        if self.receive_thread is not None and self.receive_thread.is_alive():
+            self.receive_thread.join(timeout=1.0)
         
         
