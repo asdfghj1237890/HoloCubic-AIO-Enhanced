@@ -7,10 +7,12 @@
 
 #define HEARTBEAT_APP_NAME "Heartbeat"
 
-#define DEFALUT_MQTT_ADDR "climbsnail.cn"
+// Empty defaults force the user to provide a server + credentials via the web
+// settings page; the firmware will skip MQTT init entirely until both are set.
+#define DEFALUT_MQTT_ADDR ""
 #define DEFALUT_MQTT_PORT 1883
 #define DEFALUT_MQTT_USERNAME "HoloCubic"
-#define DEFALUT_MQTT_PASSWD "ClimbSnail.v0"
+#define DEFALUT_MQTT_PASSWD ""
 
 // Bilibili的持久化配置
 #define HEARTBEAT_CONFIG_PATH "/heartbeat_v2.01.cfg"
@@ -211,7 +213,11 @@ static int heartbeat_init(AppController *sys)
     // 初始化MQTT
     if (NULL == hb_cfg.mqtt_client)
     {
-        if (hb_cfg.mqtt_server[0] >= '0' && hb_cfg.mqtt_server[0] <= '9')
+        if (hb_cfg.mqtt_server[0] == '\0' || hb_cfg.mqtt_password[0] == '\0')
+        {
+            Serial.println("[Heartbeat] MQTT server/password not set; configure via web settings");
+        }
+        else if (hb_cfg.mqtt_server[0] >= '0' && hb_cfg.mqtt_server[0] <= '9')
         {
             // ip地址
             IPAddress serverIp;

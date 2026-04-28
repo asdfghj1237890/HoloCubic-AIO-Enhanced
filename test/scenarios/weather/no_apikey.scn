@@ -1,0 +1,21 @@
+# Weather with no user-supplied API key. Boots the app without any
+# flash_seed, so read_config writes the placeholder defaults
+# (api_key = "YOUR_ACCUWEATHER_API_KEY"). The new guard in
+# get_location_key() must short-circuit before any HTTPClient::GET so
+# the app survives without crashing and without spurious fixture hits.
+#
+# We don't screenshot — the rendered page-0 clock is intentionally
+# excluded from the golden suite (see weather/smoke.scn).
+
+app weather
+
+wait_ms 800
+assert_no_crash
+
+action TURN_RIGHT
+wait_ms 200
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
