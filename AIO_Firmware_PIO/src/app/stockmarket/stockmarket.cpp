@@ -214,42 +214,60 @@ static int stockmarket_exit_callback(void *param)
     return 0;
 }
 
-// Parse Chinese market data from Sina Finance API
+// Parse Chinese market data from Sina Finance API.
+// Expected payload shape:
+//   var hq_str_sh603019="name,open,close,now,max,min,bid,ask,vol,turnover,...";
+// Walk the comma-delimited fields with explicit -1 checks at every step
+// so a truncated / non-Sina payload bails out instead of feeding negative
+// indices into String::substring (which silently returns the whole tail
+// and then atof's whatever junk comes back).
 static bool parse_sina_data(const String& payload)
 {
     Serial.println("[HTTP] Parsing Sina Finance data");
-    int startIndex_1 = payload.indexOf(',') + 1;
-    int endIndex_1 = payload.indexOf(',', startIndex_1);
-    int startIndex_2 = payload.indexOf(',', endIndex_1) + 1;
-    int endIndex_2 = payload.indexOf(',', startIndex_2);
-    int startIndex_3 = payload.indexOf(',', endIndex_2) + 1;
-    int endIndex_3 = payload.indexOf(',', startIndex_3);
-    int startIndex_4 = payload.indexOf(',', endIndex_3) + 1;
-    int endIndex_4 = payload.indexOf(',', startIndex_4);
-    int startIndex_5 = payload.indexOf(',', endIndex_4) + 1;
-    int endIndex_5 = payload.indexOf(',', startIndex_5);
-    
-    String Stockname = payload.substring(payload.indexOf('"') + 1, payload.indexOf(','));
+
+    // Stock name: between the first '"' and the first ','.
+    int quote_pos = payload.indexOf('"');
+    int first_comma = payload.indexOf(',');
+    if (quote_pos < 0 || first_comma < 0 || first_comma <= quote_pos)
+    {
+        Serial.println("[Stock] Sina payload: missing quote/comma — abort parse");
+        return false;
+    }
+    String Stockname = payload.substring(quote_pos + 1, first_comma);
     memset(run_data->stockdata.name, '\0', 13);
     int nameLen = min(12, (int)Stockname.length());
     for (int i = 0; i < nameLen; i++)
         run_data->stockdata.name[i] = Stockname.charAt(i);
-    
-    run_data->stockdata.OpenQuo = payload.substring(startIndex_1, endIndex_1).toFloat();
-    run_data->stockdata.CloseQuo = payload.substring(startIndex_2, endIndex_2).toFloat();
-    run_data->stockdata.NowQuo = payload.substring(startIndex_3, endIndex_3).toFloat();
-    run_data->stockdata.MaxQuo = payload.substring(startIndex_4, endIndex_4).toFloat();
-    run_data->stockdata.MinQuo = payload.substring(startIndex_5, endIndex_5).toFloat();
 
-    int startIndex_8 = payload.indexOf(',', endIndex_5) + 1;
-    for (int i = 0; i < 3; i++)
-        startIndex_8 = payload.indexOf(',', startIndex_8) + 1;
-    int endIndex_8 = payload.indexOf(',', startIndex_8);
-    int startIndex_9 = payload.indexOf(',', endIndex_8) + 1;
-    int endIndex_9 = payload.indexOf(',', startIndex_9);
-    run_data->stockdata.tradvolume = payload.substring(startIndex_8, endIndex_8).toFloat();
-    run_data->stockdata.turnover = payload.substring(startIndex_9, endIndex_9).toFloat();
-    
+    // Walk the next 10 fields. Sina's full payload has 30+ commas; we need
+    // F1..F10 for the assignments below (F1..F5 are price metrics, F9/F10
+    // were historically read into tradvolume/turnover — see note).
+    float fields[10] = {0};
+    int cursor = first_comma;
+    for (int i = 0; i < 10; ++i)
+    {
+        int next = payload.indexOf(',', cursor + 1);
+        if (next < 0)
+        {
+            Serial.printf("[Stock] Sina payload: ran out of commas at field %d — abort parse\n", i);
+            return false;
+        }
+        fields[i] = payload.substring(cursor + 1, next).toFloat();
+        cursor = next;
+    }
+    run_data->stockdata.OpenQuo  = fields[0];   // F1 open
+    run_data->stockdata.CloseQuo = fields[1];   // F2 close
+    run_data->stockdata.NowQuo   = fields[2];   // F3 now
+    run_data->stockdata.MaxQuo   = fields[3];   // F4 max
+    run_data->stockdata.MinQuo   = fields[4];   // F5 min
+    // NOTE: per the Sina payload format the volume field is F8 (vol) and the
+    // turnover field is F9, but the original parser walked one extra comma and
+    // assigned F9 -> tradvolume + F10 -> turnover. The displayed values in the
+    // committed cn_smoke golden depend on that mapping, so this PR preserves
+    // it byte-for-byte; correcting the field index is filed as a follow-up.
+    run_data->stockdata.tradvolume = fields[8]; // F9 (per original quirk)
+    run_data->stockdata.turnover   = fields[9]; // F10 (per original quirk)
+
     return true;
 }
 

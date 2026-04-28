@@ -220,12 +220,22 @@ static long long get_timestamp(String url)
         {
             String payload = http.getString();
             Serial.println(payload);
-            int time_index = payload.indexOf("\"t\":\"") + 5;       // Find "t":" and skip it (+5)
-            int time_end_index = payload.indexOf("\"", time_index); // Find closing quote
-            time = payload.substring(time_index, time_end_index);   // Extract timestamp
-            // Use network timestamp as reference
-            run_data->preNetTimestamp = atoll(time.c_str()) + run_data->errorNetTimestamp + TIMEZERO_OFFSIZE;
-            run_data->preLocalTimestamp = GET_SYS_MILLIS();
+            // Locate the marker before computing the offset; without this guard
+            // a missing marker silently returns -1 and `+5` produces a small
+            // positive index that picks up garbage from the head of the body.
+            int marker = payload.indexOf("\"t\":\"");
+            int time_end_index = (marker >= 0) ? payload.indexOf("\"", marker + 5) : -1;
+            if (marker >= 0 && time_end_index > marker + 5)
+            {
+                time = payload.substring(marker + 5, time_end_index);
+                // Use network timestamp as reference
+                run_data->preNetTimestamp = atoll(time.c_str()) + run_data->errorNetTimestamp + TIMEZERO_OFFSIZE;
+                run_data->preLocalTimestamp = GET_SYS_MILLIS();
+            }
+            else
+            {
+                Serial.println("[Anniv] taobao timestamp marker missing — keeping last known time");
+            }
         }
     }
     else

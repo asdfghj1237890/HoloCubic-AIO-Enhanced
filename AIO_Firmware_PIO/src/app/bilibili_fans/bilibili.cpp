@@ -184,14 +184,33 @@ static void update_fans_num()
             String payload = result.httpResponse;
             Serial.println("[HTTP] OK");
             Serial.println(payload);
-            int startIndex_1 = payload.indexOf("follower") + 10;
-            int endIndex_1 = payload.indexOf('}', startIndex_1);
-            int startIndex_2 = payload.indexOf("following") + 11;
-            int endIndex_2 = payload.indexOf(',', startIndex_2);
-            String res = payload.substring(startIndex_1, endIndex_1);
-            run_data->fans_num = payload.substring(startIndex_1, endIndex_1).toInt();
-            run_data->follow_num = payload.substring(startIndex_2, endIndex_2).toInt();
-            run_data->refresh_status = 1;
+            // Bilibili response shape: { "data": { "follower": N, "following": M, ... } }
+            // The +10 / +11 offsets skip past the literal `follower":` / `following":`.
+            // Guard each marker so a missing key (changed API, partial body)
+            // bails out instead of feeding negative indices into substring.
+            int follower_marker  = payload.indexOf("follower");
+            int following_marker = payload.indexOf("following");
+            if (follower_marker < 0 || following_marker < 0)
+            {
+                Serial.println("[Bilibili] follower/following marker missing — skipping refresh");
+            }
+            else
+            {
+                int startIndex_1 = follower_marker + 10;
+                int endIndex_1   = payload.indexOf('}', startIndex_1);
+                int startIndex_2 = following_marker + 11;
+                int endIndex_2   = payload.indexOf(',', startIndex_2);
+                if (endIndex_1 > startIndex_1 && endIndex_2 > startIndex_2)
+                {
+                    run_data->fans_num   = payload.substring(startIndex_1, endIndex_1).toInt();
+                    run_data->follow_num = payload.substring(startIndex_2, endIndex_2).toInt();
+                    run_data->refresh_status = 1;
+                }
+                else
+                {
+                    Serial.println("[Bilibili] follower/following terminator missing — skipping refresh");
+                }
+            }
         }
     }
     else
