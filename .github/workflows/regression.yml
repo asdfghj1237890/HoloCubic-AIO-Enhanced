@@ -37,9 +37,40 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio
 
+      # Cache PIO global tools/platforms + the project's downloaded libs.
+      # Massive speed-up on cache hit and avoids the GitHub-archive 502s
+      # that bit us on the lv_drivers download (run #25070427104).
+      - name: Cache PlatformIO data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            lv_simulater_platformio/.pio
+          key: pio-gui-${{ runner.os }}-${{ hashFiles('lv_simulater_platformio/platformio.ini') }}
+          restore-keys: |
+            pio-gui-${{ runner.os }}-
+
+      # Retry with backoff to absorb transient GitHub-archive download
+      # failures (502/503/timeouts) when PlatformIO fetches libs.
       - name: Build env:native_test
         working-directory: lv_simulater_platformio
-        run: pio run -e native_test
+        run: |
+          set +e
+          for attempt in 1 2 3; do
+            pio run -e native_test
+            rc=$?
+            if [ $rc -eq 0 ]; then
+              echo "::notice::Build succeeded on attempt $attempt"
+              exit 0
+            fi
+            if [ $attempt -lt 3 ]; then
+              sleep_for=$((attempt * 15))
+              echo "::warning::Build failed (rc=$rc) on attempt $attempt/3; retrying in ${sleep_for}s..."
+              sleep $sleep_for
+            fi
+          done
+          echo "::error::Build failed after 3 attempts"
+          exit 1
 
       - name: Run scenario suite
         working-directory: lv_simulater_platformio
@@ -116,7 +147,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio
 
+      # Cache PIO global tools + AIO_Firmware_PIO's libdeps for the
+      # native_unit env so transient archive 502s don't block the build.
+      - name: Cache PlatformIO data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            AIO_Firmware_PIO/.pio
+          key: pio-unit-${{ runner.os }}-${{ hashFiles('AIO_Firmware_PIO/platformio.ini') }}
+          restore-keys: |
+            pio-unit-${{ runner.os }}-
+
+      # Retry with backoff against transient download failures.
       - name: Run Unity tests (env:native_unit)
         working-directory: AIO_Firmware_PIO
         timeout-minutes: 5
-        run: pio test -e native_unit
+        run: |
+          set +e
+          for attempt in 1 2 3; do
+            pio test -e native_unit
+            rc=$?
+            if [ $rc -eq 0 ]; then
+              echo "::notice::Tests succeeded on attempt $attempt"
+              exit 0
+            fi
+            if [ $attempt -lt 3 ]; then
+              sleep_for=$((attempt * 15))
+              echo "::warning::Tests failed (rc=$rc) on attempt $attempt/3; retrying in ${sleep_for}s..."
+              sleep $sleep_for
+            fi
+          done
+          echo "::error::Tests failed after 3 attempts"
+          exit 1
