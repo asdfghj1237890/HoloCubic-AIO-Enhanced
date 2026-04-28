@@ -8,33 +8,26 @@
 #
 ################################################################################
 
-from util.widget_base import EntryWithPlaceholder
+import os
+import re
+import threading
+import time
+import tkinter as tk
+from tkinter import filedialog, ttk
+
+import customtkinter as ctk
+import esptool  # pip install esptool>=4.1,<5
+import requests
+import serial   # pip install pyserial
+import serial.tools.list_ports  # noqa: F401  — submodule must be imported explicitly
+
+import util.common as common
+import util.massagehead as mh
 from util.i18n import get_i18n
 from util.logger import get_logger
+from util.widget_base import EntryWithPlaceholder
 
 logger = get_logger(__name__)
-
-import os
-import time
-import serial   # pip install pyserial
-import tkinter as tk
-import util.tkutils as tku
-from tkinter import ttk
-from tkinter import filedialog
-import util.massagehead as mh
-import threading
-import util.common as common
-import requests
-import re
-import sys
-
-# esptool v3.3可以刷入bootloader.bin时动态修改"--flash_size"
-# if os.path.exists("./esptool_v41"):
-#     sys.path.append("./esptool_v41")
-# else:
-#     sys.path.append("./")
-# import esptool # sys.path.append("./esptool_v41") or pip install esptool==4.1 
-import esptool
 # VERSION_INFO_URL = "https://gitee.com/ClimbSnailQ/HoloCubic_AIO/blob/main/AIO_Firmware_PIO/src/common.h"
 VERSION_INFO_URL = "http://climbsnail.cn:5001/holocubicAIO/sn/v1/version/firmware"
 
@@ -64,10 +57,13 @@ class DownloadDebug(object):
         self._serial_stop_event.set()  # 預設停止狀態，com_connect 啟動時會 clear()
         self.i18n = get_i18n()
 
-        # Serial settings section
-        self.connor_grid_frame = tk.LabelFrame(self.__father, text=self.i18n.t("serial_settings"),
-                                               labelanchor="nw", bg="white")
+        # Serial settings section (CTk 沒有 LabelFrame，改用 CTkFrame + 標題 CTkLabel)
+        self.connor_grid_frame = ctk.CTkFrame(self.__father)
         self.connor_grid_frame.place(x=self.__father.winfo_width() + 10, y=10)
+        ctk.CTkLabel(
+            self.connor_grid_frame, text=self.i18n.t("serial_settings"),
+            font=ctk.CTkFont(weight="bold"),
+        ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.create_com(self.connor_grid_frame)
         self.connor_grid_frame.update()
 
@@ -88,23 +84,32 @@ class DownloadDebug(object):
              "placeholder": self.i18n.t("choose_firmware")}
         ]
         # Firmware flash section
-        self.connor_firmware_frame = tk.LabelFrame(self.__father, text=self.i18n.t("firmware_flash"),
-                                                   labelanchor="nw", bg="white")
+        self.connor_firmware_frame = ctk.CTkFrame(self.__father)
         self.connor_firmware_frame.place(x=200, y=10)
+        ctk.CTkLabel(
+            self.connor_firmware_frame, text=self.i18n.t("firmware_flash"),
+            font=ctk.CTkFont(weight="bold"),
+        ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.connor_firmware_frame.update()
         self.init_firmware(self.connor_firmware_frame)
 
         # Operation log section
-        self.connor_log_frame = tk.LabelFrame(self.__father, text=self.i18n.t("operation_log"),
-                                              labelanchor="nw", bg="white")
+        self.connor_log_frame = ctk.CTkFrame(self.__father)
         self.connor_log_frame.place(x=685, y=10)
+        ctk.CTkLabel(
+            self.connor_log_frame, text=self.i18n.t("operation_log"),
+            font=ctk.CTkFont(weight="bold"),
+        ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.connor_log_frame.update()
         self.init_log(self.connor_log_frame)
 
         # Serial receive section
-        self.connor_info_frame = tk.LabelFrame(self.__father, text=self.i18n.t("serial_receive"),
-                                               labelanchor="nw", bg="white")
+        self.connor_info_frame = ctk.CTkFrame(self.__father)
         self.connor_info_frame.place(x=self.__father.winfo_width() + 10, y=240)
+        ctk.CTkLabel(
+            self.connor_info_frame, text=self.i18n.t("serial_receive"),
+            font=ctk.CTkFont(weight="bold"),
+        ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.connor_info_frame.update()
         self.init_serial_receive(self.connor_info_frame)
 
@@ -158,48 +163,48 @@ class DownloadDebug(object):
         self.__firmware_choose_botton = [None for cnt in range(firmware_num)]
 
         for pos in range(firmware_num):
-            firmware_frame[pos] = tk.Frame(father, bg=father["bg"])
-            # 勾选框的键值对象
+            firmware_frame[pos] = ctk.CTkFrame(father, fg_color="transparent")
+            # 勾選框
             self.__firmware_enable_val[pos] = tk.IntVar()
             self.__firmware_enable_val[pos].set(1)
-            # 勾选框
-            self.__firmware_enable[pos] = tk.Checkbutton(firmware_frame[pos], text="", bg=father["bg"],
-                                                         variable=self.__firmware_enable_val[pos],
-                                                         onvalue=1, offvalue=0, height=1,
-                                                         width=1)
+            self.__firmware_enable[pos] = ctk.CTkCheckBox(
+                firmware_frame[pos], text="",
+                variable=self.__firmware_enable_val[pos],
+                onvalue=1, offvalue=0, width=24,
+            )
             self.__firmware_enable[pos].pack(side=tk.LEFT)
-            # 创建地址输入框
+            # 地址輸入框 (width=9 chars ≈ 75 px)
             self.__firmware_addr_val[pos] = tk.StringVar()
-            self.__firmware_addr_entry[pos] = tk.Entry(firmware_frame[pos], width=9,
-                                                       highlightcolor="LightGrey",
-                                                       textvariable=self.__firmware_addr_val[pos])
-
+            self.__firmware_addr_entry[pos] = ctk.CTkEntry(
+                firmware_frame[pos], width=75,
+                textvariable=self.__firmware_addr_val[pos],
+            )
             self.__firmware_addr_val[pos].set(self.__pre_down_param_list[pos]["bin_addr"])
             self.__firmware_addr_entry[pos].pack(side=tk.LEFT, padx=border_padx)
-            # 创建路径输入框
+            # 路徑輸入框 (width=40 chars ≈ 320 px)
             self.__firmware_path_val[pos] = tk.StringVar()
-            self.__firmware_path_entry[pos] = EntryWithPlaceholder(firmware_frame[pos], width=40,
-                                                                   highlightcolor="LightGrey",
-                                                                   placeholder=self.__pre_down_param_list[pos][
-                                                                       "placeholder"],
-                                                                   placeholder_color="grey",
-                                                                   textvariable=self.__firmware_path_val[pos])
-
+            self.__firmware_path_entry[pos] = EntryWithPlaceholder(
+                firmware_frame[pos], width=320,
+                placeholder=self.__pre_down_param_list[pos]["placeholder"],
+                placeholder_color="grey",
+                textvariable=self.__firmware_path_val[pos],
+            )
             self.__firmware_path_val[pos].set(self.__pre_down_param_list[pos]["bin_path"])
             self.__firmware_path_entry[pos].pack(side=tk.LEFT, padx=border_padx)
-            self.__firmware_path_entry[pos].refresh()
-            # 选择按钮
-            self.__firmware_choose_botton[pos] = tk.Button(firmware_frame[pos], text=self.i18n.t("select_button"), fg='black',
-                                                           command=lambda: self.choose_file(pos.copy()), width=6, height=1)
-
+            # 選擇按鈕
+            self.__firmware_choose_botton[pos] = ctk.CTkButton(
+                firmware_frame[pos], text=self.i18n.t("select_button"),
+                command=lambda: self.choose_file(pos.copy()),
+                width=60, height=28,
+            )
             self.__firmware_choose_botton[pos].pack(side=tk.RIGHT, fill=tk.X, padx=5)
             firmware_frame[pos].pack(side=tk.TOP, pady=border_pady)
 
-        # 由于"选择"按钮中用的是循环，参数pos不生效
-        self.__firmware_choose_botton[0].config(command=lambda: self.choose_file(0))
-        self.__firmware_choose_botton[1].config(command=lambda: self.choose_file(1))
-        self.__firmware_choose_botton[2].config(command=lambda: self.choose_file(2))
-        self.__firmware_choose_botton[3].config(command=lambda: self.choose_file(3))
+        # 由於"選擇"按鈕在迴圈中綁定，pos 變數會被覆蓋；改顯式綁定每個 index
+        self.__firmware_choose_botton[0].configure(command=lambda: self.choose_file(0))
+        self.__firmware_choose_botton[1].configure(command=lambda: self.choose_file(1))
+        self.__firmware_choose_botton[2].configure(command=lambda: self.choose_file(2))
+        self.__firmware_choose_botton[3].configure(command=lambda: self.choose_file(3))
         
         # version_info_frame = tk.Frame(father, bg=father["bg"])
         # 版本信息
@@ -213,32 +218,42 @@ class DownloadDebug(object):
         # self.m_version_info.pack(side=tk.LEFT, padx=5)
         # version_info_frame.pack(side=tk.TOP, pady=5)
 
-        # botton组件
-        botton_group_frame = tk.Frame(father, bg=father["bg"])
+        # 按鈕群組
+        botton_group_frame = ctk.CTkFrame(father, fg_color="transparent")
 
-        version_text = tk.Label(botton_group_frame, text=self.i18n.t("aio_latest_version"), bg=botton_group_frame['bg'])
+        version_text = ctk.CTkLabel(
+            botton_group_frame, text=self.i18n.t("aio_latest_version"),
+        )
         version_text.pack(side=tk.LEFT)
-        # 创建宽输入框
+        # 版本資訊輸入框
         self.m_version_var = tk.StringVar()
-        self.m_version_info = EntryWithPlaceholder(botton_group_frame, width=6, highlightcolor="LightGrey",
-                                                  placeholder=self.i18n.t("unknown"), placeholder_color="grey",
-                                                  textvariable=self.m_version_var)
+        self.m_version_info = EntryWithPlaceholder(
+            botton_group_frame, width=60,
+            placeholder=self.i18n.t("unknown"), placeholder_color="grey",
+            textvariable=self.m_version_var,
+        )
         self.m_version_info.pack(side=tk.LEFT, padx=5)
 
-        # Clear button
-        self.m_clean_flash_botton = tk.Button(botton_group_frame, text=self.i18n.t("clear_chip"), fg='black',
-                                              command=self.clean_flash, width=8, height=1)
+        # 清空按鈕
+        self.m_clean_flash_botton = ctk.CTkButton(
+            botton_group_frame, text=self.i18n.t("clear_chip"),
+            command=self.clean_flash, width=80, height=28,
+        )
         self.m_clean_flash_botton.pack(side=tk.LEFT, fill=tk.X, padx=border_padx)
-        # Download button
-        self.m_download_botton = tk.Button(botton_group_frame, text=self.i18n.t("flash_firmware"), fg='black',
-                                           command=self.down_and_canle, width=8, height=1)
-
+        # 下載按鈕
+        self.m_download_botton = ctk.CTkButton(
+            botton_group_frame, text=self.i18n.t("flash_firmware"),
+            command=self.down_and_canle, width=80, height=28,
+        )
         self.m_download_botton.pack(side=tk.RIGHT, fill=tk.X, padx=0)
         botton_group_frame.pack(side=tk.TOP, pady=5)
 
-        # 设置下载进度条组件
-        progress_frame = tk.Frame(father, bg=father["bg"])
-        self.progress_bar = tk.Canvas(progress_frame, width=450, height=15, bg="white")
+        # 進度條（保留 tk.Canvas — 自繪矩形 fill）
+        progress_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.progress_bar = tk.Canvas(
+            progress_frame, width=450, height=15, bg="white",
+            highlightthickness=0, borderwidth=0,
+        )
         # 进度条的矩形框
         self.progress_bar_circle = self.progress_bar.create_rectangle(3, 3, 450, 14, outline="green", width=1)
         self.progress_bar_fill = self.progress_bar.create_rectangle(3, 3, 20, 14, outline="", width=1, fill="green")
@@ -451,26 +466,27 @@ class DownloadDebug(object):
                 self.print_log("Flash firmware failed, please check the serial port.")
 
     def init_log(self, father):
-        """
-        初始化日志打印框
-        """
+        """初始化日誌打印框（保留 tk.Text 給彩色標記）。"""
         info_width = 39
         info_height = 15
 
-        # 滑动条
-        self.m_log_scrollbar = tk.Scrollbar(father, width=12)
-        # 信息文本框
-        self.m_log = tk.Text(father, width=info_width,
-                             height=info_height,
-                             yscrollcommand=self.m_log_scrollbar.set,
-                             state=tk.DISABLED)
-        # 两个控件关联
-        self.m_log_scrollbar.config(command=self.m_log.yview)
+        # CTk Scrollbar
+        self.m_log_scrollbar = ctk.CTkScrollbar(father, orientation="vertical")
+        # tk.Text — CTkTextbox 不支援 font tag，這裡保留原生
+        self.m_log = tk.Text(
+            father, width=info_width, height=info_height,
+            yscrollcommand=self.m_log_scrollbar.set,
+            state=tk.DISABLED,
+            borderwidth=0, highlightthickness=0,
+        )
+        self.m_log_scrollbar.configure(command=self.m_log.yview)
         self.m_log.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)
 
-        # 清空按键
-        m_clear = tk.Button(father, text="X", command=self.clear_log,
-                            width=1, height=2, font=('Helvetica', '4'))
+        # 清空按鈕
+        m_clear = ctk.CTkButton(
+            father, text="X", command=self.clear_log,
+            width=24, height=24,
+        )
         m_clear.pack(side=tk.BOTTOM, fill=tk.X, pady=1)
 
         self.m_log_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -492,25 +508,26 @@ class DownloadDebug(object):
         self.m_log.config(state=tk.DISABLED)
 
     def init_serial_receive(self, father):
-
-        # father.update()
         info_width = 135
         info_height = 27
 
-        # 滑动条
-        self.m_scrollbar = tk.Scrollbar(father, width=12, orient="vertical")
-        # 信息文本框
-        self.m_msg = tk.Text(father, width=info_width,
-                             height=info_height,
-                             yscrollcommand=self.m_scrollbar.set,
-                             state=tk.DISABLED)
-        # 两个控件关联
-        self.m_scrollbar.config(command=self.m_msg.yview)
+        # CTk Scrollbar
+        self.m_scrollbar = ctk.CTkScrollbar(father, orientation="vertical")
+        # tk.Text — 保留原生支援 yview_moveto
+        self.m_msg = tk.Text(
+            father, width=info_width, height=info_height,
+            yscrollcommand=self.m_scrollbar.set,
+            state=tk.DISABLED,
+            borderwidth=0, highlightthickness=0,
+        )
+        self.m_scrollbar.configure(command=self.m_msg.yview)
         self.m_msg.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)
 
-        # 清空按键
-        self.m_clear = tk.Button(father, text="X", command=self.clear_msg,
-                                 width=1, height=2, font=('Helvetica', '4'))
+        # 清空按鈕
+        self.m_clear = ctk.CTkButton(
+            father, text="X", command=self.clear_msg,
+            width=24, height=24,
+        )
         self.m_clear.pack(side=tk.BOTTOM, fill=tk.X, pady=1)
 
         self.m_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -537,13 +554,12 @@ class DownloadDebug(object):
             com_tuple = [""]
 
         border_padx = 15
-        # Port selection
-        com_frame = tk.Frame(father, bg=father["bg"])
-        self.m_com_label = tk.Label(com_frame, text=self.i18n.t("port_number"),
-                                    bg=father['bg'])
-        self.m_com_label.pack(side=tk.LEFT, padx=border_padx)
 
-        self.m_com_select = ttk.Combobox(com_frame, width=8, state='readonly')
+        # Port selection (ttk.Combobox 保留 — bind('<FocusOut>') 在 CTk 不容易做)
+        com_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_com_label = ctk.CTkLabel(com_frame, text=self.i18n.t("port_number"))
+        self.m_com_label.pack(side=tk.LEFT, padx=border_padx)
+        self.m_com_select = ttk.Combobox(com_frame, width=8, state="readonly")
         self.m_com_select["value"] = tuple(com_tuple)
         self.m_com_select.bind("<FocusOut>", self.com_pull_down)
         self.m_com_select.current(0)
@@ -551,62 +567,67 @@ class DownloadDebug(object):
         com_frame.pack(side=tk.TOP, pady=5)
 
         # Baud rate
-        baud_frame = tk.Frame(father, bg=father["bg"])
-        self.m_baud_label = tk.Label(baud_frame, text=self.i18n.t("baud_rate"),
-                                     bg=father['bg'])
+        baud_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_baud_label = ctk.CTkLabel(baud_frame, text=self.i18n.t("baud_rate"))
         self.m_baud_label.pack(side=tk.LEFT, padx=border_padx)
-        self.m_baud_select = ttk.Combobox(baud_frame, width=8, state='readonly')
-        self.m_baud_select["value"] = ('9600', '38400', '57600', '115200',
-                                       '230400', '460800', '576000', '921600', '1152000')
+        self.m_baud_select = ttk.Combobox(baud_frame, width=8, state="readonly")
+        self.m_baud_select["value"] = (
+            "9600", "38400", "57600", "115200",
+            "230400", "460800", "576000", "921600", "1152000",
+        )
         self.m_baud_select.current(7)
         self.m_baud_select.pack(side=tk.RIGHT, padx=border_padx)
         baud_frame.pack(side=tk.TOP, pady=5)
 
         # Data bit
-        data_bit_frame = tk.Frame(father, bg=father["bg"])
-        self.m_data_bit_label = tk.Label(data_bit_frame, text=self.i18n.t("data_bit"),
-                                         bg=father['bg'])
+        data_bit_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_data_bit_label = ctk.CTkLabel(data_bit_frame, text=self.i18n.t("data_bit"))
         self.m_data_bit_label.pack(side=tk.LEFT, padx=border_padx)
-        self.m_data_bit_select = ttk.Combobox(data_bit_frame, width=8, state='readonly')
-        self.m_data_bit_select["value"] = ('5', '6', '7', '8')
+        self.m_data_bit_select = ttk.Combobox(data_bit_frame, width=8, state="readonly")
+        self.m_data_bit_select["value"] = ("5", "6", "7", "8")
         self.m_data_bit_select.current(3)
         self.m_data_bit_select.pack(side=tk.RIGHT, padx=border_padx)
         data_bit_frame.pack(side=tk.TOP, pady=5)
 
         # Parity
-        check_bit_frame = tk.Frame(father, bg=father["bg"])
-        self.m_check_bit_label = tk.Label(check_bit_frame, text=self.i18n.t("check_bit"),
-                                          bg=father['bg'])
+        check_bit_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_check_bit_label = ctk.CTkLabel(check_bit_frame, text=self.i18n.t("check_bit"))
         self.m_check_bit_label.pack(side=tk.LEFT, padx=border_padx)
-        self.m_check_bit_select = ttk.Combobox(check_bit_frame, width=8, state='readonly')
-        self.m_check_bit_select["value"] = (self.i18n.t("no_check"), self.i18n.t("odd_check"), 
-                                            self.i18n.t("even_check"), self.i18n.t("zero_check"), 
-                                            self.i18n.t("one_check"))
+        self.m_check_bit_select = ttk.Combobox(check_bit_frame, width=8, state="readonly")
+        self.m_check_bit_select["value"] = (
+            self.i18n.t("no_check"), self.i18n.t("odd_check"),
+            self.i18n.t("even_check"), self.i18n.t("zero_check"),
+            self.i18n.t("one_check"),
+        )
         self.m_check_bit_select.current(0)
         self.m_check_bit_select.pack(side=tk.RIGHT, padx=border_padx)
         check_bit_frame.pack(side=tk.TOP, pady=5)
 
         # Stop bit
-        stop_bit_frame = tk.Frame(father, bg=father["bg"])
-        self.m_stop_bit_label = tk.Label(stop_bit_frame, text=self.i18n.t("stop_bit"),
-                                         bg=father['bg'])
+        stop_bit_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_stop_bit_label = ctk.CTkLabel(stop_bit_frame, text=self.i18n.t("stop_bit"))
         self.m_stop_bit_label.pack(side=tk.LEFT, padx=border_padx)
-        self.m_stop_bit_select = ttk.Combobox(stop_bit_frame, width=8, state='readonly')
-        self.m_stop_bit_select["value"] = (self.i18n.t("one_bit"), self.i18n.t("one_half_bit"), 
-                                           self.i18n.t("two_bit"))
+        self.m_stop_bit_select = ttk.Combobox(stop_bit_frame, width=8, state="readonly")
+        self.m_stop_bit_select["value"] = (
+            self.i18n.t("one_bit"), self.i18n.t("one_half_bit"), self.i18n.t("two_bit"),
+        )
         self.m_stop_bit_select.current(0)
         self.m_stop_bit_select.pack(side=tk.RIGHT, padx=border_padx)
         stop_bit_frame.pack(side=tk.TOP, pady=5)
 
         # Buttons
-        botton_frame = tk.Frame(father, bg=father["bg"])
-        self.m_connect_button = tk.Button(botton_frame, text=self.i18n.t("open_serial"), fg='black',
-                                          command=self.com_connect, width=12, height=1)
+        botton_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_connect_button = ctk.CTkButton(
+            botton_frame, text=self.i18n.t("open_serial"),
+            command=self.com_connect, width=120, height=28,
+        )
         self.m_connect_button.pack(side=tk.LEFT, fill=tk.X, padx=5)
-        self.m_reboot_button = tk.Button(botton_frame, text=self.i18n.t("reboot"), fg='black',
-                                         command=self.esp_reset, width=8, height=1)
+        self.m_reboot_button = ctk.CTkButton(
+            botton_frame, text=self.i18n.t("reboot"),
+            command=self.esp_reset, width=80, height=28,
+        )
         self.m_reboot_button.pack(side=tk.RIGHT, fill=tk.X, padx=5)
-        self.m_reboot_button["state"] = tk.NORMAL
+        self.m_reboot_button.configure(state=tk.NORMAL)
 
         botton_frame.pack(side=tk.TOP, pady=5)
 
