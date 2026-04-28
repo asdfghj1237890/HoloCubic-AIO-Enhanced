@@ -13,25 +13,25 @@
 import math
 import os.path
 import struct
-from typing import Any, AnyStr, NoReturn
 
 from PIL import Image
 
 
-def getColorFromPalette(palette, index):
+def getColorFromPalette(palette: list[int], index: int) -> list[int]:
     return [palette[3 * index + i] for i in range(3)]
 
 
-def checkExist(li: list, index: int):
+def checkExist(li: list[object], index: int) -> int | None:
     if index >= len(li):
         return 0
     if index < len(li) and li[index] is None:
         return -1
     if index < len(li) and li[index] is not None:
         return 1
+    return None
 
 
-def forceUpdate(li: list, index: int, elem: Any):
+def forceUpdate(li: list[object], index: int, elem: object) -> None:
     check_res = checkExist(li, index)
     if check_res:
         li[index] = elem
@@ -66,14 +66,20 @@ class _const:
     CF_TRUE_COLOR_ALPHA = 101
     CF_TRUE_COLOR_CHROMA = 102
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: object) -> None:
         raise self.ConstError(f"Can't rebind const {name}")
 
 
 class Converter:
     FLAG = _const()
 
-    def __init__(self, path, dith: bool = True, cf=FLAG.CF_INDEXED_4_BIT, cf_palette_bgr_en=0):
+    def __init__(
+        self,
+        path: str,
+        dith: bool = True,
+        cf: int | str = FLAG.CF_INDEXED_4_BIT,
+        cf_palette_bgr_en: int = 0,
+    ) -> None:
 
         self.dith = None  # Dithering enable/disable
         self.w = None  # Image width
@@ -123,7 +129,7 @@ class Converter:
         self.convert(self.cf, alpha)
 
     # noinspection PyAttributeOutsideInit
-    def convert(self, cf=None, alpha: int = 0) -> NoReturn:
+    def convert(self, cf: int | None = None, alpha: int = 0) -> None:
         if cf is not None:
             self.cf = cf
         self.d_out = []
@@ -171,7 +177,7 @@ class Converter:
         if palette_size:
             self.img.paste(img_tmp)
 
-    def format_to_c_array(self) -> AnyStr:
+    def format_to_c_array(self) -> str:
         c_array = ""
         i = 0
         y_end, x_end = self.h, self.w
@@ -238,7 +244,7 @@ class Converter:
 
         tmpArr = []
 
-        def append_and_increase():
+        def append_and_increase() -> None:
             nonlocal i, tmpArr
             tmpArr.append(f"0x{self.d_out[i]:02X}")
             i += 1
@@ -309,7 +315,7 @@ class Converter:
 
         return c_array
 
-    def _get_c_header(self) -> AnyStr:
+    def _get_c_header(self) -> str:
         c_header = r"""#if defined(LV_LVGL_H_INCLUDE_SIMPLE)
 #include "lvgl.h"
 #else
@@ -327,7 +333,7 @@ class Converter:
 const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST {attr_name} uint8_t {self.out_name}_map[] = {{"""
         return c_header
 
-    def _get_c_footer(self, cf) -> AnyStr:
+    def _get_c_footer(self, cf: int) -> str:
         c_footer = rf"""
 }};
 
@@ -356,7 +362,7 @@ const lv_img_dsc_t {self.out_name} = {{
         }.get(cf, "") + f"\n  .data = {self.out_name}_map,\n}};\n"
         return c_footer
 
-    def get_c_code_file(self, cf=-1, content="", outpath="") -> AnyStr:
+    def get_c_code_file(self, cf: int = -1, content: str = "", outpath: str = "") -> str:
         if len(content) < 1:
             content = self.format_to_c_array()
         if cf < 0:
@@ -367,7 +373,9 @@ const lv_img_dsc_t {self.out_name} = {{
             f.close()
         return out
 
-    def get_bin_file(self, cf=-1, content=None, outpath="") -> bytes:
+    def get_bin_file(
+        self, cf: int = -1, content: list[int] | bytes | None = None, outpath: str = ""
+    ) -> bytes:
         if not content:
             content = self.d_out
         if cf < 0:
@@ -397,7 +405,7 @@ const lv_img_dsc_t {self.out_name} = {{
 
         return header_bin + content
 
-    def _conv_px(self, x, y):
+    def _conv_px(self, x: int, y: int) -> None:
         c = self.img.getpixel((x, y))
 
         if self.img.mode == "P":
@@ -496,13 +504,13 @@ const lv_img_dsc_t {self.out_name} = {{
             p = self.w * y + x + 1024  # +1024 for the palette
             forceUpdate(self.d_out, p, cx & 0xFF)
 
-    def _dith_reset(self):
+    def _dith_reset(self) -> None:
         if self.dith:
             self.r_nerr = 0
             self.g_nerr = 0
             self.b_nerr = 0
 
-    def _dith_next(self, r, g, b, x):
+    def _dith_next(self, r: int, g: int, b: int, x: int) -> None:
         if self.dith:
             self.r_act = r + self.r_nerr + self.r_earr[x + 1]
             self.r_earr[x + 1] = 0
@@ -608,7 +616,7 @@ const lv_img_dsc_t {self.out_name} = {{
             if self.b_act > 0xFF:
                 self.b_act = 0xFF
 
-    def _classify_pixel(self, value, bits):
+    def _classify_pixel(self, value: int, bits: int) -> int:
 
         tmp = 1 << (8 - bits)
         val = math.ceil(value / tmp) * tmp
