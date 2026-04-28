@@ -208,8 +208,11 @@ if __name__ == "__main__":
 
     tool_windows = ctk.CTk()
     tool_windows.title("HoloCubic_AIO Tools\t  " + TOOL_VERSION)
-    tool_windows.geometry("1000x655+10+10")
-    tool_windows.resizable(False, False)
+    # CTk 元件比原生 tk 略寬，原本 1000x655 在深色化後會擠到，放大為 1200x720。
+    # 同時開啟可調整大小（並設下最小尺寸避免被縮到無法看）。
+    tool_windows.geometry("1200x720+10+10")
+    tool_windows.resizable(True, True)
+    tool_windows.minsize(1000, 600)
 
     # 將 ttk 元件（Notebook、Combobox、Treeview、Scrollbar）也染成深色，
     # 讓未遷移到 CTk 的部份不會出現白底突兀感
