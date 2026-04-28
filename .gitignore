@@ -11,3 +11,13 @@ Docs/*
  SD_Card/movie/Hologram 3D-minions_240x240.mjpeg
  SD_Card/Hologram01.mp4
  SD_Card/movie/Hologram01_240x240.mjpeg
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+AIO_Tool/.venv/
+AIO_Tool/build/
+AIO_Tool/dist/
