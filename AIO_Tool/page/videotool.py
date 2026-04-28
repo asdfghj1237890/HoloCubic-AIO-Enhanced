@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
@@ -20,7 +19,7 @@ from util.common import CACHE_PATH, ROOT_PATH
 from util.i18n import get_i18n
 
 
-class VideoTool(object):
+class VideoTool:
     """
     视频转化页类
     """
@@ -46,7 +45,8 @@ class VideoTool(object):
         # 输出设定区块（CTk 沒有 LabelFrame，改用 CTkFrame + 標題 CTkLabel）
         self.connor_param_frame = ctk.CTkFrame(output_param_frame)
         connor_title = ctk.CTkLabel(
-            self.connor_param_frame, text=self.i18n.t("output_settings"),
+            self.connor_param_frame,
+            text=self.i18n.t("output_settings"),
             font=ctk.CTkFont(weight="bold"),
         )
         connor_title.pack(anchor=tk.W, padx=10, pady=(8, 4))
@@ -58,15 +58,21 @@ class VideoTool(object):
         # Conversion log（保留 ScrolledText：black/white 配色與 font 需要 tk.Text）
         log_frame = ctk.CTkFrame(father)
         log_title = ctk.CTkLabel(
-            log_frame, text="Conversion Log",
+            log_frame,
+            text="Conversion Log",
             font=ctk.CTkFont(weight="bold"),
         )
         log_title.pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.log_text = scrolledtext.ScrolledText(
-            log_frame, width=100, height=15,
-            wrap=tk.WORD, bg="black", fg="white",
+            log_frame,
+            width=100,
+            height=15,
+            wrap=tk.WORD,
+            bg="black",
+            fg="white",
             font=("Consolas", 9),
-            borderwidth=0, highlightthickness=0,
+            borderwidth=0,
+            highlightthickness=0,
         )
         self.log_text.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
         log_frame.pack(side=tk.TOP, pady=5, fill=tk.BOTH, expand=True)
@@ -84,8 +90,11 @@ class VideoTool(object):
         self.m_src_path_entry = ctk.CTkEntry(src_frame, width=600)
         self.m_src_path_entry.pack(side=tk.LEFT, padx=border_padx)
         self.src_path_botton = ctk.CTkButton(
-            src_frame, text=self.i18n.t("select_video"),
-            command=self.choose_src_file, width=80, height=28,
+            src_frame,
+            text=self.i18n.t("select_video"),
+            command=self.choose_src_file,
+            width=80,
+            height=28,
         )
         self.src_path_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5)
         src_frame.pack(side=tk.TOP, pady=5)
@@ -98,8 +107,11 @@ class VideoTool(object):
         self.m_dst_path_entry.delete(0, tk.END)
         self.m_dst_path_entry.insert(tk.END, defualt_outpath)
         self.dst_path_botton = ctk.CTkButton(
-            dst_frame, text=self.i18n.t("output_path"),
-            command=self.choose_dst_path, width=80, height=28,
+            dst_frame,
+            text=self.i18n.t("output_path"),
+            command=self.choose_dst_path,
+            width=80,
+            height=28,
         )
         self.dst_path_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5)
         dst_frame.pack(side=tk.TOP, pady=5)
@@ -107,8 +119,11 @@ class VideoTool(object):
         # 轉換按鈕
         button_frame = ctk.CTkFrame(father, fg_color="transparent")
         self.trans_botton = ctk.CTkButton(
-            button_frame, text=self.i18n.t("start_conversion"),
-            command=self.trans_format, width=80, height=28,
+            button_frame,
+            text=self.i18n.t("start_conversion"),
+            command=self.trans_format,
+            width=80,
+            height=28,
         )
         self.trans_botton.pack(side=tk.TOP, fill=tk.X, padx=5)
         button_frame.pack(side=tk.TOP, pady=5)
@@ -124,12 +139,14 @@ class VideoTool(object):
         filepath = filedialog.askopenfilename(
             title=self.i18n.t("select_video_title"),
             defaultextension=".espace",
-            # filetypes=[('mp4', '.mp4 .MP4'), ('avi', '.avi .AVI'), 
+            # filetypes=[('mp4', '.mp4 .MP4'), ('avi', '.avi .AVI'),
             #     ('mov', '.mov .MOV'), ('gif', '.gif .GIF'), ('所有文件', '.* .*')]
             # )
-            filetypes=[(self.i18n.t("common_formats"), '.mp4 .MP4 .avi .AVI .mov .MOV .gif .GIF'),
-                (self.i18n.t("all_files"), '.* .*')]
-            )
+            filetypes=[
+                (self.i18n.t("common_formats"), ".mp4 .MP4 .avi .AVI .mov .MOV .gif .GIF"),
+                (self.i18n.t("all_files"), ".* .*"),
+            ],
+        )
         if filepath == None or filepath == "":
             return None
         else:
@@ -162,14 +179,14 @@ class VideoTool(object):
 
     def run_ffmpeg_command(self, cmd, description):
         """Run ffmpeg command and capture output in real-time"""
-        self.log(f"\n{'='*60}")
+        self.log(f"\n{'=' * 60}")
         self.log(f"[{description}]")
         try:
             self.log(f"Command: {cmd}")
         except:
-            self.log(f"Command: [Command contains non-ASCII characters]")
-        self.log(f"{'='*60}\n")
-        
+            self.log("Command: [Command contains non-ASCII characters]")
+        self.log(f"{'=' * 60}\n")
+
         try:
             process = subprocess.Popen(
                 cmd,
@@ -177,28 +194,28 @@ class VideoTool(object):
                 stderr=subprocess.STDOUT,
                 shell=True,
                 universal_newlines=False,
-                bufsize=1
+                bufsize=1,
             )
-            
-            for line in iter(process.stdout.readline, b''):
+
+            for line in iter(process.stdout.readline, b""):
                 try:
                     # Try UTF-8 first, then fallback to system encoding with error handling
                     try:
-                        decoded_line = line.decode('utf-8').strip()
+                        decoded_line = line.decode("utf-8").strip()
                     except UnicodeDecodeError:
                         try:
-                            decoded_line = line.decode('gbk').strip()
+                            decoded_line = line.decode("gbk").strip()
                         except UnicodeDecodeError:
-                            decoded_line = line.decode('utf-8', errors='ignore').strip()
-                    
+                            decoded_line = line.decode("utf-8", errors="ignore").strip()
+
                     if decoded_line:
                         self.log(decoded_line)
-                except Exception as e:
+                except Exception:
                     # Skip lines that cannot be decoded
                     pass
-            
+
             process.wait()
-            
+
             if process.returncode == 0:
                 self.log(f"\n✓ {description} completed successfully!\n")
                 return True
@@ -225,48 +242,52 @@ class VideoTool(object):
         cur_dir = os.getcwd()  # 当前目录
         self.trans_botton.configure(text=self.i18n.t("converting_video"), state=tk.DISABLED)
         self.clear_log()
-        
+
         param = self.get_output_param()
-        
+
         # Validate input
         if not param["src_path"]:
             self.log("✗ Error: Please select a source video file!")
             self.trans_botton.configure(text=self.i18n.t("start_conversion"), state=tk.NORMAL)
             return
-        
+
         if not os.path.exists(param["src_path"]):
             self.log(f"✗ Error: Source file does not exist: {param['src_path']}")
             self.trans_botton.configure(text=self.i18n.t("start_conversion"), state=tk.NORMAL)
             return
-        
-        self.log(f"Starting video conversion...")
+
+        self.log("Starting video conversion...")
         self.log(f"Source: {os.path.basename(param['src_path'])}")
         self.log(f"Resolution: {param['width']}x{param['height']}")
         self.log(f"FPS: {param['fps']}")
         self.log(f"Quality: {param['quality']}")
         self.log(f"Format: {param['format']}")
-        
+
         cmd_resize = 'ffmpeg -y -i "%s" -vf scale=%s:%s "%s"'  # 缩放转化
         cmd_to_rgb = 'ffmpeg -y -i "%s" -vf "fps=%s,scale=-1:%s:flags=lanczos,crop=%s:in_h:(in_w-%s)/2:0" -c:v rawvideo -pix_fmt rgb565be -q:v %s "%s"'
         cmd_to_mjpeg = 'ffmpeg -y -i "%s" -vf "fps=%s,scale=-1:%s:flags=lanczos,crop=%s:in_h:(in_w-%s)/2:0" -q:v %s "%s"'
 
         name_suffix = os.path.basename(param["src_path"]).split(".")
         suffix = name_suffix[-1]  # 后缀名
-        video_cache_name = name_suffix[0] + "_" + param["width"] + "x" + param["height"] + "_cache." + suffix
+        video_cache_name = (
+            name_suffix[0] + "_" + param["width"] + "x" + param["height"] + "_cache." + suffix
+        )
         video_cache = os.path.join(cur_dir, ROOT_PATH, CACHE_PATH, video_cache_name)
-        
-        if param["format"] == 'rgb565be':
+
+        if param["format"] == "rgb565be":
             out_format_tail = ".rgb"
             trans_cmd = cmd_to_rgb
-        elif param["format"] == 'MJPEG':
+        elif param["format"] == "MJPEG":
             out_format_tail = ".mjpeg"
             trans_cmd = cmd_to_mjpeg
         else:
             out_format_tail = ".mjpeg"
             trans_cmd = cmd_to_mjpeg
-            
-        final_out = os.path.join(param["dst_path"],
-                                 name_suffix[0] + "_" + param["width"] + "x" + param["height"] + out_format_tail)
+
+        final_out = os.path.join(
+            param["dst_path"],
+            name_suffix[0] + "_" + param["width"] + "x" + param["height"] + out_format_tail,
+        )
 
         # Clean up previous files
         try:
@@ -285,8 +306,15 @@ class VideoTool(object):
             return
 
         # Step 2: Convert format
-        out_cmd = trans_cmd % (video_cache, param["fps"], param["height"],
-                               param["width"], param["width"], param["quality"], final_out)
+        out_cmd = trans_cmd % (
+            video_cache,
+            param["fps"],
+            param["height"],
+            param["width"],
+            param["width"],
+            param["quality"],
+            final_out,
+        )
         if not self.run_ffmpeg_command(out_cmd, f"Step 2: Converting to {param['format']}"):
             self.log("\n✗ Conversion failed at format conversion step!")
             self.trans_botton.configure(text=self.i18n.t("start_conversion"), state=tk.NORMAL)
@@ -300,11 +328,11 @@ class VideoTool(object):
         except Exception as err:
             self.log(f"Warning: Failed to remove cache file: {err}")
 
-        self.log("\n" + "="*60)
+        self.log("\n" + "=" * 60)
         self.log("✓ CONVERSION COMPLETED SUCCESSFULLY!")
         self.log(f"Output file: {final_out}")
-        self.log("="*60)
-        
+        self.log("=" * 60)
+
         self.trans_botton.configure(text=self.i18n.t("start_conversion"), state=tk.NORMAL)
 
     def init_options(self, father):
@@ -319,12 +347,16 @@ class VideoTool(object):
         self.m_radio_val = tk.IntVar()
         radio_frame = ctk.CTkFrame(father)
         ctk.CTkRadioButton(
-            radio_frame, variable=self.m_radio_val, value=0,
+            radio_frame,
+            variable=self.m_radio_val,
+            value=0,
             text=self.i18n.t("default_option"),
             command=self.radio_select,
         ).pack(side=tk.LEFT, padx=10, pady=5)
         ctk.CTkRadioButton(
-            radio_frame, variable=self.m_radio_val, value=1,
+            radio_frame,
+            variable=self.m_radio_val,
+            value=1,
             text=self.i18n.t("custom_option"),
             command=self.radio_select,
         ).pack(side=tk.RIGHT, padx=10, pady=5)
@@ -392,5 +424,5 @@ class VideoTool(object):
             "height": self.m_height_entry.get().strip(),
             "fps": self.m_fps_entry.get().strip(),
             "quality": self.m_quality_select.get().strip(),
-            "format": self.m_format_select.get().strip()
+            "format": self.m_format_select.get().strip(),
         }

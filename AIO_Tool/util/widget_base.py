@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
@@ -14,12 +13,24 @@ import customtkinter as ctk
 
 #: tk.Entry kwargs that ctk.CTkEntry does NOT accept — silently filtered out
 #: so existing call sites passing these don't have to be rewritten yet.
-_TK_ONLY_ENTRY_KWARGS: frozenset[str] = frozenset({
-    "highlightcolor", "highlightthickness", "highlightbackground",
-    "relief", "bd", "borderwidth", "bg", "fg", "selectbackground",
-    "selectforeground", "insertbackground", "disabledbackground",
-    "disabledforeground", "readonlybackground",
-})
+_TK_ONLY_ENTRY_KWARGS: frozenset[str] = frozenset(
+    {
+        "highlightcolor",
+        "highlightthickness",
+        "highlightbackground",
+        "relief",
+        "bd",
+        "borderwidth",
+        "bg",
+        "fg",
+        "selectbackground",
+        "selectforeground",
+        "insertbackground",
+        "disabledbackground",
+        "disabledforeground",
+        "readonlybackground",
+    }
+)
 
 
 def _sanitize_ctk_entry_kwargs(kwargs: dict[str, object]) -> dict[str, object]:

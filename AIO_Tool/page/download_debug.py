@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
@@ -18,7 +17,7 @@ from tkinter import filedialog, ttk
 import customtkinter as ctk
 import esptool  # pip install esptool>=4.1,<5
 import requests
-import serial   # pip install pyserial
+import serial  # pip install pyserial
 import serial.tools.list_ports  # noqa: F401  — submodule must be imported explicitly
 
 import util.common as common
@@ -31,7 +30,8 @@ logger = get_logger(__name__)
 # VERSION_INFO_URL = "https://gitee.com/ClimbSnailQ/HoloCubic_AIO/blob/main/AIO_Firmware_PIO/src/common.h"
 VERSION_INFO_URL = "http://climbsnail.cn:5001/holocubicAIO/sn/v1/version/firmware"
 
-class DownloadDebug(object):
+
+class DownloadDebug:
     """
     菜单栏类
     """
@@ -61,7 +61,8 @@ class DownloadDebug(object):
         self.connor_grid_frame = ctk.CTkFrame(self.__father)
         self.connor_grid_frame.place(x=self.__father.winfo_width() + 10, y=10)
         ctk.CTkLabel(
-            self.connor_grid_frame, text=self.i18n.t("serial_settings"),
+            self.connor_grid_frame,
+            text=self.i18n.t("serial_settings"),
             font=ctk.CTkFont(weight="bold"),
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.create_com(self.connor_grid_frame)
@@ -71,23 +72,29 @@ class DownloadDebug(object):
         cur_dir = os.getcwd()
         # Firmware download default values
         self.__pre_down_param_list = [
-            {"bin_addr": "0x1000", "bin_path": os.path.join(cur_dir, 'base_bin\\bootloader_qio_80m.bin'),
-             "placeholder": self.i18n.t("choose_bootloader")},
-
-            {"bin_addr": "0x8000", "bin_path": os.path.join(cur_dir, 'base_bin\\partitions.bin'),
-             "placeholder": self.i18n.t("choose_partitions")},
-
-            {"bin_addr": "0xe000", "bin_path": os.path.join(cur_dir, 'base_bin\\boot_app0.bin'),
-             "placeholder": self.i18n.t("choose_boot_app0")},
-
-            {"bin_addr": "0x10000", "bin_path": "",
-             "placeholder": self.i18n.t("choose_firmware")}
+            {
+                "bin_addr": "0x1000",
+                "bin_path": os.path.join(cur_dir, "base_bin\\bootloader_qio_80m.bin"),
+                "placeholder": self.i18n.t("choose_bootloader"),
+            },
+            {
+                "bin_addr": "0x8000",
+                "bin_path": os.path.join(cur_dir, "base_bin\\partitions.bin"),
+                "placeholder": self.i18n.t("choose_partitions"),
+            },
+            {
+                "bin_addr": "0xe000",
+                "bin_path": os.path.join(cur_dir, "base_bin\\boot_app0.bin"),
+                "placeholder": self.i18n.t("choose_boot_app0"),
+            },
+            {"bin_addr": "0x10000", "bin_path": "", "placeholder": self.i18n.t("choose_firmware")},
         ]
         # Firmware flash section
         self.connor_firmware_frame = ctk.CTkFrame(self.__father)
         self.connor_firmware_frame.place(x=200, y=10)
         ctk.CTkLabel(
-            self.connor_firmware_frame, text=self.i18n.t("firmware_flash"),
+            self.connor_firmware_frame,
+            text=self.i18n.t("firmware_flash"),
             font=ctk.CTkFont(weight="bold"),
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.connor_firmware_frame.update()
@@ -97,7 +104,8 @@ class DownloadDebug(object):
         self.connor_log_frame = ctk.CTkFrame(self.__father)
         self.connor_log_frame.place(x=685, y=10)
         ctk.CTkLabel(
-            self.connor_log_frame, text=self.i18n.t("operation_log"),
+            self.connor_log_frame,
+            text=self.i18n.t("operation_log"),
             font=ctk.CTkFont(weight="bold"),
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.connor_log_frame.update()
@@ -107,13 +115,14 @@ class DownloadDebug(object):
         self.connor_info_frame = ctk.CTkFrame(self.__father)
         self.connor_info_frame.place(x=self.__father.winfo_width() + 10, y=240)
         ctk.CTkLabel(
-            self.connor_info_frame, text=self.i18n.t("serial_receive"),
+            self.connor_info_frame,
+            text=self.i18n.t("serial_receive"),
             font=ctk.CTkFont(weight="bold"),
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.connor_info_frame.update()
         self.init_serial_receive(self.connor_info_frame)
 
-        self.display_version();
+        self.display_version()
         self.get_version_thread = threading.Thread(target=self.display_version)
         self.get_version_thread.start()
 
@@ -133,8 +142,8 @@ class DownloadDebug(object):
 
         version_text = self.i18n.t("unknown")
         try:
-            response = requests.get(VERSION_INFO_URL, timeout=3) # , verify=False
-            version_info = re.findall(r'AIO_VERSION v\d{1,2}\.\d{1,2}\.\d{1,2}', response.text)
+            response = requests.get(VERSION_INFO_URL, timeout=3)  # , verify=False
+            version_info = re.findall(r"AIO_VERSION v\d{1,2}\.\d{1,2}\.\d{1,2}", response.text)
             if version_info:
                 version_text = version_info[0].split(" ")[1]
         except Exception as err:
@@ -168,15 +177,19 @@ class DownloadDebug(object):
             self.__firmware_enable_val[pos] = tk.IntVar()
             self.__firmware_enable_val[pos].set(1)
             self.__firmware_enable[pos] = ctk.CTkCheckBox(
-                firmware_frame[pos], text="",
+                firmware_frame[pos],
+                text="",
                 variable=self.__firmware_enable_val[pos],
-                onvalue=1, offvalue=0, width=24,
+                onvalue=1,
+                offvalue=0,
+                width=24,
             )
             self.__firmware_enable[pos].pack(side=tk.LEFT)
             # 地址輸入框 (width=9 chars ≈ 75 px)
             self.__firmware_addr_val[pos] = tk.StringVar()
             self.__firmware_addr_entry[pos] = ctk.CTkEntry(
-                firmware_frame[pos], width=75,
+                firmware_frame[pos],
+                width=75,
                 textvariable=self.__firmware_addr_val[pos],
             )
             self.__firmware_addr_val[pos].set(self.__pre_down_param_list[pos]["bin_addr"])
@@ -184,7 +197,8 @@ class DownloadDebug(object):
             # 路徑輸入框 (width=40 chars ≈ 320 px)
             self.__firmware_path_val[pos] = tk.StringVar()
             self.__firmware_path_entry[pos] = EntryWithPlaceholder(
-                firmware_frame[pos], width=320,
+                firmware_frame[pos],
+                width=320,
                 placeholder=self.__pre_down_param_list[pos]["placeholder"],
                 placeholder_color="grey",
                 textvariable=self.__firmware_path_val[pos],
@@ -193,9 +207,11 @@ class DownloadDebug(object):
             self.__firmware_path_entry[pos].pack(side=tk.LEFT, padx=border_padx)
             # 選擇按鈕
             self.__firmware_choose_botton[pos] = ctk.CTkButton(
-                firmware_frame[pos], text=self.i18n.t("select_button"),
+                firmware_frame[pos],
+                text=self.i18n.t("select_button"),
                 command=lambda: self.choose_file(pos.copy()),
-                width=60, height=28,
+                width=60,
+                height=28,
             )
             self.__firmware_choose_botton[pos].pack(side=tk.RIGHT, fill=tk.X, padx=5)
             firmware_frame[pos].pack(side=tk.TOP, pady=border_pady)
@@ -205,7 +221,7 @@ class DownloadDebug(object):
         self.__firmware_choose_botton[1].configure(command=lambda: self.choose_file(1))
         self.__firmware_choose_botton[2].configure(command=lambda: self.choose_file(2))
         self.__firmware_choose_botton[3].configure(command=lambda: self.choose_file(3))
-        
+
         # version_info_frame = tk.Frame(father, bg=father["bg"])
         # 版本信息
         # version_text = tk.Label(version_info_frame, text="AIO最新版本", bg=version_info_frame['bg'])
@@ -222,28 +238,37 @@ class DownloadDebug(object):
         botton_group_frame = ctk.CTkFrame(father, fg_color="transparent")
 
         version_text = ctk.CTkLabel(
-            botton_group_frame, text=self.i18n.t("aio_latest_version"),
+            botton_group_frame,
+            text=self.i18n.t("aio_latest_version"),
         )
         version_text.pack(side=tk.LEFT)
         # 版本資訊輸入框
         self.m_version_var = tk.StringVar()
         self.m_version_info = EntryWithPlaceholder(
-            botton_group_frame, width=60,
-            placeholder=self.i18n.t("unknown"), placeholder_color="grey",
+            botton_group_frame,
+            width=60,
+            placeholder=self.i18n.t("unknown"),
+            placeholder_color="grey",
             textvariable=self.m_version_var,
         )
         self.m_version_info.pack(side=tk.LEFT, padx=5)
 
         # 清空按鈕
         self.m_clean_flash_botton = ctk.CTkButton(
-            botton_group_frame, text=self.i18n.t("clear_chip"),
-            command=self.clean_flash, width=80, height=28,
+            botton_group_frame,
+            text=self.i18n.t("clear_chip"),
+            command=self.clean_flash,
+            width=80,
+            height=28,
         )
         self.m_clean_flash_botton.pack(side=tk.LEFT, fill=tk.X, padx=border_padx)
         # 下載按鈕
         self.m_download_botton = ctk.CTkButton(
-            botton_group_frame, text=self.i18n.t("flash_firmware"),
-            command=self.down_and_canle, width=80, height=28,
+            botton_group_frame,
+            text=self.i18n.t("flash_firmware"),
+            command=self.down_and_canle,
+            width=80,
+            height=28,
         )
         self.m_download_botton.pack(side=tk.RIGHT, fill=tk.X, padx=0)
         botton_group_frame.pack(side=tk.TOP, pady=5)
@@ -251,12 +276,20 @@ class DownloadDebug(object):
         # 進度條（保留 tk.Canvas — 自繪矩形 fill）
         progress_frame = ctk.CTkFrame(father, fg_color="transparent")
         self.progress_bar = tk.Canvas(
-            progress_frame, width=450, height=15, bg="white",
-            highlightthickness=0, borderwidth=0,
+            progress_frame,
+            width=450,
+            height=15,
+            bg="white",
+            highlightthickness=0,
+            borderwidth=0,
         )
         # 进度条的矩形框
-        self.progress_bar_circle = self.progress_bar.create_rectangle(3, 3, 450, 14, outline="green", width=1)
-        self.progress_bar_fill = self.progress_bar.create_rectangle(3, 3, 20, 14, outline="", width=1, fill="green")
+        self.progress_bar_circle = self.progress_bar.create_rectangle(
+            3, 3, 450, 14, outline="green", width=1
+        )
+        self.progress_bar_fill = self.progress_bar.create_rectangle(
+            3, 3, 20, 14, outline="", width=1, fill="green"
+        )
         self.progress_bar.coords(self.progress_bar_fill, (3, 3, 0, 25))
         self.progress_bar.pack(side=tk.TOP, pady=0)
         progress_frame.pack(side=tk.TOP, pady=0)
@@ -299,7 +332,8 @@ class DownloadDebug(object):
         filepath = filedialog.askopenfilename(
             title=self.i18n.t("select_bin_file"),
             defaultextension=".espace",
-            filetypes=[('BIN', '.bin .Bin')])
+            filetypes=[("BIN", ".bin .Bin")],
+        )
         if filepath == None or filepath == "":
             return None
         else:
@@ -310,6 +344,7 @@ class DownloadDebug(object):
         """
         擦除闪存
         """
+
         def clean_func():
             self.m_clean_flash_botton["text"] = "清空中"
             self.m_connect_button["state"] = tk.DISABLED
@@ -322,7 +357,7 @@ class DownloadDebug(object):
             # esptool.py erase_region 0x20000 0x4000
             # esptool.py erase_flash
             select_com = self.m_com_select.get().strip()
-            cmd = ['--port', select_com, 'erase_flash']
+            cmd = ["--port", select_com, "erase_flash"]
             # cmd = ['erase_flash']
             esptool.main(cmd)
             self.print_log("清空芯片成功！")
@@ -335,7 +370,9 @@ class DownloadDebug(object):
             self.__father.update()
 
         if self.m_clean_flash_botton["text"] == "清空芯片":
-            self.clean_flash_thread = threading.Thread(target=clean_func,)
+            self.clean_flash_thread = threading.Thread(
+                target=clean_func,
+            )
             self.clean_flash_thread.start()
         else:
             # 杀线程
@@ -399,11 +436,17 @@ class DownloadDebug(object):
             self.canle_download_firmware()
             return None
 
-        cmd = ['--port', param["port"],
-               '--baud', param["baud"],
-               '--after', 'hard_reset',
-               'write_flash', '-fs', '4MB'
-               ]
+        cmd = [
+            "--port",
+            param["port"],
+            "--baud",
+            param["baud"],
+            "--after",
+            "hard_reset",
+            "write_flash",
+            "-fs",
+            "4MB",
+        ]
 
         all_time = 0  # 粗略认为连接并复位芯片需要0.5s钟
         speed = int(param["baud"])
@@ -421,17 +464,21 @@ class DownloadDebug(object):
                 logger.error("estimate flash time failed for %s: %s", value, err)
 
         self._progress_stop_event.clear()
-        self.progress_bar_thread = threading.Thread(target=self.schedule_display,
-                                                    args=(all_time, 0.1,),
-                                                    daemon=True)
+        self.progress_bar_thread = threading.Thread(
+            target=self.schedule_display,
+            args=(
+                all_time,
+                0.1,
+            ),
+            daemon=True,
+        )
         # 进度条进程要在下载进程之前启动（为了在下载失败时可以立即查杀进度条进程）
-        self.download_thread = threading.Thread(target=self.down_action,
-                                                args=(cmd,))
+        self.download_thread = threading.Thread(target=self.down_action, args=(cmd,))
         self.progress_bar_thread.start()
         self.download_thread.start()
 
     def down_action(self, cmd):
-        cmd_str = ' '.join(cmd)
+        cmd_str = " ".join(cmd)
         self.print_log("-" * 15)
         self.print_log(cmd_str)
         self.print_log("-" * 15)
@@ -474,18 +521,24 @@ class DownloadDebug(object):
         self.m_log_scrollbar = ctk.CTkScrollbar(father, orientation="vertical")
         # tk.Text — CTkTextbox 不支援 font tag，這裡保留原生
         self.m_log = tk.Text(
-            father, width=info_width, height=info_height,
+            father,
+            width=info_width,
+            height=info_height,
             yscrollcommand=self.m_log_scrollbar.set,
             state=tk.DISABLED,
-            borderwidth=0, highlightthickness=0,
+            borderwidth=0,
+            highlightthickness=0,
         )
         self.m_log_scrollbar.configure(command=self.m_log.yview)
         self.m_log.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)
 
         # 清空按鈕
         m_clear = ctk.CTkButton(
-            father, text="X", command=self.clear_log,
-            width=24, height=24,
+            father,
+            text="X",
+            command=self.clear_log,
+            width=24,
+            height=24,
         )
         m_clear.pack(side=tk.BOTTOM, fill=tk.X, pady=1)
 
@@ -515,18 +568,24 @@ class DownloadDebug(object):
         self.m_scrollbar = ctk.CTkScrollbar(father, orientation="vertical")
         # tk.Text — 保留原生支援 yview_moveto
         self.m_msg = tk.Text(
-            father, width=info_width, height=info_height,
+            father,
+            width=info_width,
+            height=info_height,
             yscrollcommand=self.m_scrollbar.set,
             state=tk.DISABLED,
-            borderwidth=0, highlightthickness=0,
+            borderwidth=0,
+            highlightthickness=0,
         )
         self.m_scrollbar.configure(command=self.m_msg.yview)
         self.m_msg.pack(side=tk.LEFT, fill=tk.Y, padx=3, pady=3)
 
         # 清空按鈕
         self.m_clear = ctk.CTkButton(
-            father, text="X", command=self.clear_msg,
-            width=24, height=24,
+            father,
+            text="X",
+            command=self.clear_msg,
+            width=24,
+            height=24,
         )
         self.m_clear.pack(side=tk.BOTTOM, fill=tk.X, pady=1)
 
@@ -572,8 +631,15 @@ class DownloadDebug(object):
         self.m_baud_label.pack(side=tk.LEFT, padx=border_padx)
         self.m_baud_select = ttk.Combobox(baud_frame, width=8, state="readonly")
         self.m_baud_select["value"] = (
-            "9600", "38400", "57600", "115200",
-            "230400", "460800", "576000", "921600", "1152000",
+            "9600",
+            "38400",
+            "57600",
+            "115200",
+            "230400",
+            "460800",
+            "576000",
+            "921600",
+            "1152000",
         )
         self.m_baud_select.current(7)
         self.m_baud_select.pack(side=tk.RIGHT, padx=border_padx)
@@ -595,8 +661,10 @@ class DownloadDebug(object):
         self.m_check_bit_label.pack(side=tk.LEFT, padx=border_padx)
         self.m_check_bit_select = ttk.Combobox(check_bit_frame, width=8, state="readonly")
         self.m_check_bit_select["value"] = (
-            self.i18n.t("no_check"), self.i18n.t("odd_check"),
-            self.i18n.t("even_check"), self.i18n.t("zero_check"),
+            self.i18n.t("no_check"),
+            self.i18n.t("odd_check"),
+            self.i18n.t("even_check"),
+            self.i18n.t("zero_check"),
             self.i18n.t("one_check"),
         )
         self.m_check_bit_select.current(0)
@@ -609,7 +677,9 @@ class DownloadDebug(object):
         self.m_stop_bit_label.pack(side=tk.LEFT, padx=border_padx)
         self.m_stop_bit_select = ttk.Combobox(stop_bit_frame, width=8, state="readonly")
         self.m_stop_bit_select["value"] = (
-            self.i18n.t("one_bit"), self.i18n.t("one_half_bit"), self.i18n.t("two_bit"),
+            self.i18n.t("one_bit"),
+            self.i18n.t("one_half_bit"),
+            self.i18n.t("two_bit"),
         )
         self.m_stop_bit_select.current(0)
         self.m_stop_bit_select.pack(side=tk.RIGHT, padx=border_padx)
@@ -618,13 +688,19 @@ class DownloadDebug(object):
         # Buttons
         botton_frame = ctk.CTkFrame(father, fg_color="transparent")
         self.m_connect_button = ctk.CTkButton(
-            botton_frame, text=self.i18n.t("open_serial"),
-            command=self.com_connect, width=120, height=28,
+            botton_frame,
+            text=self.i18n.t("open_serial"),
+            command=self.com_connect,
+            width=120,
+            height=28,
         )
         self.m_connect_button.pack(side=tk.LEFT, fill=tk.X, padx=5)
         self.m_reboot_button = ctk.CTkButton(
-            botton_frame, text=self.i18n.t("reboot"),
-            command=self.esp_reset, width=80, height=28,
+            botton_frame,
+            text=self.i18n.t("reboot"),
+            command=self.esp_reset,
+            width=80,
+            height=28,
         )
         self.m_reboot_button.pack(side=tk.RIGHT, fill=tk.X, padx=5)
         self.m_reboot_button.configure(state=tk.NORMAL)
@@ -652,7 +728,6 @@ class DownloadDebug(object):
 
     def com_connect(self):
         if self.m_connect_button["text"] == self.i18n.t("open_serial"):
-
             down_flag, param = self.get_download_param()
             if self.ser != None:
                 self.ser.close()
@@ -662,7 +737,9 @@ class DownloadDebug(object):
             if self.ser.is_open:
                 self._serial_stop_event.clear()
                 self.receive_thread = threading.Thread(
-                    target=self.read_data, args=(self.ser,), daemon=True,
+                    target=self.read_data,
+                    args=(self.ser,),
+                    daemon=True,
                 )
                 self.receive_thread.start()
 
@@ -711,7 +788,7 @@ class DownloadDebug(object):
                 except Exception as err:
                     logger.debug("read_data ignored: %s", err)
             time.sleep(0.1)
-                
+
     def get_download_param(self):
         """
         获取下载参数
@@ -721,7 +798,11 @@ class DownloadDebug(object):
         for pos in range(firmware_num):
             firmware_addr = self.__firmware_addr_val[pos].get().strip()
             firmware_path = self.__firmware_path_entry[pos].get().strip()
-            if self.__firmware_enable_val[pos].get() == 1 and firmware_addr != "" and firmware_path != "":
+            if (
+                self.__firmware_enable_val[pos].get() == 1
+                and firmware_addr != ""
+                and firmware_path != ""
+            ):
                 data_map[firmware_addr] = firmware_path
 
         if data_map == {}:  # 无下载内容
@@ -748,7 +829,7 @@ class DownloadDebug(object):
         down_flag, param = self.get_download_param()
         self.print_log("已发送重启指令！")
         self.__father.update()
-        
+
         port = serial.Serial(param["port"], param["baud"], timeout=10)
 
         port.setDTR(False)  # IO0=HIGH

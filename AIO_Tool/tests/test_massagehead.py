@@ -101,7 +101,11 @@ class TestMsgHeadWireFormat:
     def test_dir_returns_wire_order_field_names(self) -> None:
         m = MsgHead()
         assert m.__dir__() == [
-            "header_mark", "msg_len", "from_who", "to_who", "action_type",
+            "header_mark",
+            "msg_len",
+            "from_who",
+            "to_who",
+            "action_type",
         ]
 
 
@@ -126,8 +130,12 @@ class TestSettingMsg:
     def test_decode_extracts_left_info(self) -> None:
         # Build a synthetic 7-byte header + payload, decode it
         header = struct.pack(
-            "!HHBBB", 8995, 14, int(MT.MODULE_TYPE_TOOL_SETTINGS),
-            int(MT.MODULE_TYPE_CUBIC_SETTINGS), int(AT.AT_SETTING_GET),
+            "!HHBBB",
+            8995,
+            14,
+            int(MT.MODULE_TYPE_TOOL_SETTINGS),
+            int(MT.MODULE_TYPE_CUBIC_SETTINGS),
+            int(AT.AT_SETTING_GET),
         )
         payload = b"a\x00b\x00c\x00d\r\n"
         msg = SettingMsg()

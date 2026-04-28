@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
@@ -37,14 +36,17 @@ class Helper:
         wrapper = ctk.CTkFrame(father, fg_color="transparent")
         wrapper.pack(fill="both", expand=True, padx=8, pady=8)
 
-        self.m_project_info = tk.Text(wrapper, height=45, width=140, wrap="word",
-                                       borderwidth=0, highlightthickness=0)
+        self.m_project_info = tk.Text(
+            wrapper, height=45, width=140, wrap="word", borderwidth=0, highlightthickness=0
+        )
         self.m_project_info.tag_configure(
-            "bold_italics", font=("Arial", 12, "bold", "italic"),
+            "bold_italics",
+            font=("Arial", 12, "bold", "italic"),
         )
         self.m_project_info.tag_configure("big", font=("Verdana", 16, "bold"))
         self.m_project_info.tag_configure(
-            "color", foreground="#476042",
+            "color",
+            foreground="#476042",
             font=("Tempus Sans ITC", 12, "bold"),
         )
 

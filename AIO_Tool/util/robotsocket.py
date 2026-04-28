@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
@@ -97,7 +96,7 @@ class RobotSocketServer(RobotSocket):
             while not self._stop_event.is_set():
                 try:
                     connfd, addr = self.__sersocket.accept()
-                except socket.timeout:
+                except TimeoutError:
                     continue
                 except OSError as err:
                     if self._stop_event.is_set():
@@ -123,7 +122,7 @@ class RobotSocketServer(RobotSocket):
             while not self._stop_event.is_set():
                 try:
                     recv = connfd.recv(self.__recv_buff)
-                except socket.timeout:
+                except TimeoutError:
                     continue
                 if recv == b"":
                     break
@@ -219,7 +218,8 @@ class RobotSocketClient(RobotSocket):
                             except OSError:
                                 pass
                         self.__clientsocket = socket.socket(
-                            socket.AF_INET, socket.SOCK_STREAM,
+                            socket.AF_INET,
+                            socket.SOCK_STREAM,
                         )
                         self.__clientsocket.settimeout(_RECV_TIMEOUT_SEC)
                         self.__clientsocket.connect(addr)
@@ -245,7 +245,7 @@ class RobotSocketClient(RobotSocket):
                 continue
             try:
                 recv = self.__clientsocket.recv(self.__recv_buff)
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except Exception as err:
                 if self.__clientsocket is not None:
@@ -304,7 +304,6 @@ if __name__ == "__main__":
         sersocket.send_to_client(dat, addr)
         dat = ("Server recv %s from %s\n" % (dat, addr)).encode(encoding="utf-8")
         logger.info("server demo received: %s", dat)
-
 
     # 初始化端口并设置接收数据的函数(当接收到数据，自动被调用)
     sersocket = RobotSocketServer("192.168.123.244", 6666, myRecvHandle, max_bind=10)

@@ -104,26 +104,37 @@ class TestTranslation:
 
 class TestRobustness:
     def test_invalid_json_returns_empty_dict(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """A malformed JSON file should not crash the loader."""
         bad = tmp_path / "broken.json"
         bad.write_text("{not valid json", encoding="utf-8")
-        result = i18n_mod._load_translation.__wrapped__ if hasattr(
-            i18n_mod._load_translation, "__wrapped__",
-        ) else i18n_mod._load_translation
+        result = (
+            i18n_mod._load_translation.__wrapped__
+            if hasattr(
+                i18n_mod._load_translation,
+                "__wrapped__",
+            )
+            else i18n_mod._load_translation
+        )
         # Patch the dir to point at our tmp dir
         monkeypatch.setattr(i18n_mod, "_i18n_dir", lambda: tmp_path)
         assert result("broken") == {}
 
     def test_missing_file_returns_empty_dict(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         monkeypatch.setattr(i18n_mod, "_i18n_dir", lambda: tmp_path)
         assert i18n_mod._load_translation("nonexistent") == {}
 
     def test_non_object_json_returns_empty_dict(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         # JSON arrays / scalars are not valid translation tables
         bad = tmp_path / "list.json"

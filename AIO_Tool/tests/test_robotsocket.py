@@ -57,8 +57,7 @@ class TestRobotSocketClient:
         # Connect to a port nothing is listening on — client will keep retrying.
         # stop() must still tear it down promptly.
         port = _free_port()
-        client = RobotSocketClient("127.0.0.1", port, callback_func=lambda d: None,
-                                   disconntime=0.1)
+        client = RobotSocketClient("127.0.0.1", port, callback_func=lambda d: None, disconntime=0.1)
         client.start()
         time.sleep(0.2)
 

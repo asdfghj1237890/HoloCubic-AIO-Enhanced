@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Internationalization (i18n) module for HoloCubic AIO Tool
@@ -61,11 +60,11 @@ class I18n:
     #: Translations are loaded lazily into this dict by ``__new__``.
     TRANSLATIONS: dict[str, dict[str, str]] = {}
 
-    _instance: "I18n | None" = None
+    _instance: I18n | None = None
     _current_language: str = LANG_ZH_CN
     _config_file: str = "tool_config.json"
 
-    def __new__(cls) -> "I18n":
+    def __new__(cls) -> I18n:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._load_all_translations()

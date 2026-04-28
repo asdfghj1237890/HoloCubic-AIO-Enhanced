@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
@@ -8,14 +7,15 @@
 #
 ################################################################################
 
-from pathlib import Path
-from util.logger import get_logger
 import binascii
 import ctypes
 import inspect
 import re
 import sys
 import threading
+from pathlib import Path
+
+from util.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -38,15 +38,16 @@ CACHE_PATH: str = "Cache"
 
 # 字节序定义
 byteOrders: dict[str, str] = {
-    'Native order': '@',  # 本机（默认）
-    'Native standard': '=',  # 本机
-    'Little-endian': '<',  # 小端
-    'Big-endian': '>',  # 大端
-    'Network order': '!',  # network(大端)
+    "Native order": "@",  # 本机（默认）
+    "Native standard": "=",  # 本机
+    "Little-endian": "<",  # 小端
+    "Big-endian": ">",  # 大端
+    "Network order": "!",  # network(大端)
 }
 
 
 # 关于struct格式串字节大小 https://blog.csdn.net/qq_30638831/article/details/80421019
+
 
 def getSendInfo(info: bytes) -> str:
     """
@@ -56,8 +57,8 @@ def getSendInfo(info: bytes) -> str:
     """
     info = binascii.hexlify(info)
     logger.debug("send info: %s", info)
-    re_obj = re.compile('.{1,2}')  # 匹配任意字符1-2次
-    t = ' '.join(re_obj.findall(str(info).upper()))
+    re_obj = re.compile(".{1,2}")  # 匹配任意字符1-2次
+    t = " ".join(re_obj.findall(str(info).upper()))
     return t
 
 

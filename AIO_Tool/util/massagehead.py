@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
+import struct
 from ctypes import Array, Structure, c_byte, c_char_p, c_uint, cast
 from enum import IntEnum
+
 from util.logger import get_logger
-import struct
 
 logger = get_logger(__name__)
 
@@ -120,7 +120,11 @@ class MsgHead:
     HEADER_FMT: str = "1H1H1B1B1B"
     #: Field names in wire order (subclasses override to append payload fields)
     _FIELD_ORDER: tuple[str, ...] = (
-        "header_mark", "msg_len", "from_who", "to_who", "action_type",
+        "header_mark",
+        "msg_len",
+        "from_who",
+        "to_who",
+        "action_type",
     )
 
     def __init__(
@@ -144,7 +148,8 @@ class MsgHead:
     def decode(self, network_data: bytes, byteOrder: str = "!") -> int:
         """Decode bytes into instance attributes. Returns bytes consumed."""
         members = [
-            attr for attr in self.__dir__()
+            attr
+            for attr in self.__dir__()
             if not callable(getattr(self, attr))
             and not attr.startswith("__")
             and not attr.startswith("fmt")
@@ -187,10 +192,14 @@ class SettingMsg(MsgHead):
 
     def encode(self, byteOrder: str = "=") -> bytes:
         info = (
-            self.prefs_name + b"\x00"
-            + self.key + b"\x00"
-            + self.type + b"\x00"
-            + self.value + b"\r\n"
+            self.prefs_name
+            + b"\x00"
+            + self.key
+            + b"\x00"
+            + self.type
+            + b"\x00"
+            + self.value
+            + b"\r\n"
         )
         self.msg_len = struct.Struct(self.fmt).size + len(info)
         return super().encode(byteOrder) + info

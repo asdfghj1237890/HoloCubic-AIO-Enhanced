@@ -1,43 +1,41 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
+import os
+import re
+import tkinter as tk
+from tkinter import ttk
+
+import customtkinter as ctk
+import requests
+
+import util.massagehead as mh
+import util.tkutils as tku
+from page.download_debug import DownloadDebug
+from page.filemanager import FileManager
+from page.help import Helper
+from page.images_converter import ImagesConverter
+from page.setting import Setting
+from page.tool_settings import ToolSettings
+from page.videotool import VideoTool
 from util.common import (
     TOOL_VERSION,
     TOOL_VERSION_INFO_URL,
     get_resource_path,
 )
-import util.massagehead as mh
-from page.videotool import VideoTool
-from page.download_debug import DownloadDebug
-from page.setting import Setting
-from page.help import Helper
-from page.images_converter import ImagesConverter 
-from page.filemanager import FileManager
-from page.tool_settings import ToolSettings
 from util.i18n import get_i18n
-from util.logger import setup_logging, get_logger
-
-import os
-import sys
-import tkinter as tk
-import customtkinter as ctk
-import util.tkutils as tku
-from tkinter import ttk
-from tkinter import messagebox
-import requests
-import re
+from util.logger import get_logger, setup_logging
 
 logger = get_logger(__name__)
 
 
-class Engine(object):
+class Engine:
     """
     引擎
     """
@@ -52,15 +50,15 @@ class Engine(object):
         icon_path = get_resource_path("image/holo_256.ico")
         if os.path.exists(icon_path):
             self.root.iconbitmap(icon_path)
-        
+
         # Initialize i18n
         self.i18n = get_i18n()
-        
+
         # Create output directory for file conversion
         try:
             dir_path = os.path.join("OutFile", "Cache")
             os.makedirs(dir_path)
-        except Exception as e:
+        except Exception:
             pass
 
         self.width = 700
@@ -109,7 +107,7 @@ class Engine(object):
         self.m_tool_settings_tab_windows = ToolSettings(self.m_tool_settings_tab, self)
 
         self.m_tab_manager.pack(expand=True, fill=tk.BOTH)
-    
+
     def OnThreadMessage(self, fromwho: str, towho: str, action: str, param: object = None) -> None:
         """
         引擎調度函數，各模組透過此函數間接操作或取得其他模組的資源。
@@ -118,7 +116,9 @@ class Engine(object):
         :param action:  操作類型
         :param param:   操作參數
         """
-        logger.debug("OnThreadMessage from=%s to=%s action=%s param=%s", fromwho, towho, action, param)
+        logger.debug(
+            "OnThreadMessage from=%s to=%s action=%s param=%s", fromwho, towho, action, param
+        )
 
         if towho == mh.M_DOWNLOAD_DEBUG:
             self.m_debug_tab_windows.api(action, param)
@@ -127,8 +127,11 @@ class Engine(object):
             self.m_setting_tab_windows.api(action, param)
 
         elif towho == mh.M_ENGINE and action == mh.A_UPDATALANG:
-            for page in [self.m_debug_tab_windows, self.m_setting_tab_windows,
-                         self.m_tool_settings_tab_windows]:
+            for page in [
+                self.m_debug_tab_windows,
+                self.m_setting_tab_windows,
+                self.m_tool_settings_tab_windows,
+            ]:
                 if hasattr(page, "api"):
                     page.api(mh.A_UPDATALANG)
 
@@ -152,7 +155,7 @@ class Engine(object):
         if self.m_setting_tab_windows != None:
             del self.m_setting_tab_windows
             self.m_setting_tab_windows = None
-        
+
         if self.m_tool_settings_tab_windows != None:
             del self.m_tool_settings_tab_windows
             self.m_tool_settings_tab_windows = None
@@ -168,15 +171,16 @@ class Engine(object):
             self.m_file_tab_windows.__del__()
             del self.m_file_tab_windows
             self.m_file_tab_windows = None
-        
+
         if self.m_tool_settings_tab_windows != None:
             del self.m_tool_settings_tab_windows
             self.m_tool_settings_tab_windows = None
 
+
 def get_version():
     try:
         response = requests.get(TOOL_VERSION_INFO_URL, timeout=3)
-        new_version_info = re.findall(r'AIO_TOOL_VERSION v\d{1,2}\.\d{1,2}\.\d{1,2}', response.text)
+        new_version_info = re.findall(r"AIO_TOOL_VERSION v\d{1,2}\.\d{1,2}\.\d{1,2}", response.text)
         new_version = new_version_info[0].split(" ")[1]
         if TOOL_VERSION == new_version:
             return "[已是最新版本]"
@@ -187,7 +191,7 @@ def get_version():
         return "[无法获取到最新版本]"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import threading
 
     setup_logging()
@@ -200,16 +204,16 @@ if __name__ == '__main__':
 
     tool_windows = ctk.CTk()
     tool_windows.title("HoloCubic_AIO Tools\t  " + TOOL_VERSION)
-    tool_windows.geometry('1000x655+10+10')
+    tool_windows.geometry("1000x655+10+10")
     tool_windows.resizable(False, False)
     engine = Engine(tool_windows)
     tku.center_window(tool_windows)
 
     def _fetch_version() -> None:
         hint = get_version()
-        tool_windows.after(0, lambda: tool_windows.title(
-            f"HoloCubic_AIO Tools\t  {TOOL_VERSION} {hint}"
-        ))
+        tool_windows.after(
+            0, lambda: tool_windows.title(f"HoloCubic_AIO Tools\t  {TOOL_VERSION} {hint}")
+        )
 
     threading.Thread(target=_fetch_version, daemon=True).start()
     tool_windows.mainloop()

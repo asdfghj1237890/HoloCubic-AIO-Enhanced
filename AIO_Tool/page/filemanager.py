@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
@@ -28,7 +27,7 @@ logger = get_logger(__name__)
 # FileObj {"type":"file", "name":"Filore_1", "path":"", "sub_file":[]}
 
 
-class FileManager(object):
+class FileManager:
     """
     菜单栏类
     """
@@ -120,9 +119,13 @@ class FileManager(object):
 
         # Create folder operation menu
         self.__folder_op_menu = tk.Menu(father, tearoff=0)
-        self.__folder_op_menu.add_command(label=self.i18n.t("upload_file"), command=op_folder_upload_file)
+        self.__folder_op_menu.add_command(
+            label=self.i18n.t("upload_file"), command=op_folder_upload_file
+        )
         self.__folder_op_menu.add_separator()
-        self.__folder_op_menu.add_command(label=self.i18n.t("new_folder"), command=op_folder_create_subfolder)
+        self.__folder_op_menu.add_command(
+            label=self.i18n.t("new_folder"), command=op_folder_create_subfolder
+        )
         self.__folder_op_menu.add_separator()
         self.__folder_op_menu.add_command(label=self.i18n.t("rename"), command=op_folder_rename)
         self.__folder_op_menu.add_separator()
@@ -146,8 +149,11 @@ class FileManager(object):
         self.m_ip_entry.insert(tk.END, "本功能目前不可用")
         # Connect button
         self.conn_botton = ctk.CTkButton(
-            ip_frame, text=self.i18n.t("connect"),
-            command=self.connect_holocubic, width=80, height=28,
+            ip_frame,
+            text=self.i18n.t("connect"),
+            command=self.connect_holocubic,
+            width=80,
+            height=28,
         )
         self.conn_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5)
 
@@ -183,8 +189,8 @@ class FileManager(object):
                 logger.debug("AT_DIR_LIST")
                 msg = DirList()
                 msg.decode(dat)
-                dir_path = msg.dir_path.decode('utf-8').strip(b'\x00'.decode())
-                sub_file_list = msg.dir_info.decode('utf-8').split('\t')[:-1]
+                dir_path = msg.dir_path.decode("utf-8").strip(b"\x00".decode())
+                sub_file_list = msg.dir_info.decode("utf-8").split("\t")[:-1]
                 logger.debug("dir_path len: %s", len(dir_path))
                 logger.debug("DirList info: %s", dir_path)
                 logger.debug("DirList info: %s", sub_file_list)
@@ -254,15 +260,22 @@ class FileManager(object):
         path_tree_frame = ctk.CTkFrame(father, fg_color="transparent")
 
         self.tree = ttk.Treeview(
-            path_tree_frame, show="tree", selectmode="browse", height=28,
+            path_tree_frame,
+            show="tree",
+            selectmode="browse",
+            height=28,
         )
         tree_y_scroll_bar = ctk.CTkScrollbar(
-            path_tree_frame, command=self.tree.yview, orientation="vertical",
+            path_tree_frame,
+            command=self.tree.yview,
+            orientation="vertical",
         )
         tree_y_scroll_bar.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree["yscrollcommand"] = tree_y_scroll_bar.set
         tree_x_scroll_bar = ctk.CTkScrollbar(
-            path_tree_frame, command=self.tree.xview, orientation="horizontal",
+            path_tree_frame,
+            command=self.tree.xview,
+            orientation="horizontal",
         )
         tree_x_scroll_bar.pack(side=tk.BOTTOM, fill=tk.X)
         self.tree["xscrollcommand"] = tree_x_scroll_bar.set
@@ -281,12 +294,19 @@ class FileManager(object):
         self.file_img = tk.PhotoImage(file=file_img_path)
 
         # 初始化根
-        self.tree_root = self.tree.insert("", tk.END, text=self.i18n.t("sd_card_files"), open=True, image=self.folder_img)
-        root_file = {"tree": self.tree_root, "type": "folder", "name": self.i18n.t("sd_card_files"), "path": "/", "sub_file": []}
+        self.tree_root = self.tree.insert(
+            "", tk.END, text=self.i18n.t("sd_card_files"), open=True, image=self.folder_img
+        )
+        root_file = {
+            "tree": self.tree_root,
+            "type": "folder",
+            "name": self.i18n.t("sd_card_files"),
+            "path": "/",
+            "sub_file": [],
+        }
         self.__tree_map_file[self.tree_root] = root_file  # 初始化总目录
         self.__path_map_file[root_file["path"]] = root_file
-        self.display_path_tree(self.tree_root, root_file);
-
+        self.display_path_tree(self.tree_root, root_file)
         # path_tree_frame.pack(side=tk.TOP, pady=5)
         path_tree_frame.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -314,8 +334,14 @@ class FileManager(object):
                 image = self.folder_img
             else:
                 image = self.file_img
-            sub_tree = self.tree.insert(cur_tree_root, tk.END, text=sub_file["name"],
-                                        values=(sub_file["path"],), open=True, image=image)
+            sub_tree = self.tree.insert(
+                cur_tree_root,
+                tk.END,
+                text=sub_file["name"],
+                values=(sub_file["path"],),
+                open=True,
+                image=image,
+            )
 
             # 绑定tree与文件对象的关系
             self.__tree_map_file[sub_tree] = sub_file
@@ -332,11 +358,21 @@ class FileManager(object):
             for sub_file_name in sub_file_list:
                 sub_tmp = None
                 if "/" == sub_file_name[-1]:
-                    sub_tmp = {"tree": None, "type": "folder", "name": sub_file_name[:-1],
-                               "path": updata_path + sub_file_name[:-1], "sub_file": []}
+                    sub_tmp = {
+                        "tree": None,
+                        "type": "folder",
+                        "name": sub_file_name[:-1],
+                        "path": updata_path + sub_file_name[:-1],
+                        "sub_file": [],
+                    }
                 else:
-                    sub_tmp = {"tree": None, "type": "file", "name": sub_file_name, "path": updata_path + sub_file_name,
-                               "sub_file": None}
+                    sub_tmp = {
+                        "tree": None,
+                        "type": "file",
+                        "name": sub_file_name,
+                        "path": updata_path + sub_file_name,
+                        "sub_file": None,
+                    }
 
                 # 添加节点
                 self.__path_map_file[sub_tmp["path"]] = sub_tmp
@@ -349,7 +385,9 @@ class FileManager(object):
             logger.error("reflush_folder error: %s", err)
 
         # 刷新显示
-        self.display_path_tree(self.__path_map_file[updata_path]["tree"], self.__path_map_file[updata_path]);
+        self.display_path_tree(
+            self.__path_map_file[updata_path]["tree"], self.__path_map_file[updata_path]
+        )
 
     def tree_open(self):
         """
@@ -385,7 +423,9 @@ class FileManager(object):
         # 将菜单项添加到菜单栏
         menuBar.add_cascade(label=self.__engine.word_map["Menu"]["Model"], menu=self.modelBar)
         # 在菜单项中加入子菜单
-        self.modelBar.add_command(label=self.__engine.word_map["Menu"]["Create"], command=self.click_model_create)
+        self.modelBar.add_command(
+            label=self.__engine.word_map["Menu"]["Create"], command=self.click_model_create
+        )
         # 创建分割线
         self.modelBar.add_separator()
 

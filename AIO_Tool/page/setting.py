@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 ################################################################################
 #
 # Author: ClimbSnail(HQ)
 # original source is here.
 #   https://github.com/ClimbSnail/HoloCubic_AIO_Tool
-# 
+#
 #
 ################################################################################
 
@@ -28,7 +27,7 @@ from util.logger import get_logger
 logger = get_logger(__name__)
 
 
-class Setting(object):
+class Setting:
     """
     参数设置类
     """
@@ -73,7 +72,7 @@ class Setting(object):
         wifi_title.pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.create_wifi(self.wifi_grid_frame)
         self.wifi_grid_frame.update()
-    
+
     def createConfig(self, filename):
         """
         创建配置文件
@@ -81,25 +80,82 @@ class Setting(object):
         :return: True/False
         """
         # 数据格式 {"ssid_1": {"namespace":"sys", "type":"String", "info":"提示信息"}}
-        data = {"ssid_1": {"name":"ssid_1", "namespace":"sys", "type":"String", "info":"提示信息"},
-                "password_1": {"name":"password_1", "namespace":"sys", "type":"String", "info":"提示信息"},
-                "ssid_2": {"name":"ssid_2", "namespace":"sys", "type":"String", "info":"提示信息"},
-                "password_2": {"name":"password_2", "namespace":"sys", "type":"String", "info":"提示信息"},
-
-                "backLight": {"name":"backLight", "namespace":"sys", "type":"UChar", "info":"提示信息"},
-                "rotation": {"name":"rotation", "namespace":"sys", "type":"UChar", "info":"提示信息"},
-                "auto_mpu": {"name":"auto_mpu", "namespace":"sys", "type":"UChar", "info":"提示信息"},
-
-                "cityname": {"name":"cityname", "namespace":"zhixin", "type":"String", "info":"提示信息"},
-                "language": {"name":"language", "namespace":"zhixin", "type":"String", "info":"提示信息"},
-                "weather_key": {"name":"weather_key", "namespace":"zhixin", "type":"String", "info":"提示信息"},
-
-                "tianqi_aid": {"name":"tianqi_aid", "namespace":"tianqi", "type":"String", "info":"提示信息"},
-                "tianqi_as": {"name":"tianqi_as", "namespace":"tianqi", "type":"String", "info":"提示信息"},
-                "tianqi_addr": {"name":"tianqi_addr", "namespace":"tianqi", "type":"String", "info":"提示信息"},
-
-                "bili_uid": {"name":"bili_uid", "namespace":"other", "type":"String", "info":"提示信息"}
-                }
+        data = {
+            "ssid_1": {"name": "ssid_1", "namespace": "sys", "type": "String", "info": "提示信息"},
+            "password_1": {
+                "name": "password_1",
+                "namespace": "sys",
+                "type": "String",
+                "info": "提示信息",
+            },
+            "ssid_2": {"name": "ssid_2", "namespace": "sys", "type": "String", "info": "提示信息"},
+            "password_2": {
+                "name": "password_2",
+                "namespace": "sys",
+                "type": "String",
+                "info": "提示信息",
+            },
+            "backLight": {
+                "name": "backLight",
+                "namespace": "sys",
+                "type": "UChar",
+                "info": "提示信息",
+            },
+            "rotation": {
+                "name": "rotation",
+                "namespace": "sys",
+                "type": "UChar",
+                "info": "提示信息",
+            },
+            "auto_mpu": {
+                "name": "auto_mpu",
+                "namespace": "sys",
+                "type": "UChar",
+                "info": "提示信息",
+            },
+            "cityname": {
+                "name": "cityname",
+                "namespace": "zhixin",
+                "type": "String",
+                "info": "提示信息",
+            },
+            "language": {
+                "name": "language",
+                "namespace": "zhixin",
+                "type": "String",
+                "info": "提示信息",
+            },
+            "weather_key": {
+                "name": "weather_key",
+                "namespace": "zhixin",
+                "type": "String",
+                "info": "提示信息",
+            },
+            "tianqi_aid": {
+                "name": "tianqi_aid",
+                "namespace": "tianqi",
+                "type": "String",
+                "info": "提示信息",
+            },
+            "tianqi_as": {
+                "name": "tianqi_as",
+                "namespace": "tianqi",
+                "type": "String",
+                "info": "提示信息",
+            },
+            "tianqi_addr": {
+                "name": "tianqi_addr",
+                "namespace": "tianqi",
+                "type": "String",
+                "info": "提示信息",
+            },
+            "bili_uid": {
+                "name": "bili_uid",
+                "namespace": "other",
+                "type": "String",
+                "info": "提示信息",
+            },
+        }
         fp = codecs.open(self.cfg_name, "w", "utf8")
         json.dump(data, fp, indent=2)
         fp.close()
@@ -136,8 +192,15 @@ class Setting(object):
         self.m_baud_label.pack(side=tk.LEFT, padx=border_padx)
         self.m_baud_select = ttk.Combobox(baud_frame, width=8, state="readonly")
         self.m_baud_select["value"] = (
-            "9600", "38400", "57600", "115200",
-            "230400", "460800", "576000", "921600", "1152000",
+            "9600",
+            "38400",
+            "57600",
+            "115200",
+            "230400",
+            "460800",
+            "576000",
+            "921600",
+            "1152000",
         )
         self.m_baud_select.current(3)
         self.m_baud_select.pack(side=tk.LEFT, padx=border_padx)
@@ -146,13 +209,15 @@ class Setting(object):
         # Connect button
         botton_frame = ctk.CTkFrame(father, fg_color="transparent")
         self.m_connect_button = ctk.CTkButton(
-            botton_frame, text=self.i18n.t("open_serial"),
-            command=self.com_connect, width=90, height=28,
+            botton_frame,
+            text=self.i18n.t("open_serial"),
+            command=self.com_connect,
+            width=90,
+            height=28,
         )
         self.m_connect_button.pack(side=tk.LEFT, fill=tk.X, padx=5)
 
         botton_frame.pack(side=tk.LEFT, pady=5)
-
 
     def com_pull_down(self, event):
         """
@@ -178,7 +243,6 @@ class Setting(object):
         self.m_engine.OnThreadMessage(mh.M_SETTING, mh.M_DOWNLOAD_DEBUG, mh.A_CLOSE_UART, None)
 
         if self.m_connect_button.cget("text") == self.i18n.t("open_serial"):
-
             port = self.m_com_select.get().strip()
             baud = self.m_baud_select.get().strip()
             if self.ser != None:
@@ -189,7 +253,9 @@ class Setting(object):
             if self.ser.is_open:
                 self._serial_stop_event.clear()
                 self.receive_thread = threading.Thread(
-                    target=self.read_data, args=(self.ser,), daemon=True,
+                    target=self.read_data,
+                    args=(self.ser,),
+                    daemon=True,
                 )
                 self.receive_thread.start()
 
@@ -212,7 +278,6 @@ class Setting(object):
                 self.receive_thread = None
                 self.print_log("Receive_thread stop")
 
-
     def read_data(self, ser):
         """背景接收序列埠資料；stop event 觸發時跳出迴圈。"""
         self.print_log("Receive_thread start")
@@ -226,8 +291,7 @@ class Setting(object):
         logger.info(msg)
         self.set_param("ssid_1", "12345678")
 
-    
-    # 帧格式为 
+    # 帧格式为
     # 帧头0x2323（2字节）+ 帧长度（2字节）+ 发送者（2字节）
     #                  + 接收者（2字节）+ 消息类型（2字节）
     #                   + 消息数据（帧长度-10）+ 帧尾/r/n（2字节）
@@ -238,65 +302,67 @@ class Setting(object):
         :param value: 值
         :return: None
         """
-        value_type = {"String": mh.VT.VALUE_TYPE_STRING, 
-                    "UChar": mh.VT.VALUE_TYPE_UCHAR, 
-                    "Int": mh.VT.VALUE_TYPE_INT
-                    }
+        value_type = {
+            "String": mh.VT.VALUE_TYPE_STRING,
+            "UChar": mh.VT.VALUE_TYPE_UCHAR,
+            "Int": mh.VT.VALUE_TYPE_INT,
+        }
         try:
             info = self.data_info[key]
             logger.debug("set_param info: %s", info)
             send_data = mh.SettingMsg()
             send_data.action_type = mh.AT.AT_SETTING_SET
-            send_data.prefs_name = bytes(info["namespace"], encoding='utf8')
-            send_data.key = bytes(key, encoding='utf8')
-            send_data.type = value_type[info["type"]].to_bytes(1, byteorder='little', signed=True)
+            send_data.prefs_name = bytes(info["namespace"], encoding="utf8")
+            send_data.key = bytes(key, encoding="utf8")
+            send_data.type = value_type[info["type"]].to_bytes(1, byteorder="little", signed=True)
             logger.debug("set_param type bytes: %s", send_data.type)
-            send_data.value = bytes(value, encoding='utf8')
+            send_data.value = bytes(value, encoding="utf8")
             logger.debug("set_param encoded: %s", send_data.encode())
             if self.ser != None:
                 self.ser.write(send_data.encode())
         except Exception as err:
             logger.error("set_param failed:\n%s", traceback.format_exc())
             logger.error("set_param error: %s", err)
-        
 
-    # 帧格式为 
+    # 帧格式为
     # 帧头0x2323（2字节）+ 帧长度（2字节）+ 发送者（2字节）
     #                  + 接收者（2字节）+ 消息类型（2字节）
     #                   + 消息数据（帧长度-10）+ 帧尾/r/n（2字节）
     def get_param(self, key):
         """
         获取参数
-        :param key: 
+        :param key:
         :return: string(value)
         """
-        value_type = {"String": mh.VT.VALUE_TYPE_STRING, 
-                    "UChar": mh.VT.VALUE_TYPE_UCHAR, 
-                    "Int": mh.VT.VALUE_TYPE_INT
-                    }
+        value_type = {
+            "String": mh.VT.VALUE_TYPE_STRING,
+            "UChar": mh.VT.VALUE_TYPE_UCHAR,
+            "Int": mh.VT.VALUE_TYPE_INT,
+        }
         try:
             info = self.data_info[key]
             logger.debug("get_param info: %s", info)
             send_data = mh.SettingMsg()
             send_data.action_type = mh.AT.AT_SETTING_GET
-            send_data.prefs_name = bytes(info["namespace"], encoding='utf8')
-            send_data.key = bytes(key, encoding='utf8')
-            send_data.type = value_type[info["type"]].to_bytes(1, byteorder='little', signed=True)
+            send_data.prefs_name = bytes(info["namespace"], encoding="utf8")
+            send_data.key = bytes(key, encoding="utf8")
+            send_data.type = value_type[info["type"]].to_bytes(1, byteorder="little", signed=True)
             logger.debug("get_param type bytes: %s", send_data.type)
-            logger.debug("send_data --> %s", send_data.encode('>'))
+            logger.debug("send_data --> %s", send_data.encode(">"))
             if self.ser != None:
-                self.ser.write(send_data.encode('>'))
+                self.ser.write(send_data.encode(">"))
         except Exception as err:
             logger.error("get_param failed:\n%s", traceback.format_exc())
             logger.error("get_param error: %s", err)
 
-
     def create_wifi(self, father):
         """建立 WiFi 控件。"""
         get_botton = ctk.CTkButton(
-            father, text=self.i18n.t("get_button"),
+            father,
+            text=self.i18n.t("get_button"),
             command=lambda: self.get_param("ssid"),
-            width=60, height=28,
+            width=60,
+            height=28,
         )
         get_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=8)
 
@@ -309,5 +375,3 @@ class Setting(object):
         self._serial_stop_event.set()
         if self.receive_thread is not None and self.receive_thread.is_alive():
             self.receive_thread.join(timeout=1.0)
-        
-        
