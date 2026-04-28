@@ -8,19 +8,19 @@
 #
 ################################################################################
 
-from util.common import CACHE_PATH, ROOT_PATH
-from util.widget_base import EntryWithPlaceholder
-from util.convertor_core import Converter
-from util.convertor_core import _const
-from util.i18n import get_i18n
-import util.tkutils as tku
-
+import os
+import os.path
+import shutil
 import tkinter as tk
 from tkinter import ttk
-import os.path
+
+import customtkinter as ctk
 from PIL import Image
-import os
-import shutil
+
+from util.common import CACHE_PATH, ROOT_PATH
+from util.convertor_core import Converter, _const
+from util.i18n import get_i18n
+from util.widget_base import EntryWithPlaceholder
 
 FLAG = _const()
 
@@ -67,15 +67,21 @@ class ImagesConverter(object):
         self.__father = father  # 保存父窗口
         self.i18n = get_i18n()
 
-        self.m_select_frame = tk.Frame(self.__father, bg=father["bg"])
+        self.m_select_frame = ctk.CTkFrame(self.__father, fg_color="transparent")
         self.init_setting(self.m_select_frame)
         self.m_select_frame.pack(side=tk.TOP, pady=5)
 
-        self.m_path_frame = tk.Frame(self.__father, bg=father["bg"])
+        self.m_path_frame = ctk.CTkFrame(self.__father, fg_color="transparent")
         self.init_image_path(self.m_path_frame)
         self.m_path_frame.pack(side=tk.TOP, pady=5)
 
-        self.m_info_frame = tk.LabelFrame(self.__father, text="Conversion Log", bg="white")
+        # CTk 沒有 LabelFrame，使用 CTkFrame + 標題 CTkLabel
+        self.m_info_frame = ctk.CTkFrame(self.__father)
+        info_title = ctk.CTkLabel(
+            self.m_info_frame, text="Conversion Log",
+            font=ctk.CTkFont(weight="bold"),
+        )
+        info_title.pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.init_info(self.m_info_frame)
         self.m_info_frame.pack(side=tk.TOP, pady=5, fill=tk.BOTH, expand=True)
 
@@ -87,26 +93,25 @@ class ImagesConverter(object):
         """
         border_padx = 15  # 两个控件的间距
 
-        self.m_jpg_label = tk.Label(father, text=self.i18n.t("jpg_output"),
-                                    # font=self.my_ft1,
-                                    bg=father['bg'])
+        self.m_jpg_label = ctk.CTkLabel(father, text=self.i18n.t("jpg_output"))
         self.m_jpg_label.pack(side=tk.LEFT)
         # 勾选框的键值对象
         self.__jpg_enable_val = tk.IntVar()
         self.__jpg_enable_val.set(1)
         # 勾选框
-        self.__jpg_enable = tk.Checkbutton(father, text="", bg=father["bg"],
-                                           variable=self.__jpg_enable_val,
-                                           onvalue=1, offvalue=0, height=1,
-                                           width=1, command=self.enable_jpg)
+        self.__jpg_enable = ctk.CTkCheckBox(
+            father, text="",
+            variable=self.__jpg_enable_val,
+            onvalue=1, offvalue=0,
+            command=self.enable_jpg,
+            width=24,
+        )
         self.__jpg_enable.pack(side=tk.LEFT)
         # 色彩格式
-        color_frame = tk.Frame(father, bg=father["bg"])
-        self.m_color_label = tk.Label(color_frame, text=self.i18n.t("color_format"),
-                                      # font=self.my_ft1,
-                                      bg=father['bg'])
+        color_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_color_label = ctk.CTkLabel(color_frame, text=self.i18n.t("color_format"))
         self.m_color_label.pack(side=tk.LEFT)
-        self.m_color_select = ttk.Combobox(color_frame, width=20, state='readonly')
+        self.m_color_select = ttk.Combobox(color_frame, width=20, state="readonly")
         self.m_color_select["value"] = ('CF_TRUE_COLOR', 'CF_TRUE_COLOR_ALPHA',
                                         'CF_TRUE_COLOR_CHROMA', 'CF_INDEXED_1_BIT',
                                         'CF_INDEXED_2_BIT', 'CF_INDEXED_4_BIT', 'CF_INDEXED_8_BIT',
@@ -120,12 +125,10 @@ class ImagesConverter(object):
         color_frame.pack(side=tk.LEFT, pady=5)
 
         # 输出格式
-        output_frame = tk.Frame(father, bg=father["bg"])
-        self.m_output_label = tk.Label(output_frame, text=self.i18n.t("output_format"),
-                                       # font=self.my_ft1,
-                                       bg=father['bg'])
+        output_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_output_label = ctk.CTkLabel(output_frame, text=self.i18n.t("output_format"))
         self.m_output_label.pack(side=tk.LEFT)
-        self.m_output_select = ttk.Combobox(output_frame, width=15, state='readonly')
+        self.m_output_select = ttk.Combobox(output_frame, width=15, state="readonly")
         self.m_output_select["value"] = ('C_array', 'Binary_332', 'Binary_565',
                                          'Binary_565_SWAP', 'Binary_888')
         self.m_output_select["state"] = tk.DISABLED
@@ -134,23 +137,27 @@ class ImagesConverter(object):
         self.m_output_select.pack(side=tk.LEFT, padx=border_padx)
         output_frame.pack(side=tk.LEFT, pady=5)
 
-        # 输出格式
-        out_ratio_frame = tk.Frame(father, bg=father["bg"])
-        self.m_output_width = tk.Label(out_ratio_frame, text=self.i18n.t("resolution"),
-                                       # font=self.my_ft1,
-                                       bg=father['bg'])
+        # 解析度
+        out_ratio_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_output_width = ctk.CTkLabel(out_ratio_frame, text=self.i18n.t("resolution"))
         self.m_output_width.pack(side=tk.LEFT)
-        # 创建宽输入框
+        # 创建宽输入框 (CTkEntry width 為像素，原 width=6 字符 ≈ 60px)
         self.m_width_val = tk.StringVar()
-        self.m_width_entry = EntryWithPlaceholder(out_ratio_frame, width=6, highlightcolor="LightGrey",
-                                                  placeholder=self.i18n.t("width_placeholder"), placeholder_color="grey",
-                                                  textvariable=self.m_width_val)
+        self.m_width_entry = EntryWithPlaceholder(
+            out_ratio_frame, width=60,
+            placeholder=self.i18n.t("width_placeholder"),
+            placeholder_color="grey",
+            textvariable=self.m_width_val,
+        )
         self.m_width_entry.pack(side=tk.LEFT, padx=5)
         # 创建高输入框
         self.m_height_val = tk.StringVar()
-        self.m_height_entry = EntryWithPlaceholder(out_ratio_frame, width=6, highlightcolor="LightGrey",
-                                                   placeholder=self.i18n.t("height_placeholder"), placeholder_color="grey",
-                                                   textvariable=self.m_height_val)
+        self.m_height_entry = EntryWithPlaceholder(
+            out_ratio_frame, width=60,
+            placeholder=self.i18n.t("height_placeholder"),
+            placeholder_color="grey",
+            textvariable=self.m_height_val,
+        )
         self.m_height_entry.pack(side=tk.LEFT, padx=5)
         out_ratio_frame.pack(side=tk.LEFT, pady=5)
 
@@ -173,30 +180,35 @@ class ImagesConverter(object):
         :return: None
         """
         border_padx = 15  # 两个控件的间距
-        # 色彩格式
-        image_path_frame = tk.Frame(father, bg=father["bg"])
-        # 创建路径输入框
+        image_path_frame = ctk.CTkFrame(father, fg_color="transparent")
+        # 创建路径输入框 (width=80 chars ≈ 600 px)
         self.m_image_path_val = tk.StringVar()
-        self.m_image_path_entry = EntryWithPlaceholder(image_path_frame, width=80, highlightcolor="LightGrey",
-                                                       placeholder=self.i18n.t("select_images"), placeholder_color="grey",
-                                                       textvariable=self.m_image_path_val)
+        self.m_image_path_entry = EntryWithPlaceholder(
+            image_path_frame, width=600,
+            placeholder=self.i18n.t("select_images"),
+            placeholder_color="grey",
+            textvariable=self.m_image_path_val,
+        )
         self.m_image_path_entry.pack(side=tk.LEFT, padx=border_padx)
-        # 原视频输入按钮
-        self.m_image_path_botton = tk.Button(image_path_frame, text=self.i18n.t("select_button"), fg='black',
-                                             command=self.choose_image_files, width=6, height=1)
-
+        # 选择文件按钮
+        self.m_image_path_botton = ctk.CTkButton(
+            image_path_frame, text=self.i18n.t("select_button"),
+            command=self.choose_image_files, width=60, height=28,
+        )
         self.m_image_path_botton.pack(side=tk.LEFT, fill=tk.X, padx=5)
 
         # 转化按钮
-        self.m_trans_botton = tk.Button(image_path_frame, text=self.i18n.t("start_convert"), fg='black',
-                                        command=self.trans_images, width=8, height=1)
-
+        self.m_trans_botton = ctk.CTkButton(
+            image_path_frame, text=self.i18n.t("start_convert"),
+            command=self.trans_images, width=80, height=28,
+        )
         self.m_trans_botton.pack(side=tk.LEFT, fill=tk.X, padx=5)
 
         # 提示文字
-        self.m_tip_label = tk.Label(image_path_frame, text=self.i18n.t("click_to_convert"),
-                                    fg="green",
-                                    bg=father['bg'])
+        self.m_tip_label = ctk.CTkLabel(
+            image_path_frame, text=self.i18n.t("click_to_convert"),
+            text_color="green",
+        )
         self.m_tip_label.pack(side=tk.LEFT, padx=border_padx)
 
         image_path_frame.pack(side=tk.LEFT, pady=5)
@@ -313,28 +325,32 @@ class ImagesConverter(object):
         self.__father.update()
 
     def init_info(self, father):
-        """
-        初始化信息打印框
-        :param father: 父容器
-        :return: None
-        """
+        """初始化信息打印框（保留 tk.Text + 字型 tag，CTkTextbox 不支援 font tag）。"""
         info = self.i18n.t("image_converter_info")
 
-        scrollbar = tk.Scrollbar(father)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.m_project_info = tk.Text(father, width=100, yscrollcommand=scrollbar.set, wrap=tk.WORD)
-        self.m_project_info.tag_configure('bold_italics',
-                                          font=('Arial', 12, 'bold', 'italic'))
-        self.m_project_info.tag_configure('big', font=('Verdana', 13))
-        self.m_project_info.tag_configure('color', foreground='#476042',
-                                          font=('Tempus Sans ITC', 12, 'bold'))
-        self.m_project_info.tag_configure('normal', font=('Courier', 10))
-        self.m_project_info.tag_configure('error', foreground='red', font=('Courier', 10))
+        scrollbar = ctk.CTkScrollbar(father)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 5), pady=5)
+
+        self.m_project_info = tk.Text(
+            father, width=100, yscrollcommand=scrollbar.set, wrap=tk.WORD,
+            borderwidth=0, highlightthickness=0,
+        )
+        self.m_project_info.tag_configure(
+            "bold_italics", font=("Arial", 12, "bold", "italic"),
+        )
+        self.m_project_info.tag_configure("big", font=("Verdana", 13))
+        self.m_project_info.tag_configure(
+            "color", foreground="#476042",
+            font=("Tempus Sans ITC", 12, "bold"),
+        )
+        self.m_project_info.tag_configure("normal", font=("Courier", 10))
+        self.m_project_info.tag_configure(
+            "error", foreground="red", font=("Courier", 10),
+        )
 
         self.m_project_info.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.m_project_info.yview)
-        
+        scrollbar.configure(command=self.m_project_info.yview)
+
         self.m_project_info.config(state=tk.NORMAL)
-        self.m_project_info.insert(tk.END, info, 'big')
+        self.m_project_info.insert(tk.END, info, "big")
         self.m_project_info.config(state=tk.DISABLED)
