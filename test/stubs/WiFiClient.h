@@ -24,7 +24,7 @@ public:
     int connect(const char *host, uint16_t port);
     int connect(const char *host, uint16_t port, int /*timeout_ms*/);
     int connect(uint32_t /*ip*/, uint16_t /*port*/) { return 0; }
-    void stop() { m_buf.clear(); m_pos = 0; m_connected = false; }
+    void stop() { m_buf = String(""); m_pos = 0; m_connected = false; }
     int connected() { return m_connected ? 1 : 0; }
 
     int available() { return (int)(m_buf.length() - m_pos); }
