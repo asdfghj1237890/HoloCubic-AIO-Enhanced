@@ -213,6 +213,13 @@ static int pc_resource_init(AppController *sys)
     run_data->preTimeMillis = 0;
     memset(&run_data->rs_data, 0, sizeof(PC_Resource));
     run_data->host = cfg_data.pc_ipaddr.c_str();
+    // Defensive: calloc above already zeroed run_data, but if init were ever
+    // called twice without a matching exit_callback, the prior client would
+    // leak. The NULL check makes that future-proof at zero runtime cost.
+    if (NULL != run_data->client)
+    {
+        delete run_data->client;
+    }
     run_data->client = new WiFiClient();
 
     return 0;

@@ -759,6 +759,11 @@ inline c_display::c_display(void *phy_fb, int display_width, int display_height,
     for (int i = 0; i < m_surface_cnt; i++)
     {
         m_surface_group[i] = (phy_fb) ? new c_surface(surface_width, surface_height, color_bytes) : new c_surface_no_fb(surface_width, surface_height, color_bytes, gfx_op);
+        // Vendored third-party header — narrow nullcheck against allocation
+        // failure to avoid a SIGSEGV on attach_display(NULL); intentionally
+        // not unwinding the partial m_surface_group[] (would diverge further
+        // from upstream).
+        if (NULL == m_surface_group[i]) { continue; }
         m_surface_group[i]->attach_display(this);
     }
 }

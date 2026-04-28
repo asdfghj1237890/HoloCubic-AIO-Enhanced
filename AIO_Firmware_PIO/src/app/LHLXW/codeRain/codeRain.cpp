@@ -2,6 +2,7 @@
 #include "DigitalRainAnimation.hpp"
 #include "sys/app_controller.h"
 #include "common.h"
+#include <memory>
 
 /*
 功能：代码雨
@@ -16,7 +17,12 @@ extern ImuAction *act_info;
 
 
 void codeRain_process(lv_obj_t * ym){
-  DigitalRainAnimation<TFT_eSPI> *matrix_effect = new DigitalRainAnimation<TFT_eSPI>();
+  // unique_ptr so any abnormal exit (early return, exception in third-party
+  // animation lib, future code path that bails before the explicit delete)
+  // still releases the heap allocation. The previous code only delete'd on
+  // the RETURN-action branch.
+  std::unique_ptr<DigitalRainAnimation<TFT_eSPI>> matrix_effect_owner(new DigitalRainAnimation<TFT_eSPI>());
+  DigitalRainAnimation<TFT_eSPI> *matrix_effect = matrix_effect_owner.get();
   bool codeSizeFont = false;//123564
   lv_obj_t *obj = lv_obj_create(NULL);
   lv_obj_set_style_bg_color(obj,lv_color_hex(0),LV_STATE_DEFAULT);
@@ -48,7 +54,7 @@ void codeRain_process(lv_obj_t * ym){
         }
         lv_obj_clean(obj);
         lv_obj_del(obj);
-        delete matrix_effect;
+        // matrix_effect freed automatically by matrix_effect_owner's destructor
         return;//退出此功能
     }else if(TURN_RIGHT == act_info->active){
       if(millis()-tempD > 999){
