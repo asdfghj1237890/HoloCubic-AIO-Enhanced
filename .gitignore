@@ -21,3 +21,6 @@ __pycache__/
 AIO_Tool/.venv/
 AIO_Tool/build/
 AIO_Tool/dist/
+# User-specific runtime state (language preference, etc.)
+AIO_Tool/tool_config.json
+AIO_Tool/OutFile/

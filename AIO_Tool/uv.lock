@@ -448,7 +448,7 @@ wheels = [
 
 [[package]]
 name = "cubic-aio-tool"
-version = "1.6.2"
+version = "2.5.0"
 source = { virtual = "." }
 dependencies = [
     { name = "customtkinter" },
