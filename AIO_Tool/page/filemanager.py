@@ -9,17 +9,17 @@
 ################################################################################
 
 import tkinter as tk
-from tkinter.constants import COMMAND
-import util.tkutils as tku
+import traceback
 from tkinter import ttk
+
+import customtkinter as ctk
+
 from util.common import get_resource_path
 from util.file_info import DirList, FileGetInfo, FileRead, FileSystem
-from util.massagehead import AT, MsgHead
-from util.robotsocket import RobotSocketClient
 from util.i18n import get_i18n
 from util.logger import get_logger
-import sys
-import traceback
+from util.massagehead import AT, MsgHead
+from util.robotsocket import RobotSocketClient
 
 logger = get_logger(__name__)
 
@@ -50,20 +50,19 @@ class FileManager(object):
         self.i18n = get_i18n()
 
         # 连接器相关控件
-        self.m_conn_frame = tk.Frame(self.__father, bg=father["bg"])
-        self.init_connect(self.m_conn_frame)  # 初始化ip地址
+        self.m_conn_frame = ctk.CTkFrame(self.__father, fg_color="transparent")
+        self.init_connect(self.m_conn_frame)
         self.m_conn_frame.pack(side=tk.TOP, pady=5)
 
         # 目录树
-        self.path_tree_frame = tk.Frame(father, bg=father["bg"])
+        self.path_tree_frame = ctk.CTkFrame(father, fg_color="transparent")
         self.path_tree_frame.place(x=10, y=50)
         self.path_tree_frame.update()
-        self.init_path_tree(self.path_tree_frame)  # 初始化目录树
-        # self.path_tree_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5)
+        self.init_path_tree(self.path_tree_frame)
 
         # 视图区
-        self.view_file_frame = tk.Frame(father, bg=father["bg"])
-        self.init_view_file(self.view_file_frame)  # 初始化视图区
+        self.view_file_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.init_view_file(self.view_file_frame)
         self.view_file_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5)
 
         # 初始化右击操作项(默认不显示)
@@ -135,21 +134,21 @@ class FileManager(object):
         :param father: 父容器
         :return: None
         """
-        border_padx = 10  # 两个控件的间距
+        border_padx = 10  # 兩個控件的間距
 
-        ip_frame = tk.Frame(father, bg=father["bg"])
-        self.m_ip_label = tk.Label(ip_frame, text=self.i18n.t("ip_address"),
-                                   bg=father['bg'])
+        ip_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_ip_label = ctk.CTkLabel(ip_frame, text=self.i18n.t("ip_address"))
         self.m_ip_label.pack(side=tk.LEFT, padx=border_padx)
-        # Create input box
-        self.m_ip_entry = tk.Entry(ip_frame, width=20, highlightcolor="LightGrey")
+        # IP 輸入框 (width=20 chars ≈ 160 px)
+        self.m_ip_entry = ctk.CTkEntry(ip_frame, width=160)
         self.m_ip_entry.pack(side=tk.LEFT, padx=border_padx)
         self.m_ip_entry.delete(0, tk.END)
         self.m_ip_entry.insert(tk.END, "本功能目前不可用")
         # Connect button
-        self.conn_botton = tk.Button(ip_frame, text=self.i18n.t("connect"), fg='black',
-                                     command=self.connect_holocubic, width=8, height=1)
-
+        self.conn_botton = ctk.CTkButton(
+            ip_frame, text=self.i18n.t("connect"),
+            command=self.connect_holocubic, width=80, height=28,
+        )
         self.conn_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5)
 
         ip_frame.pack(side=tk.TOP, pady=5)
@@ -207,20 +206,20 @@ class FileManager(object):
                 msg = FileGetInfo()
                 msg.decode(dat)
 
-        if self.conn_botton["text"] == "连接":
+        if self.conn_botton.cget("text") == self.i18n.t("connect"):
             try:
                 ip_port = self.m_ip_entry.get().strip()
                 ip, port = ip_port.split(":")
                 logger.debug("connecting to %s:%s", ip, port)
-                # 初始化端口并设置接收数据的函数(当接收到数据，自动被调用)
+                # 初始化端口並設定接收回呼
                 self.__clientsocket = RobotSocketClient(ip, int(port), myRecvHandle)
-                self.__clientsocket.start()  # socket开始工作
+                self.__clientsocket.start()
 
-                self.conn_botton["text"] = "断开连接"
+                self.conn_botton.configure(text=self.i18n.t("disconnect"))
             except Exception as err:
                 logger.error("connect_holocubic failed: %s", err)
         else:
-            self.conn_botton["text"] = "连接"
+            self.conn_botton.configure(text=self.i18n.t("connect"))
             if self.__clientsocket != None:
                 self.__clientsocket.__del__()
                 # del self.__clientsocket
@@ -252,20 +251,21 @@ class FileManager(object):
                 logger.error("display_op_menu failed:\n%s", traceback.format_exc())
                 logger.error("display_op_menu error: %s", err)
 
-        border_padx = 10  # 两个控件的间距
+        path_tree_frame = ctk.CTkFrame(father, fg_color="transparent")
 
-        path_tree_frame = tk.Frame(father, bg=father["bg"])
-
-        self.tree = ttk.Treeview(path_tree_frame, show="tree", selectmode="browse",
-                                 height=28)
-        tree_y_scroll_bar = tk.Scrollbar(path_tree_frame, command=self.tree.yview, relief=tk.SUNKEN, width=6)
+        self.tree = ttk.Treeview(
+            path_tree_frame, show="tree", selectmode="browse", height=28,
+        )
+        tree_y_scroll_bar = ctk.CTkScrollbar(
+            path_tree_frame, command=self.tree.yview, orientation="vertical",
+        )
         tree_y_scroll_bar.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree["yscrollcommand"] = tree_y_scroll_bar.set
-        # self.tree.config(yscrollcommand = tree_y_scroll_bar.set)
-        tree_x_scroll_bar = tk.Scrollbar(path_tree_frame, command=self.tree.xview, relief=tk.SUNKEN, width=6)
+        tree_x_scroll_bar = ctk.CTkScrollbar(
+            path_tree_frame, command=self.tree.xview, orientation="horizontal",
+        )
         tree_x_scroll_bar.pack(side=tk.BOTTOM, fill=tk.X)
         self.tree["xscrollcommand"] = tree_x_scroll_bar.set
-        # self.tree.config(xscrollcommand = tree_x_scroll_bar.set)
         self.tree.pack(expand=1, fill=tk.BOTH)
 
         # <<TreeviewSelect>>
@@ -369,14 +369,8 @@ class FileManager(object):
                 self.__clientsocket.send_to_ser(send_data)
 
     def init_view_file(self, father):
-        """
-        初始化连接
-        :param father: 父容器
-        :return: None
-        """
-        border_padx = 10  # 两个控件的间距
-        view_file_frame = tk.Frame(father, bg=father["bg"])
-
+        """初始化視圖區（目前空容器）。"""
+        view_file_frame = ctk.CTkFrame(father, fg_color="transparent")
         view_file_frame.pack(side=tk.TOP, pady=5)
 
     def init_modelBar(self, menuBar):
