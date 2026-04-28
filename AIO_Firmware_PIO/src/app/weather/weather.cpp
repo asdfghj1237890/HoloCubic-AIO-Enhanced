@@ -577,10 +577,14 @@ static void get_weather(void)
         {
             String payload = http.getString();
             DynamicJsonDocument doc(2048);
-            deserializeJson(doc, payload);
+            DeserializationError jsonErr = deserializeJson(doc, payload);
             Serial.println(payload);
-            
-            if (doc.is<JsonArray>() && doc.size() > 0)
+
+            if (jsonErr)
+            {
+                Serial.printf("[APP] Get weather - JSON parse error: %s\n", jsonErr.c_str());
+            }
+            else if (doc.is<JsonArray>() && doc.size() > 0)
             {
                 /*
                 AccuWeather Current Conditions Response Example:
@@ -601,36 +605,43 @@ static void get_weather(void)
                 }]
                 */
                 JsonObject current = doc[0];
-                
+
+                // Each field uses ArduinoJson 6.18's `| fallback` operator so a
+                // missing or wrong-type value yields the sentinel instead of
+                // crashing on undefined .as<T>() conversion. Nested keys
+                // (Temperature.Metric.Value, Wind.Direction.Localized, etc) are
+                // safe to chain because intermediate misses propagate as null
+                // variants until the leaf operator| picks the fallback.
+
                 // City name (use configured city name)
-                strcpy(run_data->wea.cityname, cfg_data.city_name.c_str());
-                
+                snprintf(run_data->wea.cityname, sizeof(run_data->wea.cityname), "%s", cfg_data.city_name.c_str());
+
                 // Temperature (Celsius)
-                run_data->wea.temperature = current["Temperature"]["Metric"]["Value"].as<int>();
-                
+                run_data->wea.temperature = current["Temperature"]["Metric"]["Value"] | 0;
+
                 // Humidity
-                run_data->wea.humidity = current["RelativeHumidity"].as<int>();
-                
+                run_data->wea.humidity = current["RelativeHumidity"] | 0;
+
                 // Weather icon code mapping
-                int iconCode = current["WeatherIcon"].as<int>();
+                int iconCode = current["WeatherIcon"] | 0;
                 run_data->wea.weather_code = mapAccuWeatherIcon(iconCode);
-                
+
                 // Weather description
-                String weatherText = current["WeatherText"].as<String>();
-                strcpy(run_data->wea.weather, weatherText.c_str());
-                
+                const char *weatherText = current["WeatherText"] | "";
+                snprintf(run_data->wea.weather, sizeof(run_data->wea.weather), "%s", weatherText);
+
                 // Wind direction
-                String windDir = current["Wind"]["Direction"]["Localized"].as<String>();
-                strcpy(run_data->wea.windDir, windDir.c_str());
-                
+                const char *windDir = current["Wind"]["Direction"]["Localized"] | "";
+                snprintf(run_data->wea.windDir, sizeof(run_data->wea.windDir), "%s", windDir);
+
                 // Wind speed (convert km/h to level)
-                float windSpeed = current["Wind"]["Speed"]["Metric"]["Value"].as<float>();
+                float windSpeed = current["Wind"]["Speed"]["Metric"]["Value"] | 0.0f;
                 int windLevel = (int)(windSpeed / 5.0); // Rough conversion: 0-5km/h = level 0, 5-10 = level 1, etc.
                 if (windLevel > 12) windLevel = 12;
                 snprintf(run_data->wea.windpower, 10, "%d", windLevel);
-                
+
                 // Air quality estimate from UV index (since AccuWeather doesn't provide AQI in free tier)
-                int uvIndex = current["UVIndex"].as<int>();
+                int uvIndex = current["UVIndex"] | 0;
                 if (uvIndex <= 2) run_data->wea.airQulity = 0;      // Good
                 else if (uvIndex <= 5) run_data->wea.airQulity = 1; // Moderate
                 else if (uvIndex <= 7) run_data->wea.airQulity = 2; // Fair
