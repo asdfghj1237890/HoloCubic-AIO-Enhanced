@@ -50,8 +50,21 @@ void HeartbeatAppForeverData::callback(char *topic, byte *payload, unsigned int 
         Serial.print((char)payload[i]); // 打印主题内容
     }
     Serial.println();
-    payload[length] = 0;
-    if (strcmp(hb_cfg.mac_id, (char *)payload))
+
+    // The caller (PubSubClient) owns `payload` with exactly `length` bytes;
+    // writing `payload[length] = 0` overruns when length == buffer cap.
+    // Copy into a local NUL-terminated buffer instead so strcmp gets a
+    // proper C string without mutating the caller's memory.
+    char *local = (char *)malloc(length + 1);
+    if (NULL == local)
+    {
+        Serial.println("[Heartbeat] callback: payload alloc failed");
+        return;
+    }
+    memcpy(local, payload, length);
+    local[length] = '\0';
+
+    if (strcmp(hb_cfg.mac_id, local))
     {
         app_controller->send_to(HEARTBEAT_APP_NAME, CTRL_NAME, APP_MESSAGE_MQTT_DATA, NULL, NULL);
     }
@@ -60,6 +73,8 @@ void HeartbeatAppForeverData::callback(char *topic, byte *payload, unsigned int 
         // 是自己发送出去的消息
         Serial.print("Own message!\n");
     }
+
+    free(local);
 }
 
 static void write_config(HeartbeatAppForeverData *cfg)
