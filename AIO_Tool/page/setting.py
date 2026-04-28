@@ -8,18 +8,20 @@
 #
 ################################################################################
 
-import tkinter as tk
-import util.tkutils as tku
-from tkinter import ttk
-import json
 import codecs
+import json
 import threading
+import time
+import tkinter as tk
+import traceback
+from tkinter import ttk
+
+import customtkinter as ctk
+import serial
+import serial.tools.list_ports  # noqa: F401  — submodule must be imported explicitly
+
 import util.common as common
 import util.massagehead as mh
-import serial
-import time
-import struct
-import traceback
 from util.i18n import get_i18n
 from util.logger import get_logger
 
@@ -55,15 +57,20 @@ class Setting(object):
         fp.close()
 
         # Serial connection
-        self.uart_father = tk.Frame(self.__father, bg=self.__father["bg"])
+        self.uart_father = ctk.CTkFrame(self.__father, fg_color="transparent")
         self.uart_father.place(x=self.__father.winfo_width() + 250, y=10)
         self.connect_uart(self.uart_father)
         self.uart_father.update()
 
-        # WiFi settings frame
-        self.wifi_grid_frame = tk.LabelFrame(self.__father, text=self.i18n.t("wifi_settings"),
-                                               labelanchor="nw", bg="white")
+        # WiFi settings frame —— CTk 沒有 LabelFrame，改用 CTkFrame + 標題 CTkLabel
+        self.wifi_grid_frame = ctk.CTkFrame(self.__father)
         self.wifi_grid_frame.place(x=self.__father.winfo_width() + 10, y=10)
+        wifi_title = ctk.CTkLabel(
+            self.wifi_grid_frame,
+            text=self.i18n.t("wifi_settings"),
+            font=ctk.CTkFont(weight="bold"),
+        )
+        wifi_title.pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.create_wifi(self.wifi_grid_frame)
         self.wifi_grid_frame.update()
     
@@ -111,13 +118,12 @@ class Setting(object):
             com_tuple = [""]
 
         border_padx = 15
-        # Port selection
-        com_frame = tk.Frame(father, bg=father["bg"])
-        self.m_com_label = tk.Label(com_frame, text=self.i18n.t("port_number"),
-                                    bg=father['bg'])
+        # Port selection (ttk.Combobox 保留 — CTkOptionMenu 不支援 readonly+bind('<FocusOut>'))
+        com_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_com_label = ctk.CTkLabel(com_frame, text=self.i18n.t("port_number"))
         self.m_com_label.pack(side=tk.LEFT, padx=border_padx)
 
-        self.m_com_select = ttk.Combobox(com_frame, width=8, state='readonly')
+        self.m_com_select = ttk.Combobox(com_frame, width=8, state="readonly")
         self.m_com_select["value"] = tuple(com_tuple)
         self.m_com_select.bind("<FocusOut>", self.com_pull_down)
         self.m_com_select.current(0)
@@ -125,21 +131,24 @@ class Setting(object):
         com_frame.pack(side=tk.LEFT, pady=5)
 
         # Baud rate
-        baud_frame = tk.Frame(father, bg=father["bg"])
-        self.m_baud_label = tk.Label(baud_frame, text=self.i18n.t("baud_rate"),
-                                     bg=father['bg'])
+        baud_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_baud_label = ctk.CTkLabel(baud_frame, text=self.i18n.t("baud_rate"))
         self.m_baud_label.pack(side=tk.LEFT, padx=border_padx)
-        self.m_baud_select = ttk.Combobox(baud_frame, width=8, state='readonly')
-        self.m_baud_select["value"] = ('9600', '38400', '57600', '115200',
-                                       '230400', '460800', '576000', '921600', '1152000')
+        self.m_baud_select = ttk.Combobox(baud_frame, width=8, state="readonly")
+        self.m_baud_select["value"] = (
+            "9600", "38400", "57600", "115200",
+            "230400", "460800", "576000", "921600", "1152000",
+        )
         self.m_baud_select.current(3)
         self.m_baud_select.pack(side=tk.LEFT, padx=border_padx)
         baud_frame.pack(side=tk.LEFT, pady=5)
 
         # Connect button
-        botton_frame = tk.Frame(father, bg=father["bg"])
-        self.m_connect_button = tk.Button(botton_frame, text=self.i18n.t("open_serial"), fg='black',
-                                          command=self.com_connect, width=12, height=1)
+        botton_frame = ctk.CTkFrame(father, fg_color="transparent")
+        self.m_connect_button = ctk.CTkButton(
+            botton_frame, text=self.i18n.t("open_serial"),
+            command=self.com_connect, width=90, height=28,
+        )
         self.m_connect_button.pack(side=tk.LEFT, fill=tk.X, padx=5)
 
         botton_frame.pack(side=tk.LEFT, pady=5)
@@ -168,7 +177,7 @@ class Setting(object):
         # 先关闭下载页的串口
         self.m_engine.OnThreadMessage(mh.M_SETTING, mh.M_DOWNLOAD_DEBUG, mh.A_CLOSE_UART, None)
 
-        if self.m_connect_button["text"] == self.i18n.t("open_serial"):
+        if self.m_connect_button.cget("text") == self.i18n.t("open_serial"):
 
             port = self.m_com_select.get().strip()
             baud = self.m_baud_select.get().strip()
@@ -184,11 +193,11 @@ class Setting(object):
                 )
                 self.receive_thread.start()
 
-                self.m_connect_button["text"] = self.i18n.t("close_serial")
+                self.m_connect_button.configure(text=self.i18n.t("close_serial"))
                 self.m_com_select["state"] = tk.DISABLED
                 self.m_baud_select["state"] = tk.DISABLED
         else:
-            self.m_connect_button["text"] = self.i18n.t("open_serial")
+            self.m_connect_button.configure(text=self.i18n.t("open_serial"))
             self.m_com_select["state"] = tk.NORMAL
             self.m_baud_select["state"] = tk.NORMAL
 
@@ -283,16 +292,13 @@ class Setting(object):
 
 
     def create_wifi(self, father):
-        """
-        创建WIFI控件
-        :param father: 父类窗口
-        :return: None
-        """
-        # 选择按钮
-        get_botton = tk.Button(father, text=self.i18n.t("get_button"), fg='black',
-                                command=lambda: self.get_param("ssid"),
-                                width=6, height=1)
-        get_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5)
+        """建立 WiFi 控件。"""
+        get_botton = ctk.CTkButton(
+            father, text=self.i18n.t("get_button"),
+            command=lambda: self.get_param("ssid"),
+            width=60, height=28,
+        )
+        get_botton.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=8)
 
     def __del__(self):
         """資源釋放：通知 receive_thread 停止並等待結束。"""
