@@ -2,6 +2,7 @@
 #include "bilibili_gui.h"
 #include "sys/app_controller.h"
 #include "../../common.h"
+#include "../../http_util.h"
 
 #define FANS_API "https://api.bilibili.com/x/relation/stat?vmid="
 #define OTHER_API "https://api.bilibili.com/x/space/upstat?mid="
@@ -72,19 +73,7 @@ static MyHttpResult http_request(String uid = "344470052")
     // String url = "http://www.dtmb.top/api/fans/index?id=" + uid;
     MyHttpResult result;
     String url = FANS_API + uid;
-    HTTPClient httpClient;
-    httpClient.setTimeout(1000);
-    bool status = httpClient.begin(url);
-    if (status == false)
-    {
-        result.httpCode = -1;
-        return result;
-    }
-    int httpCode = httpClient.GET();
-    String httpResponse = httpClient.getString();
-    httpClient.end();
-    result.httpCode = httpCode;
-    result.httpResponse = httpResponse;
+    result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 1000);
     return result;
 }
 
