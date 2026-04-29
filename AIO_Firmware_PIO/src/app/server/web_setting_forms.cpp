@@ -15,97 +15,129 @@
 #include "web_setting_internal.h"
 #include "app/app_conf.h"
 
-#define SETING_CSS ".input{display:block;margin:18px 0;background:rgba(10,14,39,0.8);padding:15px;border:2px solid #00ff41;box-shadow:0 0 15px rgba(0,255,65,0.3),inset 0 0 10px rgba(0,255,65,0.05);transition:all 0.3s;position:relative;z-index:2;}" \
-                   ".input:hover{box-shadow:0 0 25px rgba(0,255,65,0.6),inset 0 0 15px rgba(0,255,65,0.1);border-color:#00ff41;}" \
-                   ".input span{width:320px;float:left;height:42px;line-height:42px;color:#00ff41;font-weight:700;font-size:15px;text-transform:uppercase;letter-spacing:1px;text-shadow:0 0 8px rgba(0,255,65,0.6);font-family:'Courier New',monospace;}" \
-                   ".input input[type='text']{height:40px;width:240px;border:2px solid #00d9ff;background:rgba(0,217,255,0.05);color:#00d9ff;padding:0 12px;font-size:14px;font-family:'Courier New',monospace;transition:all 0.3s;}" \
-                   ".input input[type='text']:focus{outline:none;border-color:#00ff41;background:rgba(0,255,65,0.1);box-shadow:0 0 20px rgba(0,255,65,0.6);color:#00ff41;}" \
-                   ".input .radio{height:18px;width:18px;margin:0 10px;cursor:pointer;accent-color:#00ff41;filter:drop-shadow(0 0 5px #00ff41);}" \
-                   ".btn{min-width:160px;height:45px;background:rgba(0,255,65,0.1);border:2px solid #00ff41;color:#00ff41;font-size:16px;font-weight:700;cursor:pointer;margin-top:25px;box-shadow:0 0 20px rgba(0,255,65,0.6);transition:all 0.3s;text-transform:uppercase;letter-spacing:2px;font-family:'Courier New',monospace;}" \
-                   ".btn:hover{background:rgba(0,255,65,0.2);box-shadow:0 0 35px rgba(0,255,65,0.9);transform:scale(1.05);}" \
-                   "form{background:rgba(10,14,39,0.95);padding:30px;border:3px solid #00ff41;box-shadow:0 0 30px rgba(0,255,65,0.5),inset 0 0 30px rgba(0,255,65,0.05);margin:25px auto;max-width:850px;position:relative;z-index:2;}"
+// Glass UI form-render macros. Each *_SETTING macro builds one
+// <form><div class="card"> wrapping a sequence of <div class="field">
+// rows, ending with the row-actions Save bar. The styles for these
+// classes live in GLASS_CSS in web_setting.cpp; SETING_CSS from the
+// pre-Glass cyberpunk theme is gone with this PR.
+//
+// %s placeholders preserve the existing per-field substitution order
+// so the *_setting() functions below don't need to re-shape their
+// snprintf calls — only the surrounding HTML changed.
 
-#define SYS_SETTING "<form method=\"GET\" action=\"saveSysConf\">"                                                                                                                                                                                                      \
-                    "<label class=\"input\"><span>WiFi SSID_0(2.4G)</span><input type=\"text\"name=\"ssid_0\"value=\"%s\"></label>"                                                                                                                                     \
-                    "<label class=\"input\"><span>WiFi Passwd_0</span><input type=\"text\"name=\"password_0\"value=\"%s\"></label>"                                                                                                                                     \
-                    "<label class=\"input\"><span>功耗控制（0低发热 1性能优先）</span><input type=\"text\"name=\"power_mode\"value=\"%s\"></label>"                                                                                                        \
-                    "<label class=\"input\"><span>屏幕亮度 (值为1~100)</span><input type=\"text\"name=\"backLight\"value=\"%s\"></label>"                                                                                                                         \
-                    "<label class=\"input\"><span>屏幕方向 (0~5可选)</span><input type=\"text\"name=\"rotation\"value=\"%s\"></label>"                                                                                                                            \
-                    "<label class=\"input\"><span>操作方向（0~15可选）</span><input type=\"text\"name=\"mpu_order\"value=\"%s\"></label>"                                                                                                                       \
-                    "<label class=\"input\"><span>MPU6050自动校准</span><input class=\"radio\" type=\"radio\" value=\"0\" name=\"auto_calibration_mpu\" %s>关闭<input class=\"radio\" type=\"radio\" value=\"1\" name=\"auto_calibration_mpu\" %s>开启</label>" \
-                    "<label class=\"input\"><span>开机自启的APP名字（如 Weather ）</span><input type=\"text\"name=\"auto_start_app\"value=\"%s\"></label>"                                                                                                    \
-                    "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+// Compact field helpers. Each emits one .field row with the right
+// number of %s placeholders (text=1, password=1, radio2=2, select3=3).
+// Tip column kept as empty <span></span> placeholder; per-field tooltips
+// can be wired later by inlining "<span class=\"tip\" data-tip=\"...\">?</span>".
+#define G_FIELD_TEXT(lbl, name) \
+  "<div class=\"field\"><label>" lbl "</label>" \
+  "<input type=\"text\" name=\"" name "\" value=\"%s\"><span></span></div>"
 
-#define RGB_SETTING "<form method=\"GET\" action=\"saveRgbConf\">"                                                                                          \
-                    "<label class=\"input\"><span>RGB最低亮度（0~1000可选）</span><input type=\"text\"name=\"min_brightness\"value=\"%s\"></label>" \
-                    "<label class=\"input\"><span>RGB最高亮度（0~1000可选）</span><input type=\"text\"name=\"max_brightness\"value=\"%s\"></label>" \
-                    "<label class=\"input\"><span>RGB渐变时间（10~1000可选）</span><input type=\"text\"name=\"time\"value=\"%s\"></label>"          \
-                    "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define G_FIELD_PWD(lbl, name) \
+  "<div class=\"field\"><label>" lbl "</label>" \
+  "<div class=\"secret-wrap\"><input type=\"password\" name=\"" name "\" value=\"%s\" class=\"mono\">" \
+  "<button type=\"button\" class=\"eye-btn\">\xF0\x9F\x91\x81</button></div><span></span></div>"
 
-#define WEATHER_SETTING "<form method=\"GET\" action=\"saveWeatherConf\">"                                                                                            \
-                        "<label class=\"input\"><span>AccuWeather API Key</span><input type=\"text\"name=\"api_key\"value=\"%s\"></label>"                          \
-                        "<label class=\"input\"><span>城市名稱 (City Name)</span><input type=\"text\"name=\"city_name\"value=\"%s\"></label>"                       \
-                        "<label class=\"input\"><span>天氣更新週期（毫秒）</span><input type=\"text\"name=\"weatherUpdataInterval\"value=\"%s\"></label>"   \
-                        "<label class=\"input\"><span>日期更新週期（毫秒）</span><input type=\"text\"name=\"timeUpdataInterval\"value=\"%s\"></label>"      \
-                        "<label class=\"input\"><span>界面語言</span><input class=\"radio\" type=\"radio\" value=\"0\" name=\"language\" %s>简体中文<input class=\"radio\" type=\"radio\" value=\"1\" name=\"language\" %s>繁體中文</label>" \
-                        "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define G_FIELD_RADIO2(lbl, name, v0, l0, v1, l1) \
+  "<div class=\"field\"><label>" lbl "</label><div>" \
+  "<input class=\"radio\" type=\"radio\" value=\"" v0 "\" name=\"" name "\" %s>" l0 \
+  "<input class=\"radio\" type=\"radio\" value=\"" v1 "\" name=\"" name "\" %s>" l1 \
+  "</div><span></span></div>"
 
-#define WEATHER_OLD_SETTING "<form method=\"GET\" action=\"saveWeatherOldConf\">"                                                                                       \
-                            "<label class=\"input\"><span>知心天气 城市名（拼音）</span><input type=\"text\"name=\"cityname\"value=\"%s\"></label>"          \
-                            "<label class=\"input\"><span>City Language(zh-Hans)</span><input type=\"text\"name=\"language\"value=\"%s\"></label>"                      \
-                            "<label class=\"input\"><span>Weather Key</span><input type=\"text\"name=\"weather_key\"value=\"%s\"></label>"                              \
-                            "<label class=\"input\"><span>天气更新周期（毫秒）</span><input type=\"text\"name=\"weatherUpdataInterval\"value=\"%s\"></label>" \
-                            "<label class=\"input\"><span>日期更新周期（毫秒）</span><input type=\"text\"name=\"timeUpdataInterval\"value=\"%s\"></label>"    \
-                            "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define G_FORM_OPEN(action, title) \
+  "<form method=\"GET\" action=\"" action "\"><div class=\"card\">" \
+  "<div class=\"card-head\"><div><div class=\"card-title\">" title "</div></div></div>" \
+  "<div class=\"card-body\">"
 
-#define BILIBILI_SETTING "<form method=\"GET\" action=\"saveBiliConf\">"                                                                                      \
-                         "<label class=\"input\"><span>Bili UID</span><input type=\"text\"name=\"bili_uid\"value=\"%s\"></label>"                             \
-                         "<label class=\"input\"><span>数据更新周期（毫秒）</span><input type=\"text\"name=\"updataInterval\"value=\"%s\"></label>" \
-                         "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define G_FORM_CLOSE \
+  "</div><div class=\"row-actions\">" \
+  "<button type=\"submit\" class=\"btn primary\">\xE2\x9C\x93 Save</button>" \
+  "</div></div></form>"
 
-#define STOCK_SETTING "<form method=\"GET\" action=\"saveStockConf\">"                                                                                                                                                          \
-                      "<label class=\"input\"><span>Stock Symbol (e.g., AAPL, TSLA, 601126)</span><input type=\"text\"name=\"stock_symbol\"value=\"%s\"></label>"                                                                             \
-                      "<label class=\"input\"><span>Market Type</span><select name=\"market_type\" style=\"height:40px;width:240px;border:2px solid #00d9ff;background:rgba(0,217,255,0.05);color:#00d9ff;padding:0 12px;font-size:14px;\">" \
-                      "<option value=\"US\" %s>US (United States)</option>"                                                                                                                                                                    \
-                      "<option value=\"CN\" %s>CN (China)</option>"                                                                                                                                                                            \
-                      "<option value=\"HK\" %s>HK (Hong Kong)</option>"                                                                                                                                                                        \
-                      "</select></label>"                                                                                                                                                                                                       \
-                      "<label class=\"input\"><span>Update Interval (milliseconds)</span><input type=\"text\"name=\"updataInterval\"value=\"%s\"></label>"                                                                                     \
-                      "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"Save\"></form>"
+#define SYS_SETTING G_FORM_OPEN("saveSysConf", "System") \
+  G_FIELD_TEXT("WiFi SSID_0 (2.4G)", "ssid_0") \
+  G_FIELD_PWD ("WiFi Password_0", "password_0") \
+  G_FIELD_TEXT("Power Mode (0=eco, 1=perf)", "power_mode") \
+  G_FIELD_TEXT("Backlight (1-100)", "backLight") \
+  G_FIELD_TEXT("Rotation (0-5)", "rotation") \
+  G_FIELD_TEXT("MPU Order (0-15)", "mpu_order") \
+  G_FIELD_RADIO2("MPU6050 Auto-cal", "auto_calibration_mpu", "0", "Off", "1", "On") \
+  G_FIELD_TEXT("Auto-start App (e.g. Weather)", "auto_start_app") \
+  G_FORM_CLOSE
 
-#define PICTURE_SETTING "<form method=\"GET\" action=\"savePictureConf\">"                                                                                         \
-                        "<label class=\"input\"><span>自动切换时间间隔（毫秒）</span><input type=\"text\"name=\"switchInterval\"value=\"%s\"></label>" \
-                        "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define RGB_SETTING G_FORM_OPEN("saveRgbConf", "RGB Lighting") \
+  G_FIELD_TEXT("Min Brightness (0-1000)", "min_brightness") \
+  G_FIELD_TEXT("Max Brightness (0-1000)", "max_brightness") \
+  G_FIELD_TEXT("Cycle Time (10-1000 ms)", "time") \
+  G_FORM_CLOSE
 
-#define MEDIA_SETTING "<form method=\"GET\" action=\"saveMediaConf\">"                                                                                             \
-                      "<label class=\"input\"><span>自动切换（0不切换 1自动切换）</span><input type=\"text\"name=\"switchFlag\"value=\"%s\"></label>" \
-                      "<label class=\"input\"><span>功耗控制（0低发热 1性能优先）</span><input type=\"text\"name=\"powerFlag\"value=\"%s\"></label>"  \
-                      "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define WEATHER_SETTING G_FORM_OPEN("saveWeatherConf", "Weather (AccuWeather)") \
+  G_FIELD_PWD ("AccuWeather API Key", "api_key") \
+  G_FIELD_TEXT("City Name", "city_name") \
+  G_FIELD_TEXT("Weather Refresh (ms)", "weatherUpdataInterval") \
+  G_FIELD_TEXT("Time Refresh (ms)", "timeUpdataInterval") \
+  G_FIELD_RADIO2("Display Language", "language", "0", "\xE7\xAE\x80\xE4\xBD\x93", "1", "\xE7\xB9\x81\xE9\xAB\x94") \
+  G_FORM_CLOSE
 
-#define SCREEN_SETTING "<form method=\"GET\" action=\"saveScreenConf\">"                                                                                           \
-                       "<label class=\"input\"><span>功耗控制（0低发热 1性能优先）</span><input type=\"text\"name=\"powerFlag\"value=\"%s\"></label>" \
-                       "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define WEATHER_OLD_SETTING G_FORM_OPEN("saveWeatherOldConf", "Weather (legacy)") \
+  G_FIELD_TEXT("City Name (pinyin)", "cityname") \
+  G_FIELD_TEXT("City Language (zh-Hans)", "language") \
+  G_FIELD_PWD ("Weather Key", "weather_key") \
+  G_FIELD_TEXT("Weather Refresh (ms)", "weatherUpdataInterval") \
+  G_FIELD_TEXT("Time Refresh (ms)", "timeUpdataInterval") \
+  G_FORM_CLOSE
 
-#define HEARTBEAT_SETTING "<form method=\"GET\" action=\"saveHeartbeatConf\">"                                                                            \
-                          "<label class=\"input\"><span>Role(0:heart,1:beat)</span><input type=\"text\"name=\"role\"value=\"%s\"></label>"                \
-                          "<label class=\"input\"><span>QQ num(填写QQ号)</span><input type=\"text\"name=\"qq_num\"value=\"%s\"></label>"                    \
-                        "<label class=\"input\"><span>MQTT Server</span><input type=\"text\"name=\"mqtt_server\"value=\"%s\"></label>"                    \
-                        "<label class=\"input\"><span>MQTT 端口号</span><input type=\"text\"name=\"mqtt_port\"value=\"%s\"></label>"                   \
-                        "<label class=\"input\"><span>MQTT 服务用户名(可不填)</span><input type=\"text\"name=\"mqtt_user\"value=\"%s\"></label>"  \
-                        "<label class=\"input\"><span>MQTT 服务密码(可不填)</span><input type=\"text\"name=\"mqtt_password\"value=\"%s\"></label>" \
-                        "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define BILIBILI_SETTING G_FORM_OPEN("saveBiliConf", "Bilibili Fans") \
+  G_FIELD_TEXT("Bili UID", "bili_uid") \
+  G_FIELD_TEXT("Update Interval (ms)", "updataInterval") \
+  G_FORM_CLOSE
 
-#define ANNIVERSARY_SETTING "<form method=\"GET\" action=\"saveAnniversaryConf\">"                                                      \
-                            "<label class=\"input\"><span>事件0</span><input type=\"text\"name=\"event_name0\"value=\"%s\"></label>"  \
-                            "<label class=\"input\"><span>日期0</span><input type=\"text\"name=\"target_date0\"value=\"%s\"></label>" \
-                            "<label class=\"input\"><span>事件1</span><input type=\"text\"name=\"event_name1\"value=\"%s\"></label>"  \
-                            "<label class=\"input\"><span>日期1</span><input type=\"text\"name=\"target_date1\"value=\"%s\"></label>" \
-                            "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+// Stock has a 3-option select rather than radio; spell it out inline
+// rather than adding a single-use G_FIELD_SELECT3 macro.
+#define STOCK_SETTING G_FORM_OPEN("saveStockConf", "Stock") \
+  G_FIELD_TEXT("Stock Symbol (AAPL, TSLA, 601126)", "stock_symbol") \
+  "<div class=\"field\"><label>Market</label>" \
+  "<select name=\"market_type\">" \
+  "<option value=\"US\" %s>US</option>" \
+  "<option value=\"CN\" %s>CN</option>" \
+  "<option value=\"HK\" %s>HK</option>" \
+  "</select><span></span></div>" \
+  G_FIELD_TEXT("Update Interval (ms)", "updataInterval") \
+  G_FORM_CLOSE
 
-#define REMOTR_SENSOR_SETTING "<form method=\"GET\" action=\"savePCResourceConf\">"                                                                                       \
-                              "<label class=\"input\"><span>PC地址</span><input type=\"text\"name=\"pc_ipaddr\"value=\"%s\"></label>"                                   \
-                              "<label class=\"input\"><span>传感器数据更新间隔(ms)</span><input type=\"text\"name=\"sensorUpdataInterval\"value=\"%s\"></label>" \
-                              "</label><input class=\"btn\" type=\"submit\" name=\"submit\" value=\"保存\"></form>"
+#define PICTURE_SETTING G_FORM_OPEN("savePictureConf", "Picture") \
+  G_FIELD_TEXT("Auto-switch Interval (ms)", "switchInterval") \
+  G_FORM_CLOSE
+
+#define MEDIA_SETTING G_FORM_OPEN("saveMediaConf", "Media Player") \
+  G_FIELD_TEXT("Auto-switch (0=off, 1=on)", "switchFlag") \
+  G_FIELD_TEXT("Power Mode (0=eco, 1=perf)", "powerFlag") \
+  G_FORM_CLOSE
+
+#define SCREEN_SETTING G_FORM_OPEN("saveScreenConf", "Screen Share") \
+  G_FIELD_TEXT("Power Mode (0=eco, 1=perf)", "powerFlag") \
+  G_FORM_CLOSE
+
+#define HEARTBEAT_SETTING G_FORM_OPEN("saveHeartbeatConf", "Heartbeat (MQTT)") \
+  G_FIELD_TEXT("Role (0=heart, 1=beat)", "role") \
+  G_FIELD_TEXT("QQ Number", "qq_num") \
+  G_FIELD_TEXT("MQTT Server", "mqtt_server") \
+  G_FIELD_TEXT("MQTT Port", "mqtt_port") \
+  G_FIELD_TEXT("MQTT Username (optional)", "mqtt_user") \
+  G_FIELD_PWD ("MQTT Password (optional)", "mqtt_password") \
+  G_FORM_CLOSE
+
+#define ANNIVERSARY_SETTING G_FORM_OPEN("saveAnniversaryConf", "Anniversary") \
+  G_FIELD_TEXT("Event 0", "event_name0") \
+  G_FIELD_TEXT("Date 0", "target_date0") \
+  G_FIELD_TEXT("Event 1", "event_name1") \
+  G_FIELD_TEXT("Date 1", "target_date1") \
+  G_FORM_CLOSE
+
+#define REMOTR_SENSOR_SETTING G_FORM_OPEN("savePCResourceConf", "PC Resource") \
+  G_FIELD_TEXT("PC IP Address", "pc_ipaddr") \
+  G_FIELD_TEXT("Sensor Update Interval (ms)", "sensorUpdataInterval") \
+  G_FORM_CLOSE
 
 void sys_setting()
 {
