@@ -213,3 +213,60 @@ jobs:
           done
           echo "::error::FTP tests failed after 3 attempts"
           exit 1
+
+  # Track D: real ESP32 firmware compile (env:HoloCubic_AIO_Releases).
+  # Catches the class of bug PR #71 missed — host stubs that diverge from
+  # real Arduino-core headers (e.g. PR-3.3 split where WiFiServer was
+  # only included via the host stub, not the firmware include chain).
+  # Pre-this-job, that bug only surfaced at release-tag time.
+  firmware-build:
+    name: Firmware build (ESP32 release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      # Cache the espressif32 platform tools + project libdeps. First run
+      # downloads ~500MB of toolchain (~6-8 min); subsequent cache hits
+      # cut it to ~2 min total.
+      - name: Cache PlatformIO data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            AIO_Firmware_PIO/.pio
+          key: pio-firmware-${{ runner.os }}-${{ hashFiles('AIO_Firmware_PIO/platformio.ini') }}
+          restore-keys: |
+            pio-firmware-${{ runner.os }}-
+
+      # Retry-with-backoff matches the other jobs; absorbs transient
+      # GitHub-archive 502s on lib downloads.
+      - name: Build firmware (env:HoloCubic_AIO_Releases)
+        working-directory: AIO_Firmware_PIO
+        timeout-minutes: 15
+        run: |
+          set +e
+          for attempt in 1 2 3; do
+            pio run -e HoloCubic_AIO_Releases
+            rc=$?
+            if [ $rc -eq 0 ]; then
+              echo "::notice::Firmware build succeeded on attempt $attempt"
+              exit 0
+            fi
+            if [ $attempt -lt 3 ]; then
+              sleep_for=$((attempt * 15))
+              echo "::warning::Firmware build failed (rc=$rc) on attempt $attempt/3; retrying in ${sleep_for}s..."
+              sleep $sleep_for
+            fi
+          done
+          echo "::error::Firmware build failed after 3 attempts"
+          exit 1
