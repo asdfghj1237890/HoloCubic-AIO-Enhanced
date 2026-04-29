@@ -380,7 +380,7 @@ void init_page_header()
     // Main: topbar + open .content
     webpage_header += F("<main class=\"main\"><div class=\"topbar\"><div class=\"crumbs\">HoloCubic &nbsp;/&nbsp; <strong id=\"crumbCurrent\">");
     webpage_header += getText("home");
-    webpage_header += F("</strong></div><div class=\"status-cluster\"><span class=\"pill\" id=\"wifiPill\"><span class=\"dot\" id=\"wifiDot\"></span><span id=\"wifiText\">--</span></span><span class=\"pill\" id=\"ipPill\">--</span></div></div>");
+    webpage_header += F("</strong></div><div class=\"status-cluster\"><span class=\"pill\" id=\"wifiPill\"><span class=\"dot\" id=\"wifiDot\"></span><span id=\"wifiText\">--</span></span><span class=\"pill\" id=\"ipPill\" title=\"Device IP address\">IP --</span></div></div>");
     webpage_header += F("<div class=\"content\">");
 }
 
@@ -433,7 +433,7 @@ static const char GLASS_JS[] PROGMEM = R"GLASS(
       var ipPill   = document.getElementById('ipPill');
       if(wifiText) wifiText.textContent = d.wifi.connected ? (d.wifi.ssid + ' · ' + d.wifi.rssi + ' dBm') : 'WiFi off';
       if(wifiDot)  wifiDot.style.background = d.wifi.connected ? 'var(--good)' : 'var(--bad)';
-      if(ipPill)   ipPill.textContent = d.wifi.connected ? d.wifi.ip : '--';
+      if(ipPill)   ipPill.textContent = 'IP ' + (d.wifi.connected ? d.wifi.ip : '--');
       var u=document.getElementById('kpiUptime');  if(u) u.innerHTML = fmtUptime(d.uptime_ms) + '<span class="unit">hh:mm:ss</span>';
       var fh=document.getElementById('kpiHeap');   if(fh) fh.innerHTML = fmtKB(d.free_heap) + '<span class="unit">/' + fmtKB(d.total_heap) + ' KB</span>';
       var hb=document.getElementById('kpiHeapBar');if(hb) hb.style.width = (100*d.free_heap/d.total_heap).toFixed(0)+'%';
