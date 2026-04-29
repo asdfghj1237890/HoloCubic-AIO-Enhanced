@@ -15,6 +15,14 @@ on:
           - compare
           - update-golden
 
+# Opt all JS-based actions in this workflow into Node.js 24 ahead of the
+# 2026-06-02 forced default, which silences the per-action deprecation
+# warning ("Node.js 20 actions are deprecated"). Once actions/checkout +
+# friends ship a major release that bundles Node.js 24 explicitly, this
+# block can come out and the action versions can be bumped instead.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   gui-regression:
     name: GUI regression (SDL2 host harness)

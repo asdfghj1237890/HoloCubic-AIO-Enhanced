@@ -16,6 +16,12 @@ on:
       - ".github/workflows/aio-tool.yml"
   workflow_dispatch:
 
+# Opt all JS-based actions in this workflow into Node.js 24 ahead of the
+# 2026-06-02 forced default, silencing the deprecation warning. See
+# .github/workflows/regression.yml for the full context.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   python-checks:
     name: pytest + ruff (uv)
