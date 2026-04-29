@@ -185,7 +185,11 @@ void init_page_header()
     // Glass UI CSS now served from /static/glass.css (FU #2) so the
     // browser caches it across page navigations. The PROGMEM blob is
     // still defined above and emitted by serve_glass_css().
-    webpage_header += F("<link rel=\"stylesheet\" href=\"/static/glass.css\">");
+    // ?v=AIO_VERSION cache-bust query: /static/glass.{css,js} are served
+    // with Cache-Control: max-age=86400, so without a versioned URL the
+    // browser keeps using stale assets across firmware upgrades. Bumping
+    // AIO_VERSION (common.h) auto-invalidates both.
+    webpage_header += F("<link rel=\"stylesheet\" href=\"/static/glass.css?v=" AIO_VERSION "\">");
     // Restore the saved theme (dark by default) before <body> renders so
     // the page doesn't flash dark first when light is selected.
     webpage_header += F("<script>try{if(localStorage.getItem('holocubic-theme')==='light')document.documentElement.classList.add('preload-light');}catch(e){}</script>");
@@ -422,7 +426,7 @@ static const char GLASS_JS[] PROGMEM = R"GLASS(
   // Stats: refresh status pills + dashboard KPIs from /api/stats
   function fmtUptime(ms){
     var s = Math.floor(ms/1000), h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
-    return ('0'+h).slice(-2)+':'+('0'+m).slice(-2)+':'+('0'+(s%60)).slice(-2);
+    return ('0'+h).slice(-2)+'h:'+('0'+m).slice(-2)+'m:'+('0'+(s%60)).slice(-2)+'s';
   }
   function fmtKB(b){ return Math.round(b/1024); }
   function fmtMB(b){ return (b/1024/1024).toFixed(1); }
@@ -434,7 +438,7 @@ static const char GLASS_JS[] PROGMEM = R"GLASS(
       if(wifiText) wifiText.textContent = d.wifi.connected ? (d.wifi.ssid + ' · ' + d.wifi.rssi + ' dBm') : 'WiFi off';
       if(wifiDot)  wifiDot.style.background = d.wifi.connected ? 'var(--good)' : 'var(--bad)';
       if(ipPill)   ipPill.textContent = 'IP ' + (d.wifi.connected ? d.wifi.ip : '--');
-      var u=document.getElementById('kpiUptime');  if(u) u.innerHTML = fmtUptime(d.uptime_ms) + '<span class="unit">hh:mm:ss</span>';
+      var u=document.getElementById('kpiUptime');  if(u) u.textContent = fmtUptime(d.uptime_ms);
       var fh=document.getElementById('kpiHeap');   if(fh) fh.innerHTML = fmtKB(d.free_heap) + '<span class="unit">/' + fmtKB(d.total_heap) + ' KB</span>';
       var hb=document.getElementById('kpiHeapBar');if(hb) hb.style.width = (100*d.free_heap/d.total_heap).toFixed(0)+'%';
       var fl=document.getElementById('kpiFlash');  if(fl) fl.innerHTML = fmtMB(d.flash_used) + '<span class="unit">/' + fmtMB(d.flash_total) + ' MB</span>';
@@ -515,7 +519,7 @@ void init_page_footer()
     // Glass UI JS now served from /static/glass.js (FU #2) for browser
     // caching; PROGMEM blob still defined above and emitted by
     // serve_glass_js().
-    webpage_footer += F("<script src=\"/static/glass.js\"></script>");
+    webpage_footer += F("<script src=\"/static/glass.js?v=" AIO_VERSION "\"></script>");
     webpage_footer += F("</body></html>");
 }
 
