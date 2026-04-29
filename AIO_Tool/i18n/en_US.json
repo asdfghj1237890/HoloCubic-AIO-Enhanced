@@ -27,6 +27,7 @@
   "btn_up": "Up",
   "btn_left": "Left",
   "btn_right": "Right",
+  "btn_ok": "OK",
   "btn_home": "Home",
   "port_number": "Port",
   "baud_rate": "Baud Rate",

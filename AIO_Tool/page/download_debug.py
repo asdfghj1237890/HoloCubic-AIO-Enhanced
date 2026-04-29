@@ -633,6 +633,19 @@ class DownloadDebug:
             height=32,
             state=tk.DISABLED,
         )
+        # OK / Confirm — sends GO_FORWORD, the action every app uses for
+        # "select / activate / refresh" (e.g. weather force-refresh,
+        # bilibili manual fan-count update). Most useful action for a
+        # remote, so labelled prominently between the directional cluster
+        # and Home.
+        self.m_remote_ok_btn = ctk.CTkButton(
+            btn_frame,
+            text="✓ " + self.i18n.t("btn_ok"),
+            command=lambda: self._send_remote(b"~F"),
+            width=110,
+            height=32,
+            state=tk.DISABLED,
+        )
         self.m_remote_home_btn = ctk.CTkButton(
             btn_frame,
             text="\U0001f3e0 " + self.i18n.t("btn_home"),
@@ -645,6 +658,7 @@ class DownloadDebug:
             self.m_remote_up_btn,
             self.m_remote_left_btn,
             self.m_remote_right_btn,
+            self.m_remote_ok_btn,
             self.m_remote_home_btn,
         ):
             btn.pack(side=tk.LEFT, padx=4)
@@ -942,6 +956,7 @@ class DownloadDebug:
                 self.m_remote_up_btn.configure(state=tk.NORMAL)
                 self.m_remote_left_btn.configure(state=tk.NORMAL)
                 self.m_remote_right_btn.configure(state=tk.NORMAL)
+                self.m_remote_ok_btn.configure(state=tk.NORMAL)
                 self.m_remote_home_btn.configure(state=tk.NORMAL)
         else:
             self.m_connect_button.configure(text=self.i18n.t("open_serial"))
@@ -957,6 +972,7 @@ class DownloadDebug:
             self.m_remote_up_btn.configure(state=tk.DISABLED)
             self.m_remote_left_btn.configure(state=tk.DISABLED)
             self.m_remote_right_btn.configure(state=tk.DISABLED)
+            self.m_remote_ok_btn.configure(state=tk.DISABLED)
             self.m_remote_home_btn.configure(state=tk.DISABLED)
 
             if self.ser is not None:
