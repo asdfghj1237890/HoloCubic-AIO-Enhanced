@@ -15,6 +15,8 @@
 | 07 | [CI + Release](./07-ci-and-release.md) | GitHub Actions 三個 workflow、tag 怎麼觸發 release、PR 流程 | 20 min |
 | 08 | [重構與優化案例集](./08-refactoring-case-studies.md) | 10 個真實 PR 的「舊長什麼樣 → 為什麼不好 → 新的怎麼解 → 為什麼這樣解」，覆蓋 strcpy/JSON/MQTT callback/delay()/HTTPClient dedupe/CTkButton/PyInstaller/WiFi STA-vs-AP/cache busting/test design | 1 hr |
 | 09 | [測試架構解構（從上到下）](./09-test-architecture-decomposition.md) | 整個測試系統的架構視角：7 層（silicon → GUI render）對應到 4 個 env，bug class 分流，coverage map，跑 trace 從 user action 貫穿全 stack，**長時間 leak detection 設計**（stock leak case + 4 個解法選項），coverage gap 跟 mock 設計常見誤解 | 1 hr |
+| 10 | [測試框架設計（end-state record）](./10-test-framework-design.md) | 雙軌（GUI scenario / Unity unit）框架是怎麼長成現在這樣的、機制細節（HTTP/socket/SD/flash fixture、WIFI_CONN routing、SIGSEGV+addr2line）、coverage snapshot、已知限制 | 30 min |
+| 11 | [測試框架抓出來的 bug](./11-bugs-surfaced-by-tests.md) | 寫測試過程中**被動發現**的 4 個 latent bug：stockmarket lv_obj_del、game_2048 judge() off-by-one、media_player calloc-of-File UB、FlashFS mkdir 父目錄錯。每條含 fix commit + root cause + 未來偵測機制 | 20 min |
 
 ## 路徑慣例
 
