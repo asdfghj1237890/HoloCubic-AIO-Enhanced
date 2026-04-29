@@ -13,6 +13,12 @@
 #define AIO_ESP32_FTPSERVER_INTERNAL_H
 
 #include <Arduino.h>
+// On real ESP32 Arduino-core, WiFiServer lives in <WiFi.h> while
+// WiFiClient lives in <WiFiClient.h>. The host test stub put both
+// classes in WiFiClient.h, which masked this missing include during
+// the PR-3.3 split CI. Pull both headers explicitly so the firmware
+// build sees WiFiServer too.
+#include <WiFi.h>
 #include <WiFiClient.h>
 #include "ESP32FtpServer.h"
 
