@@ -387,15 +387,27 @@ class DownloadDebug:
             select_com = self.m_com_select.get().strip()
             cmd = ["--port", select_com, "erase_flash"]
             # cmd = ['erase_flash']
-            esptool.main(cmd)
-            self.print_log("清空芯片成功！")
-            # 更新按钮状态
-            self.m_clean_flash_botton["text"] = "清空芯片"
-            self.m_connect_button["state"] = tk.NORMAL
-            self.m_reboot_button["state"] = tk.NORMAL
-            # self.m_clean_flash_botton["state"] = tk.NORMAL
-            self.m_download_botton["state"] = tk.NORMAL
-            self.__father.update()
+            # Wrap esptool to surface SerialException (port busy /
+            # permission) and any other failure to the operation log.
+            # Without this, the thread dies silently and the button
+            # stays at "清空中" forever.
+            try:
+                esptool.main(cmd)
+                self.print_log("清空芯片成功！")
+            except serial.SerialException as err:
+                logger.error("erase flash serial error: %s", err)
+                self.print_log(f"清空芯片失敗 (序列埠): {err}")
+            except Exception as err:
+                logger.error("erase flash failed: %s", err)
+                self.print_log(f"清空芯片失敗: {err}")
+            finally:
+                # 更新按钮状态
+                self.m_clean_flash_botton["text"] = "清空芯片"
+                self.m_connect_button["state"] = tk.NORMAL
+                self.m_reboot_button["state"] = tk.NORMAL
+                # self.m_clean_flash_botton["state"] = tk.NORMAL
+                self.m_download_botton["state"] = tk.NORMAL
+                self.__father.update()
 
         if self.m_clean_flash_botton["text"] == "清空芯片":
             self.clean_flash_thread = threading.Thread(
@@ -416,11 +428,29 @@ class DownloadDebug:
     def down_and_canle(self) -> None:
         """
         下载与取消按钮
+
+        Wrap the dispatch so any unexpected failure (e.g. button text
+        out of sync with i18n.t() return — which silently no-ops both
+        branches) gets surfaced to the operation log instead of dying
+        in Tk's default callback handler.
         """
-        if self.m_download_botton["text"] == self.i18n.t("flash_firmware"):
-            self.download_firmware()
-        elif self.m_download_botton["text"] == self.i18n.t("cancel_flash"):
-            self.canle_download_firmware()
+        try:
+            if self.m_download_botton["text"] == self.i18n.t("flash_firmware"):
+                self.download_firmware()
+            elif self.m_download_botton["text"] == self.i18n.t("cancel_flash"):
+                self.canle_download_firmware()
+            else:
+                # Defensive: button text matches neither expected i18n
+                # value. Surfaces the language-drift class of bug.
+                btn_text = self.m_download_botton["text"]
+                self.print_log(
+                    f"flash button text mismatch: got '{btn_text}', "
+                    f"expected '{self.i18n.t('flash_firmware')}' or "
+                    f"'{self.i18n.t('cancel_flash')}'"
+                )
+        except Exception as err:
+            logger.error("down_and_canle dispatch failed: %s", err)
+            self.print_log(f"flash dispatch failed: {err}")
 
     def canle_download_firmware(self) -> None:
         """
@@ -759,11 +789,37 @@ class DownloadDebug:
         self.m_com_select.current(choose_index)
 
     def com_connect(self) -> None:
-        if self.m_connect_button["text"] == self.i18n.t("open_serial"):
+        # Defensive: button text might not match either i18n value if
+        # language was switched after creation (the buttons aren't
+        # re-translated live). Without this branch the click is a
+        # silent no-op.
+        btn_text = self.m_connect_button["text"]
+        open_label = self.i18n.t("open_serial")
+        close_label = self.i18n.t("close_serial")
+        if btn_text != open_label and btn_text != close_label:
+            self.print_log(f"serial button text mismatch: got '{btn_text}', expected '{open_label}' or '{close_label}'")
+            # Recover: assume user wants to open and reset the label.
+            self.m_connect_button["text"] = open_label
+            btn_text = open_label
+
+        if btn_text == open_label:
             down_flag, param = self.get_download_param()
             if self.ser is not None:
                 self.ser.close()
-            self.ser = serial.Serial(param["port"], param["baud"], timeout=10)
+            # Surface SerialException (port busy / permission / not found)
+            # to the operation log instead of swallowing it in Tk's default
+            # callback handler. Without this the user sees no button-state
+            # change and zero log output — looks identical to "nothing
+            # happened". The most common real cause is another process
+            # (Arduino IDE Serial Monitor, putty, a stale CubicAIO_Tool
+            # instance) holding the COM port.
+            try:
+                self.ser = serial.Serial(param["port"], param["baud"], timeout=10)
+            except (serial.SerialException, OSError, ValueError) as err:
+                logger.error("open serial port failed: %s", err)
+                self.print_log(f"{self.i18n.t('open_serial')} failed: {err}")
+                self.ser = None
+                return
 
             # Check if opened successfully
             if self.ser.is_open:
@@ -855,24 +911,31 @@ class DownloadDebug:
         self.m_clean_flash_botton["state"] = tk.DISABLED
         self.m_download_botton["state"] = tk.DISABLED
         down_flag, param = self.get_download_param()
-        self.print_log("已发送重启指令！")
         self.__father.update()
 
-        port = serial.Serial(param["port"], param["baud"], timeout=10)
-
-        port.setDTR(False)  # IO0=HIGH
-        port.setRTS(True)  # EN=LOW, chip in reset
-        time.sleep(0.05)
-        port.setRTS(False)  # EN=HIGH, chip out of reset
-        # 0.5 needed for ESP32 rev0 and rev1
-        time.sleep(0.05)  # 0.5 / 0.05
-
-        port.close()
-        del port
-        self.m_connect_button["state"] = tk.NORMAL
-        self.m_reboot_button["state"] = tk.NORMAL
-        self.m_clean_flash_botton["state"] = tk.NORMAL
-        self.m_download_botton["state"] = tk.NORMAL
+        # Surface failure (port busy / permission / not found) to the
+        # log instead of swallowing in Tk's default callback handler.
+        try:
+            port = serial.Serial(param["port"], param["baud"], timeout=10)
+            try:
+                port.setDTR(False)  # IO0=HIGH
+                port.setRTS(True)  # EN=LOW, chip in reset
+                time.sleep(0.05)
+                port.setRTS(False)  # EN=HIGH, chip out of reset
+                # 0.5 needed for ESP32 rev0 and rev1
+                time.sleep(0.05)  # 0.5 / 0.05
+                self.print_log("已发送重启指令！")
+            finally:
+                port.close()
+                del port
+        except (serial.SerialException, OSError, ValueError) as err:
+            logger.error("esp reset failed: %s", err)
+            self.print_log(f"{self.i18n.t('reboot')} failed: {err}")
+        finally:
+            self.m_connect_button["state"] = tk.NORMAL
+            self.m_reboot_button["state"] = tk.NORMAL
+            self.m_clean_flash_botton["state"] = tk.NORMAL
+            self.m_download_botton["state"] = tk.NORMAL
 
     def __del__(self) -> None:
         """資源釋放：通知 receive_thread 停止；esptool download_thread 仍以 _async_raise 中斷。"""
