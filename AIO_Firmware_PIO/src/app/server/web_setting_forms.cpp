@@ -196,7 +196,22 @@ void sys_setting()
                 mpu_order, "", "checked=\"checked\"",
                 auto_start_app);
     }
-    webpage = buf;
+
+    // WiFi scan card prepended above the system form. Static skeleton; the
+    // GLASS_JS rescanBtn handler in init_page_footer fetches /api/wifi-scan
+    // (the endpoint added in Glass UI PR-A) and re-renders #wifiScanList
+    // with one .scan-row per network. Clicking a row fills the ssid_0 input
+    // below + focuses the password field.
+    webpage = F("<div class=\"card\"><div class=\"card-head\"><div><div class=\"card-title\">");
+    webpage += getText("wifi_networks");
+    webpage += F("</div><div class=\"card-sub\">");
+    webpage += getText("scan_subtitle");
+    webpage += F("</div></div><button type=\"button\" class=\"btn ghost\" id=\"rescanBtn\" style=\"margin-left:auto\">");
+    webpage += getText("rescan");
+    webpage += F("</button></div><div class=\"card-body\"><div class=\"scan-list\" id=\"wifiScanList\"><div class=\"scan-empty\">");
+    webpage += getText("scan_hint");
+    webpage += F("</div></div></div></div>");
+    webpage += buf;
     Send_HTML(webpage);
 }
 

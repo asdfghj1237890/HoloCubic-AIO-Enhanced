@@ -145,6 +145,14 @@ body.light .theme-toggle::after{left:14px;}
 .quick-card a{display:block;padding:14px 20px;border-bottom:1px solid var(--border);color:var(--fg);text-decoration:none;font-size:13px;}
 .quick-card a:hover{background:var(--bg-3);color:var(--accent);}
 .quick-card a:last-child{border-bottom:none;}
+.scan-list{padding:4px 0;}
+.scan-row{display:grid;grid-template-columns:1fr auto auto auto;gap:14px;align-items:center;padding:11px 20px;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;}
+.scan-row:last-child{border-bottom:none;}
+.scan-row:hover{background:var(--bg-3);}
+.scan-row.current{background:linear-gradient(90deg,var(--accent-soft),transparent);color:var(--accent);}
+.scan-row .meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--fg-3);}
+.scan-row .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+.scan-empty{padding:20px;color:var(--fg-3);text-align:center;font-size:13px;}
 )GLASS";
 void init_page_header()
 {
@@ -435,6 +443,58 @@ static const char GLASS_JS[] PROGMEM = R"GLASS(
     setTimeout(function(){ t.style.opacity=0; t.style.transform='translateY(8px)'; }, 2500);
     setTimeout(function(){ t.remove(); }, 3000);
   }
+
+  // WiFi scan (System page only): bind #rescanBtn → /api/wifi-scan,
+  // render rows in #wifiScanList, click row → fill ssid_0 + focus
+  // password_0. No-op on pages without the rescan button.
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function renderScanRows(networks){
+    var list = document.getElementById('wifiScanList');
+    if(!list) return;
+    if(!networks || networks.length === 0){
+      list.innerHTML = '<div class="scan-empty">No networks found</div>';
+      return;
+    }
+    networks.sort(function(a,b){ return b.rssi - a.rssi; });
+    var html = networks.map(function(n){
+      var bars = n.rssi >= -55 ? '▁▃▅▇' : n.rssi >= -65 ? '▁▃▅' : n.rssi >= -75 ? '▁▃' : '▁';
+      return '<div class="scan-row ' + (n.current ? 'current' : '') + '" data-ssid="' + escapeHtml(n.ssid) + '">' +
+             '<span>' + escapeHtml(n.ssid) + '</span>' +
+             '<span class="meta">' + n.sec + '</span>' +
+             '<span class="meta">' + n.rssi + ' dBm ' + bars + '</span>' +
+             (n.current ? '<span class="dot" title="connected"></span>' : '<span style="width:7px"></span>') +
+             '</div>';
+    }).join('');
+    list.innerHTML = html;
+    list.querySelectorAll('.scan-row').forEach(function(row){
+      row.addEventListener('click', function(){
+        var ssid = row.getAttribute('data-ssid');
+        var ssidInput = document.querySelector('input[name="ssid_0"]');
+        var pwdInput  = document.querySelector('input[name="password_0"]');
+        if(ssidInput){ ssidInput.value = ssid; }
+        if(pwdInput){ pwdInput.focus(); }
+      });
+    });
+  }
+  var rescanBtn = document.getElementById('rescanBtn');
+  if(rescanBtn){
+    rescanBtn.addEventListener('click', function(){
+      var list = document.getElementById('wifiScanList');
+      if(list){ list.innerHTML = '<div class="scan-empty">Scanning…</div>'; }
+      rescanBtn.disabled = true;
+      fetch('/api/wifi-scan',{cache:'no-store'})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ renderScanRows(d.networks); })
+        .catch(function(){
+          if(list){ list.innerHTML = '<div class="scan-empty">Scan failed</div>'; }
+        })
+        .finally(function(){ rescanBtn.disabled = false; });
+    });
+  }
 })();
 )GLASS";
 
@@ -610,6 +670,33 @@ const char* getText(const char* key) {
         if (current_lang == LANG_ZH_CN) return "温度";
         if (current_lang == LANG_ZH_TW) return "溫度";
         return "Temp";
+    }
+
+    // WiFi scan card on the System page
+    if (strcmp(key, "wifi_networks") == 0) {
+        if (current_lang == LANG_ZH_CN) return "WiFi 网络";
+        if (current_lang == LANG_ZH_TW) return "WiFi 網路";
+        return "WiFi Networks";
+    }
+    if (strcmp(key, "scan_subtitle") == 0) {
+        if (current_lang == LANG_ZH_CN) return "扫描附近网络";
+        if (current_lang == LANG_ZH_TW) return "掃描附近網路";
+        return "Scan for nearby networks";
+    }
+    if (strcmp(key, "rescan") == 0) {
+        if (current_lang == LANG_ZH_CN) return "重新扫描";
+        if (current_lang == LANG_ZH_TW) return "重新掃描";
+        return "Rescan";
+    }
+    if (strcmp(key, "scan_hint") == 0) {
+        if (current_lang == LANG_ZH_CN) return "点击重新扫描以发现网络";
+        if (current_lang == LANG_ZH_TW) return "點擊重新掃描以發現網路";
+        return "Click Rescan to discover networks";
+    }
+    if (strcmp(key, "scanning") == 0) {
+        if (current_lang == LANG_ZH_CN) return "扫描中…";
+        if (current_lang == LANG_ZH_TW) return "掃描中…";
+        return "Scanning…";
     }
 
     return "";
