@@ -180,3 +180,28 @@ jobs:
           done
           echo "::error::Tests failed after 3 attempts"
           exit 1
+
+      # Track C: ESP32FtpServer smoke tests. Separate env because the FTP
+      # harness needs heavier stubs (String, IPAddress, scriptable
+      # WiFiServer/SD) than the lean native_unit surface. Added as the
+      # gating safety net for PR-3.3 (FtpServer file split).
+      - name: Run FTP harness tests (env:native_ftp)
+        working-directory: AIO_Firmware_PIO
+        timeout-minutes: 5
+        run: |
+          set +e
+          for attempt in 1 2 3; do
+            pio test -e native_ftp
+            rc=$?
+            if [ $rc -eq 0 ]; then
+              echo "::notice::FTP tests succeeded on attempt $attempt"
+              exit 0
+            fi
+            if [ $attempt -lt 3 ]; then
+              sleep_for=$((attempt * 15))
+              echo "::warning::FTP tests failed (rc=$rc) on attempt $attempt/3; retrying in ${sleep_for}s..."
+              sleep $sleep_for
+            fi
+          done
+          echo "::error::FTP tests failed after 3 attempts"
+          exit 1
