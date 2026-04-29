@@ -2,6 +2,7 @@
 #include "stockmarket_gui.h"
 #include "sys/app_controller.h"
 #include "../../common.h"
+#include "../../http_util.h"
 #include "ArduinoJson.h"
 
 // STOCKmarket configuration for persistence
@@ -98,51 +99,26 @@ static MyHttpResult http_request(const String& symbol, const String& market)
 {
     MyHttpResult result;
     String url;
-    
-    // Use appropriate API based on market
+    String stockSymbol = buildStockSymbol(symbol, market);
+
     if (market == "CN")
     {
-        // Chinese market: use Sina Finance API
-        String stockSymbol = buildStockSymbol(symbol, market);
+        // Chinese market: Sina Finance API. The `referer` header is
+        // load-bearing — Sina returns 403 / empty body without it.
         url = "http://hq.sinajs.cn/list=" + stockSymbol;
-        
-        HTTPClient httpClient;
-        httpClient.setTimeout(2000);
-        bool status = httpClient.begin(url);
-        if (status == false)
-        {
-            result.httpCode = -1;
-            return result;
-        }
-        httpClient.addHeader("referer", "https://finance.sina.com.cn");
-        int httpCode = httpClient.GET();
-        String httpResponse = httpClient.getString();
-        httpClient.end();
-        result.httpCode = httpCode;
-        result.httpResponse = httpResponse;
+        result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 2000,
+                                            "referer", "https://finance.sina.com.cn");
     }
     else
     {
-        // International markets: use Yahoo Finance API
-        String stockSymbol = buildStockSymbol(symbol, market);
+        // International markets: Yahoo Finance v8 chart API. Yahoo blocks
+        // the default ESP32 User-Agent; "Mozilla/5.0" is the smallest UA
+        // that gets a normal JSON body.
         url = "https://query1.finance.yahoo.com/v8/finance/chart/" + stockSymbol + "?interval=1d&range=1d";
-        
-        HTTPClient httpClient;
-        httpClient.setTimeout(3000);
-        bool status = httpClient.begin(url);
-        if (status == false)
-        {
-            result.httpCode = -1;
-            return result;
-        }
-        httpClient.addHeader("User-Agent", "Mozilla/5.0");
-        int httpCode = httpClient.GET();
-        String httpResponse = httpClient.getString();
-        httpClient.end();
-        result.httpCode = httpCode;
-        result.httpResponse = httpResponse;
+        result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 3000,
+                                            "User-Agent", "Mozilla/5.0");
     }
-    
+
     return result;
 }
 
