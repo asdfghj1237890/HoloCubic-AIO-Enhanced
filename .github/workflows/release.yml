@@ -113,6 +113,11 @@ jobs:
       - build_firmware
       - build_tool
     steps:
+      # Need the repo for the dist/ boot+partition bin files (3 small files
+      # checked in for from-scratch ESP32 flashing). See dist/README.md.
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download firmware artifact
         uses: actions/download-artifact@v4
         with:
@@ -125,12 +130,35 @@ jobs:
           name: tool
           path: release
 
+      - name: Stage boot/partition bins
+        run: |
+          cp dist/bootloader_qio_80m.bin release/
+          cp dist/partitions.bin         release/
+          cp dist/boot_app0.bin          release/
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           name: HoloCubic AIO ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
+          body: |
+            ## Files
+            | File | Flash address | Notes |
+            |---|---|---|
+            | `HoloCubic_AIO_firmware_${{ needs.build_firmware.outputs.version }}.bin` | `0x10000` | Application firmware |
+            | `HoloCubic_AIO_Tool_${{ needs.build_tool.outputs.version }}.exe` | — | Windows GUI flasher |
+            | `bootloader_qio_80m.bin` | `0x1000` | ESP32 second-stage bootloader |
+            | `partitions.bin` | `0x8000` | Custom partition table (HoloCubic AIO layout) |
+            | `boot_app0.bin` | `0xe000` | OTA boot selector |
+
+            For first-time flash, drag all four `.bin` into the AIO Tool's 韌體刷寫 tab at the addresses above.
+            See [dist/README.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/dist/README.md) for esptool CLI usage.
+
+            See [AIO_Tool/CHANGELOG.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/AIO_Tool/CHANGELOG.md) for tool changes.
           files: |
             release/HoloCubic_AIO_firmware_${{ needs.build_firmware.outputs.version }}.bin
             release/HoloCubic_AIO_Tool_${{ needs.build_tool.outputs.version }}.exe
+            release/bootloader_qio_80m.bin
+            release/partitions.bin
+            release/boot_app0.bin
 
