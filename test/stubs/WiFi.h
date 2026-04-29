@@ -12,6 +12,15 @@
 #define WIFI_AP_STA 3
 #define WIFI_OFF   0
 
+// wifi_auth_mode_t subset matching the ESP32 Arduino core ~3.5.0
+// (no WPA3 yet). Used by web_api's encryption_label table.
+#define WIFI_AUTH_OPEN            0
+#define WIFI_AUTH_WEP             1
+#define WIFI_AUTH_WPA_PSK         2
+#define WIFI_AUTH_WPA2_PSK        3
+#define WIFI_AUTH_WPA_WPA2_PSK    4
+#define WIFI_AUTH_WPA2_ENTERPRISE 5
+
 class IPAddress {
 public:
     uint8_t a[4] = {0, 0, 0, 0};
@@ -50,6 +59,8 @@ public:
     String SSID() { return String(""); }
     int RSSI() { return -50; }
     int scanNetworks(bool = false, bool = false) { return 0; }
+    void scanDelete() {}
+    int encryptionType(int) { return WIFI_AUTH_OPEN; }
     String SSID(int) { return String(""); }
     int RSSI(int) { return -100; }
     void setSleep(bool) {}

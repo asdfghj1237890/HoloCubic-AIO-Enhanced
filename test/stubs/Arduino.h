@@ -193,8 +193,16 @@ public:
     void deepSleep(uint64_t) {}
     uint32_t getFreeHeap() { return 0; }
     uint32_t getMinFreeHeap() { return 0; }
+    // Used by web_api /api/stats. Stub returns sensible values for the
+    // host harness; firmware uses real ESP-IDF values.
+    uint32_t getHeapSize() { return 327680; }
+    uint32_t getSketchSize() { return 0; }
+    uint32_t getFlashChipSize() { return 4194304; }
 };
 extern EspClass ESP;
+
+// Internal ESP32 temperature sensor (undocumented). Returns Fahrenheit-ish raw byte.
+extern "C" inline uint8_t temprature_sens_read() { return 95; }  // ~35°C after the firmware's /1.8 conversion
 
 static inline void setCpuFrequencyMhz(uint32_t) {}
 static inline uint32_t getCpuFrequencyMhz() { return 240; }

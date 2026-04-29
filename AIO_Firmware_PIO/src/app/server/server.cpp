@@ -1,6 +1,7 @@
 #include "server.h"
 #include "server_gui.h"
 #include "web_setting.h"
+#include "web_api.h"
 #include "sys/app_controller.h"
 #include "app/app_conf.h"
 #include "network.h"
@@ -71,6 +72,10 @@ void start_web_config()
         []()
         { server.send(200); },
         handleFileUpload);
+
+    // JSON API endpoints for the Glass UI dashboard + system page.
+    server.on("/api/stats", HTTP_GET, api_stats);
+    server.on("/api/wifi-scan", HTTP_GET, api_wifi_scan);
 
     // 连接
     server.on("/saveSysConf", saveSysConf);
