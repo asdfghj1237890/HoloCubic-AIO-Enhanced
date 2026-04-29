@@ -46,6 +46,13 @@ class Engine:
         :param root: Window widget
         """
         self.root = root
+        # Catch-all for any uncaught exception in a Tk callback. Without
+        # this, callback exceptions go to stderr — which is invisible in
+        # the PyInstaller .exe build (no console window). Symptom from
+        # the user side: button click does nothing, no log entry, no
+        # error dialog. Routes the traceback to a messagebox so the
+        # user can at least screenshot and report.
+        self.root.report_callback_exception = self._on_tk_callback_exception
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         icon_path = get_resource_path("image/holo_256.ico")
         if os.path.exists(icon_path):
@@ -132,6 +139,34 @@ class Engine:
             ]:
                 if hasattr(page, "api"):
                     page.api(mh.A_UPDATALANG)
+
+    def _on_tk_callback_exception(
+        self, exc_type: type[BaseException], exc_value: BaseException, exc_tb: object
+    ) -> None:
+        """Catch-all for uncaught Tk callback exceptions.
+
+        Wired in via ``self.root.report_callback_exception``. The
+        default Tk handler prints to stderr, which is invisible in the
+        PyInstaller .exe build (built with --noconsole) — so any
+        unexpected error in a button handler used to look like
+        "nothing happened" from the user's side.
+        """
+        # Lazy import so this file's import graph stays unchanged for
+        # the test harness which doesn't have a Tk display.
+        import traceback
+        from tkinter import messagebox
+
+        logger.exception("Uncaught Tk callback exception", exc_info=(exc_type, exc_value, exc_tb))
+        tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        # Keep the dialog short; the full traceback goes to the log file.
+        try:
+            messagebox.showerror(
+                "Unexpected error",
+                f"{exc_type.__name__}: {exc_value}\n\nFull traceback in the log file (see %TEMP%/CubicAIO_Tool.log).",
+            )
+        except Exception:
+            # Tk might be torn down mid-shutdown; fall back to stderr.
+            logger.error("Failed to show error dialog: %s", tb_str)
 
     def on_closing(self) -> None:
         """
