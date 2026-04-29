@@ -5,6 +5,7 @@
 #include "network.h"
 #include "common.h"
 #include "ArduinoJson.h"
+#include "http_util.h"
 #include <esp32-hal-timer.h>
 #include <map>
 
@@ -318,176 +319,122 @@ static bool get_location_key(void)
     
     Serial.println("[Info] No cached location key, fetching from API...");
 
-    HTTPClient http;
-    http.setTimeout(3000);
     char api[256] = {0};
-    bool useIPDetection = false;
-    bool tryIPFallback = false;
-
-    // Determine which API to use
-    if (cfg_data.city_name.length() == 0)
+    bool useIPDetection = (cfg_data.city_name.length() == 0);
+    if (useIPDetection)
     {
-        // No city name: use IP detection
-        useIPDetection = true;
         snprintf(api, 256, LOCATION_IP_API, cfg_data.api_key.c_str());
         Serial.println("[Info] Using IP-based location detection");
     }
     else
     {
-        // City name provided: try city search first
         snprintf(api, 256, LOCATION_SEARCH_API,
                  cfg_data.api_key.c_str(),
                  cfg_data.city_name.c_str());
         Serial.printf("[Info] Searching for city: %s\n", cfg_data.city_name.c_str());
     }
-    
     Serial.print("Location API = ");
     Serial.println(api);
-    
-    http.begin(api);
-    http.addHeader("User-Agent", "ESP32-Weather-Station");
 
-    int httpCode = http.GET();
+    // Search results may include multiple cities -> 4096-byte doc.
+    DynamicJsonDocument doc(4096);
+    int httpCode = 0;
+    bool ok = http_fetch_json(api, doc, 3000, &httpCode);
     Serial.printf("[HTTP] Response code: %d\n", httpCode);
-    
-    if (httpCode > 0)
+    if (!ok)
     {
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+        if (httpCode <= 0)
         {
-            String payload = http.getString();
-            Serial.println("[API Response]:");
-            Serial.println(payload);
-            
-            // Increase memory for location search results (can return multiple cities)
-            DynamicJsonDocument doc(4096);
-            DeserializationError error = deserializeJson(doc, payload);
-            
-            if (error)
-            {
-                Serial.print("[JSON] Parse error: ");
-                Serial.println(error.c_str());
-                Serial.println("[Info] Try increasing DynamicJsonDocument size or simplifying query");
-                http.end();
-                return false;
-            }
-            
-            // Check if response contains error
-            if (doc.containsKey("Code"))
-            {
-                String errorCode = doc["Code"].as<String>();
-                String errorMsg = doc["Message"].as<String>();
-                Serial.printf("[API Error] Code: %s, Message: %s\n", errorCode.c_str(), errorMsg.c_str());
-                http.end();
-                return false;
-            }
-            
-            // IP-based API returns object, search API returns array
-            JsonObject location;
-            if (doc.is<JsonObject>())
-            {
-                location = doc.as<JsonObject>();
-            }
-            else if (doc.is<JsonArray>() && doc.size() > 0)
-            {
-                location = doc[0];
-            }
-            
-            if (!location.isNull() && location.containsKey("Key"))
-            {
-                cfg_data.location_key = location["Key"].as<String>();
-                String cityName = location["LocalizedName"].as<String>();
-                String country = location["Country"]["LocalizedName"].as<String>();
-                
-                // Update city name if using IP detection
-                if (useIPDetection || cfg_data.city_name.length() == 0)
-                {
-                    cfg_data.city_name = location["EnglishName"].as<String>();
-                }
-                
-                Serial.print("[Success] Location Key: ");
-                Serial.println(cfg_data.location_key);
-                Serial.printf("[Info] City: %s, Country: %s\n", cityName.c_str(), country.c_str());
-                
-                // Cache the location key and city name
-                write_config(&cfg_data);
-                http.end();
-                return true;
-            }
-            else
-            {
-                Serial.println("[APP] Get location key failed - no valid location data in response");
-                
-                // If city search failed, try IP-based detection as fallback
-                if (!useIPDetection && cfg_data.city_name.length() > 0)
-                {
-                    Serial.println("[Info] City search failed, trying IP-based detection as fallback...");
-                    http.end();
-                    
-                    // Try IP-based detection
-                    snprintf(api, 256, LOCATION_IP_API, cfg_data.api_key.c_str());
-                    Serial.print("Location API (IP fallback) = ");
-                    Serial.println(api);
-                    
-                    http.begin(api);
-                    http.addHeader("User-Agent", "ESP32-Weather-Station");
-                    
-                    httpCode = http.GET();
-                    Serial.printf("[HTTP] Response code: %d\n", httpCode);
-                    
-                    if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
-                    {
-                    payload = http.getString();
-                    Serial.println("[API Response (IP fallback)]:");
-                    Serial.println(payload);
-                    
-                    // IP API returns single object, needs less memory
-                    DynamicJsonDocument doc2(2048);
-                    error = deserializeJson(doc2, payload);
-                    
-                    if (!error && doc2.is<JsonObject>())
-                    {
-                        location = doc2.as<JsonObject>();
-                            if (!location.isNull() && location.containsKey("Key"))
-                            {
-                                cfg_data.location_key = location["Key"].as<String>();
-                                String cityName = location["LocalizedName"].as<String>();
-                                String country = location["Country"]["LocalizedName"].as<String>();
-                                cfg_data.city_name = location["EnglishName"].as<String>();
-                                
-                                Serial.print("[Success] Location Key (IP fallback): ");
-                                Serial.println(cfg_data.location_key);
-                                Serial.printf("[Info] Auto-detected City: %s, Country: %s\n", cityName.c_str(), country.c_str());
-                                
-                                write_config(&cfg_data);
-                                http.end();
-                                return true;
-                            }
-                        }
-                    }
-                    Serial.println("[Error] IP-based fallback also failed");
-                }
-                
-                if (useIPDetection)
-                {
-                    Serial.println("[Info] IP-based detection failed");
-                    Serial.println("[Note] AccuWeather uses your public IP (WAN IP), not local 192.168.x.x");
-                    Serial.println("[Note] Your API key might be restricted to specific countries/regions");
-                }
-                
-                Serial.println("[Suggestion] This API key might only work with specific cities");
-                Serial.println("[Examples] Try: Beijing, Shanghai, Guangzhou, Shenzhen, Chengdu, Wuhan");
-            }
+            Serial.printf("[HTTP] GET failed (code=%d)\n", httpCode);
         }
-        else
+        else if (httpCode != HTTP_CODE_OK && httpCode != HTTP_CODE_MOVED_PERMANENTLY)
         {
             Serial.printf("[HTTP] Unexpected status code: %d\n", httpCode);
         }
+        else
+        {
+            Serial.println("[JSON] Parse error");
+            Serial.println("[Info] Try increasing DynamicJsonDocument size or simplifying query");
+        }
+        return false;
     }
-    else
+
+    // API error envelope
+    if (doc.containsKey("Code"))
     {
-        Serial.printf("[HTTP] GET failed, error: %s\n", http.errorToString(httpCode).c_str());
+        String errorCode = doc["Code"].as<String>();
+        String errorMsg = doc["Message"].as<String>();
+        Serial.printf("[API Error] Code: %s, Message: %s\n", errorCode.c_str(), errorMsg.c_str());
+        return false;
     }
-    http.end();
+
+    // IP API returns single object, search API returns an array of candidates.
+    JsonObject location;
+    if (doc.is<JsonObject>())
+    {
+        location = doc.as<JsonObject>();
+    }
+    else if (doc.is<JsonArray>() && doc.size() > 0)
+    {
+        location = doc[0];
+    }
+
+    if (!location.isNull() && location.containsKey("Key"))
+    {
+        cfg_data.location_key = location["Key"].as<String>();
+        String cityName = location["LocalizedName"].as<String>();
+        String country = location["Country"]["LocalizedName"].as<String>();
+        if (useIPDetection || cfg_data.city_name.length() == 0)
+        {
+            cfg_data.city_name = location["EnglishName"].as<String>();
+        }
+        Serial.print("[Success] Location Key: ");
+        Serial.println(cfg_data.location_key);
+        Serial.printf("[Info] City: %s, Country: %s\n", cityName.c_str(), country.c_str());
+        write_config(&cfg_data);
+        return true;
+    }
+
+    Serial.println("[APP] Get location key failed - no valid location data in response");
+
+    // If city search failed, try IP-based detection as fallback (single retry).
+    if (!useIPDetection && cfg_data.city_name.length() > 0)
+    {
+        Serial.println("[Info] City search failed, trying IP-based detection as fallback...");
+        snprintf(api, 256, LOCATION_IP_API, cfg_data.api_key.c_str());
+        Serial.print("Location API (IP fallback) = ");
+        Serial.println(api);
+
+        DynamicJsonDocument doc2(2048);
+        int httpCode2 = 0;
+        if (http_fetch_json(api, doc2, 3000, &httpCode2) && doc2.is<JsonObject>())
+        {
+            JsonObject location2 = doc2.as<JsonObject>();
+            if (!location2.isNull() && location2.containsKey("Key"))
+            {
+                cfg_data.location_key = location2["Key"].as<String>();
+                String cityName = location2["LocalizedName"].as<String>();
+                String country = location2["Country"]["LocalizedName"].as<String>();
+                cfg_data.city_name = location2["EnglishName"].as<String>();
+                Serial.print("[Success] Location Key (IP fallback): ");
+                Serial.println(cfg_data.location_key);
+                Serial.printf("[Info] Auto-detected City: %s, Country: %s\n", cityName.c_str(), country.c_str());
+                write_config(&cfg_data);
+                return true;
+            }
+        }
+        Serial.println("[Error] IP-based fallback also failed");
+    }
+
+    if (useIPDetection)
+    {
+        Serial.println("[Info] IP-based detection failed");
+        Serial.println("[Note] AccuWeather uses your public IP (WAN IP), not local 192.168.x.x");
+        Serial.println("[Note] Your API key might be restricted to specific countries/regions");
+    }
+
+    Serial.println("[Suggestion] This API key might only work with specific cities");
+    Serial.println("[Examples] Try: Beijing, Shanghai, Guangzhou, Shenzhen, Chengdu, Wuhan");
     return false;
 }
 
@@ -559,33 +506,35 @@ static void get_weather(void)
         return;
     }
 
-    HTTPClient http;
-    http.setTimeout(2000);
     char api[256] = {0};
-
     snprintf(api, 256, WEATHER_CURRENT_API,
              cfg_data.location_key.c_str(),
              cfg_data.api_key.c_str());
     Serial.print("Current Weather API = ");
     Serial.println(api);
-    http.begin(api);
 
-    int httpCode = http.GET();
-    if (httpCode > 0)
+    DynamicJsonDocument doc(2048);
+    int httpCode = 0;
+    bool ok = http_fetch_json(api, doc, 2000, &httpCode);
+    if (!ok)
     {
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
+        if (httpCode <= 0)
         {
-            String payload = http.getString();
-            DynamicJsonDocument doc(2048);
-            DeserializationError jsonErr = deserializeJson(doc, payload);
-            Serial.println(payload);
-
-            if (jsonErr)
-            {
-                Serial.printf("[APP] Get weather - JSON parse error: %s\n", jsonErr.c_str());
-            }
-            else if (doc.is<JsonArray>() && doc.size() > 0)
-            {
+            Serial.printf("[HTTP] GET... failed (code=%d)\n", httpCode);
+        }
+        else if (httpCode != HTTP_CODE_OK && httpCode != HTTP_CODE_MOVED_PERMANENTLY)
+        {
+            Serial.printf("[HTTP] Unexpected status code: %d\n", httpCode);
+        }
+        else
+        {
+            Serial.println("[APP] Get weather - JSON parse error");
+        }
+    }
+    else
+    {
+        if (doc.is<JsonArray>() && doc.size() > 0)
+        {
                 /*
                 AccuWeather Current Conditions Response Example:
                 [{
@@ -654,13 +603,7 @@ static void get_weather(void)
             {
                 Serial.println("[APP] Get weather error - invalid response format");
             }
-        }
     }
-    else
-    {
-        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-    }
-    http.end();
 }
 
 static long long get_timestamp(void)
@@ -676,35 +619,26 @@ static long long get_timestamp(String url)
     if (WL_CONNECTED != WiFi.status())
         return 0;
 
-    String time = "";
-    HTTPClient http;
-    http.setTimeout(1000);
-    http.begin(url);
-
-    int httpCode = http.GET();
-    if (httpCode > 0)
+    String payload;
+    int httpCode = http_fetch_string(url.c_str(), payload, 1000);
+    if (httpCode == HTTP_CODE_OK)
     {
-        if (httpCode == HTTP_CODE_OK)
-        {
-            String payload = http.getString();
-            Serial.println(payload);
-            int time_index = payload.indexOf("\"t\":\"") + 5;       // 找到 "t":" 后的索引，+5 跳过 "t":" 的长度
-            int time_end_index = payload.indexOf("\"", time_index); // 查找结束引号的位置
-            time = payload.substring(time_index, time_end_index);   // 提取时间戳
+        Serial.println(payload);
+        int time_index = payload.indexOf("\"t\":\"") + 5;       // 找到 "t":" 后的索引，+5 跳过 "t":" 的长度
+        int time_end_index = payload.indexOf("\"", time_index); // 查找结束引号的位置
+        String time = payload.substring(time_index, time_end_index); // 提取时间戳
 
-            // 以网络时间戳为准
-            run_data->preNetTimestamp = atoll(time.c_str()) + run_data->errorNetTimestamp + TIMEZERO_OFFSIZE;
-            run_data->preLocalTimestamp = GET_SYS_MILLIS();
-        }
+        // 以网络时间戳为准
+        run_data->preNetTimestamp = atoll(time.c_str()) + run_data->errorNetTimestamp + TIMEZERO_OFFSIZE;
+        run_data->preLocalTimestamp = GET_SYS_MILLIS();
     }
     else
     {
-        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+        Serial.printf("[HTTP] GET... failed (code=%d)\n", httpCode);
         // 得不到网络时间戳时
         run_data->preNetTimestamp = run_data->preNetTimestamp + (GET_SYS_MILLIS() - run_data->preLocalTimestamp);
         run_data->preLocalTimestamp = GET_SYS_MILLIS();
     }
-    http.end();
 
     return run_data->preNetTimestamp;
 }
@@ -767,64 +701,49 @@ static void get_daliyWeather(short maxT[], short minT[])
         return;
     }
 
-    HTTPClient http;
-    http.setTimeout(2000);
     char api[256] = {0};
-    
     snprintf(api, 256, WEATHER_FORECAST_API,
              cfg_data.location_key.c_str(),
              cfg_data.api_key.c_str());
     Serial.print("Forecast API = ");
     Serial.println(api);
-    http.begin(api);
 
-    int httpCode = http.GET();
+    DynamicJsonDocument doc2(8192);
+    int httpCode = 0;
+    bool ok = http_fetch_json(api, doc2, 2000, &httpCode);
     Serial.printf("[HTTP] Forecast response code: %d\n", httpCode);
-    
-    if (httpCode > 0)
-    {
-        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY)
-        {
-            String payload = http.getString();
-            Serial.println("[Forecast API Response]:");
-            
-            // Check if response is empty
-            if (payload.length() == 0)
-            {
-                Serial.println("[Warning] Forecast API returned empty response");
-                Serial.println("[Info] Your API key might not have access to forecast data");
-                Serial.println("[Info] Free tier AccuWeather API may not include 5-day forecast");
-                Serial.println("[Info] Current weather will still work normally");
-                http.end();
-                return;
-            }
-            
-            Serial.println(payload);
-            
-            DynamicJsonDocument doc2(8192);
-            DeserializationError error = deserializeJson(doc2, payload);
-            
-            if (error)
-            {
-                Serial.print("[JSON] Forecast parse error: ");
-                Serial.println(error.c_str());
-                Serial.println("[Info] Forecast feature disabled, but current weather works fine");
-                http.end();
-                return;
-            }
-            
-            // Check for API error
-            if (doc2.containsKey("Code"))
-            {
-                String errorCode = doc2["Code"].as<String>();
-                String errorMsg = doc2["Message"].as<String>();
-                Serial.printf("[API Error] Forecast - Code: %s, Message: %s\n", errorCode.c_str(), errorMsg.c_str());
-                http.end();
-                return;
-            }
 
-            if (doc2.containsKey("DailyForecasts"))
-            {
+    if (!ok)
+    {
+        if (httpCode <= 0)
+        {
+            Serial.printf("[HTTP] GET... failed (code=%d)\n", httpCode);
+        }
+        else if (httpCode != HTTP_CODE_OK && httpCode != HTTP_CODE_MOVED_PERMANENTLY)
+        {
+            Serial.printf("[HTTP] Unexpected status code: %d\n", httpCode);
+        }
+        else
+        {
+            // Helper succeeded HTTP fetch but JSON parse failed (or body
+            // was empty: deserializeJson treats empty input as InvalidInput).
+            Serial.println("[JSON] Forecast parse error or empty body");
+            Serial.println("[Info] Forecast feature disabled, but current weather works fine");
+        }
+        return;
+    }
+
+    // Check for API error envelope
+    if (doc2.containsKey("Code"))
+    {
+        String errorCode = doc2["Code"].as<String>();
+        String errorMsg = doc2["Message"].as<String>();
+        Serial.printf("[API Error] Forecast - Code: %s, Message: %s\n", errorCode.c_str(), errorMsg.c_str());
+        return;
+    }
+
+    if (doc2.containsKey("DailyForecasts"))
+    {
                 /*
                 AccuWeather 5-Day Forecast Response Example:
                 {
@@ -853,18 +772,11 @@ static void get_daliyWeather(short maxT[], short minT[])
                 }
                 
                 Serial.println("Get AccuWeather forecast OK\n");
-            }
-            else
-            {
-                Serial.println("[APP] Get forecast error - invalid response format");
-            }
-        }
     }
     else
     {
-        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+        Serial.println("[APP] Get forecast error - invalid response format");
     }
-    http.end();
 }
 
 static void updateTime_RTC(long long timestamp)
