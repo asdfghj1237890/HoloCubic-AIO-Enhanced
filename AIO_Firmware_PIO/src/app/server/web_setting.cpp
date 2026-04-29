@@ -869,6 +869,295 @@ const char* getText(const char* key) {
         return "File Size";
     }
 
+    // Form chrome (used by every *_setting page)
+    if (strcmp(key, "save") == 0) {
+        if (current_lang == LANG_ZH_CN) return "保存";
+        if (current_lang == LANG_ZH_TW) return "儲存";
+        return "Save";
+    }
+    if (strcmp(key, "off") == 0) {
+        if (current_lang == LANG_ZH_CN) return "关闭";
+        if (current_lang == LANG_ZH_TW) return "關閉";
+        return "Off";
+    }
+    if (strcmp(key, "on") == 0) {
+        if (current_lang == LANG_ZH_CN) return "开启";
+        if (current_lang == LANG_ZH_TW) return "開啟";
+        return "On";
+    }
+
+    // Form card titles (match the sidebar nav names where applicable)
+    if (strcmp(key, "form_sys_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "系统";
+        if (current_lang == LANG_ZH_TW) return "系統";
+        return "System";
+    }
+    if (strcmp(key, "form_rgb_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "RGB 灯效";
+        if (current_lang == LANG_ZH_TW) return "RGB 燈效";
+        return "RGB Lighting";
+    }
+    if (strcmp(key, "form_weather_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "天气 (AccuWeather)";
+        if (current_lang == LANG_ZH_TW) return "天氣 (AccuWeather)";
+        return "Weather (AccuWeather)";
+    }
+    if (strcmp(key, "form_weather_old_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "天气 (旧版)";
+        if (current_lang == LANG_ZH_TW) return "天氣 (舊版)";
+        return "Weather (legacy)";
+    }
+    if (strcmp(key, "form_bili_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "Bilibili 粉丝数";
+        if (current_lang == LANG_ZH_TW) return "Bilibili 粉絲數";
+        return "Bilibili Fans";
+    }
+    if (strcmp(key, "form_stock_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "股票";
+        if (current_lang == LANG_ZH_TW) return "股票";
+        return "Stock";
+    }
+    if (strcmp(key, "form_picture_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "图片";
+        if (current_lang == LANG_ZH_TW) return "圖片";
+        return "Picture";
+    }
+    if (strcmp(key, "form_media_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "媒体播放器";
+        if (current_lang == LANG_ZH_TW) return "媒體播放器";
+        return "Media Player";
+    }
+    if (strcmp(key, "form_screen_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "屏幕共享";
+        if (current_lang == LANG_ZH_TW) return "螢幕分享";
+        return "Screen Share";
+    }
+    if (strcmp(key, "form_heartbeat_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "心跳 (MQTT)";
+        if (current_lang == LANG_ZH_TW) return "心跳 (MQTT)";
+        return "Heartbeat (MQTT)";
+    }
+    if (strcmp(key, "form_anniversary_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "纪念日";
+        if (current_lang == LANG_ZH_TW) return "紀念日";
+        return "Anniversary";
+    }
+    if (strcmp(key, "form_pc_resource_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "PC 资源监控";
+        if (current_lang == LANG_ZH_TW) return "PC 資源監控";
+        return "PC Resource";
+    }
+
+    // Field labels — System
+    if (strcmp(key, "fld_ssid") == 0) {
+        if (current_lang == LANG_ZH_CN) return "WiFi 名称 (2.4G)";
+        if (current_lang == LANG_ZH_TW) return "WiFi 名稱 (2.4G)";
+        return "WiFi SSID (2.4G)";
+    }
+    if (strcmp(key, "fld_password") == 0) {
+        if (current_lang == LANG_ZH_CN) return "WiFi 密码";
+        if (current_lang == LANG_ZH_TW) return "WiFi 密碼";
+        return "WiFi Password";
+    }
+    if (strcmp(key, "fld_power_mode") == 0) {
+        if (current_lang == LANG_ZH_CN) return "电源模式";
+        if (current_lang == LANG_ZH_TW) return "電源模式";
+        return "Power Mode";
+    }
+    if (strcmp(key, "fld_backlight") == 0) {
+        if (current_lang == LANG_ZH_CN) return "背光亮度 (1-100)";
+        if (current_lang == LANG_ZH_TW) return "背光亮度 (1-100)";
+        return "Backlight (1-100)";
+    }
+    if (strcmp(key, "fld_rotation") == 0) {
+        if (current_lang == LANG_ZH_CN) return "屏幕方向 (0-5)";
+        if (current_lang == LANG_ZH_TW) return "螢幕方向 (0-5)";
+        return "Rotation (0-5)";
+    }
+    if (strcmp(key, "fld_mpu_order") == 0) {
+        if (current_lang == LANG_ZH_CN) return "MPU 轴向 (0-15)";
+        if (current_lang == LANG_ZH_TW) return "MPU 軸向 (0-15)";
+        return "MPU Order (0-15)";
+    }
+    if (strcmp(key, "fld_mpu_autocal") == 0) {
+        if (current_lang == LANG_ZH_CN) return "MPU6050 自动校准";
+        if (current_lang == LANG_ZH_TW) return "MPU6050 自動校準";
+        return "MPU6050 Auto-cal";
+    }
+    if (strcmp(key, "fld_auto_start") == 0) {
+        if (current_lang == LANG_ZH_CN) return "开机启动应用";
+        if (current_lang == LANG_ZH_TW) return "開機啟動應用";
+        return "Auto-start App";
+    }
+
+    // Field labels — RGB
+    if (strcmp(key, "fld_min_brightness") == 0) {
+        if (current_lang == LANG_ZH_CN) return "最小亮度 (0-1000)";
+        if (current_lang == LANG_ZH_TW) return "最小亮度 (0-1000)";
+        return "Min Brightness (0-1000)";
+    }
+    if (strcmp(key, "fld_max_brightness") == 0) {
+        if (current_lang == LANG_ZH_CN) return "最大亮度 (0-1000)";
+        if (current_lang == LANG_ZH_TW) return "最大亮度 (0-1000)";
+        return "Max Brightness (0-1000)";
+    }
+    if (strcmp(key, "fld_cycle_time") == 0) {
+        if (current_lang == LANG_ZH_CN) return "循环周期 (10-1000 ms)";
+        if (current_lang == LANG_ZH_TW) return "循環週期 (10-1000 ms)";
+        return "Cycle Time (10-1000 ms)";
+    }
+
+    // Field labels — Weather
+    if (strcmp(key, "fld_api_key") == 0) {
+        if (current_lang == LANG_ZH_CN) return "AccuWeather API 密钥";
+        if (current_lang == LANG_ZH_TW) return "AccuWeather API 金鑰";
+        return "AccuWeather API Key";
+    }
+    if (strcmp(key, "fld_city") == 0) {
+        if (current_lang == LANG_ZH_CN) return "城市名称";
+        if (current_lang == LANG_ZH_TW) return "城市名稱";
+        return "City Name";
+    }
+    if (strcmp(key, "fld_weather_refresh") == 0) {
+        if (current_lang == LANG_ZH_CN) return "天气刷新 (ms)";
+        if (current_lang == LANG_ZH_TW) return "天氣刷新 (ms)";
+        return "Weather Refresh (ms)";
+    }
+    if (strcmp(key, "fld_time_refresh") == 0) {
+        if (current_lang == LANG_ZH_CN) return "时间刷新 (ms)";
+        if (current_lang == LANG_ZH_TW) return "時間刷新 (ms)";
+        return "Time Refresh (ms)";
+    }
+    if (strcmp(key, "fld_display_lang") == 0) {
+        if (current_lang == LANG_ZH_CN) return "显示语言";
+        if (current_lang == LANG_ZH_TW) return "顯示語言";
+        return "Display Language";
+    }
+
+    // Field labels — Weather (legacy)
+    if (strcmp(key, "fld_city_pinyin") == 0) {
+        if (current_lang == LANG_ZH_CN) return "城市名 (拼音)";
+        if (current_lang == LANG_ZH_TW) return "城市名 (拼音)";
+        return "City Name (pinyin)";
+    }
+    if (strcmp(key, "fld_city_lang") == 0) {
+        if (current_lang == LANG_ZH_CN) return "城市语言 (zh-Hans)";
+        if (current_lang == LANG_ZH_TW) return "城市語言 (zh-Hans)";
+        return "City Language (zh-Hans)";
+    }
+    if (strcmp(key, "fld_weather_key") == 0) {
+        if (current_lang == LANG_ZH_CN) return "天气 API 密钥";
+        if (current_lang == LANG_ZH_TW) return "天氣 API 金鑰";
+        return "Weather Key";
+    }
+
+    // Field labels — Bilibili
+    if (strcmp(key, "fld_bili_uid") == 0) {
+        if (current_lang == LANG_ZH_CN) return "Bili UID";
+        if (current_lang == LANG_ZH_TW) return "Bili UID";
+        return "Bili UID";
+    }
+    if (strcmp(key, "fld_update_interval") == 0) {
+        if (current_lang == LANG_ZH_CN) return "更新间隔 (ms)";
+        if (current_lang == LANG_ZH_TW) return "更新間隔 (ms)";
+        return "Update Interval (ms)";
+    }
+
+    // Field labels — Stock
+    if (strcmp(key, "fld_stock_symbol") == 0) {
+        if (current_lang == LANG_ZH_CN) return "股票代号 (AAPL, TSLA, 601126)";
+        if (current_lang == LANG_ZH_TW) return "股票代號 (AAPL, TSLA, 601126)";
+        return "Stock Symbol (AAPL, TSLA, 601126)";
+    }
+    if (strcmp(key, "fld_market") == 0) {
+        if (current_lang == LANG_ZH_CN) return "市场";
+        if (current_lang == LANG_ZH_TW) return "市場";
+        return "Market";
+    }
+
+    // Field labels — Picture / Media / Screen Share
+    if (strcmp(key, "fld_switch_interval") == 0) {
+        if (current_lang == LANG_ZH_CN) return "自动切换间隔 (ms)";
+        if (current_lang == LANG_ZH_TW) return "自動切換間隔 (ms)";
+        return "Auto-switch Interval (ms)";
+    }
+    if (strcmp(key, "fld_switch_flag") == 0) {
+        if (current_lang == LANG_ZH_CN) return "自动切换 (0=关, 1=开)";
+        if (current_lang == LANG_ZH_TW) return "自動切換 (0=關, 1=開)";
+        return "Auto-switch (0=off, 1=on)";
+    }
+    if (strcmp(key, "fld_power_flag") == 0) {
+        if (current_lang == LANG_ZH_CN) return "电源模式 (0=节能, 1=性能)";
+        if (current_lang == LANG_ZH_TW) return "電源模式 (0=節能, 1=效能)";
+        return "Power Mode (0=eco, 1=perf)";
+    }
+
+    // Field labels — Heartbeat
+    if (strcmp(key, "fld_role") == 0) {
+        if (current_lang == LANG_ZH_CN) return "角色 (0=heart, 1=beat)";
+        if (current_lang == LANG_ZH_TW) return "角色 (0=heart, 1=beat)";
+        return "Role (0=heart, 1=beat)";
+    }
+    if (strcmp(key, "fld_qq") == 0) {
+        if (current_lang == LANG_ZH_CN) return "QQ 号";
+        if (current_lang == LANG_ZH_TW) return "QQ 號";
+        return "QQ Number";
+    }
+    if (strcmp(key, "fld_mqtt_server") == 0) {
+        if (current_lang == LANG_ZH_CN) return "MQTT 服务器";
+        if (current_lang == LANG_ZH_TW) return "MQTT 伺服器";
+        return "MQTT Server";
+    }
+    if (strcmp(key, "fld_mqtt_port") == 0) {
+        if (current_lang == LANG_ZH_CN) return "MQTT 端口";
+        if (current_lang == LANG_ZH_TW) return "MQTT 埠號";
+        return "MQTT Port";
+    }
+    if (strcmp(key, "fld_mqtt_user") == 0) {
+        if (current_lang == LANG_ZH_CN) return "MQTT 用户名 (选填)";
+        if (current_lang == LANG_ZH_TW) return "MQTT 使用者 (選填)";
+        return "MQTT Username (optional)";
+    }
+    if (strcmp(key, "fld_mqtt_pwd") == 0) {
+        if (current_lang == LANG_ZH_CN) return "MQTT 密码 (选填)";
+        if (current_lang == LANG_ZH_TW) return "MQTT 密碼 (選填)";
+        return "MQTT Password (optional)";
+    }
+
+    // Field labels — Anniversary
+    if (strcmp(key, "fld_event0") == 0) {
+        if (current_lang == LANG_ZH_CN) return "事件 0";
+        if (current_lang == LANG_ZH_TW) return "事件 0";
+        return "Event 0";
+    }
+    if (strcmp(key, "fld_date0") == 0) {
+        if (current_lang == LANG_ZH_CN) return "日期 0";
+        if (current_lang == LANG_ZH_TW) return "日期 0";
+        return "Date 0";
+    }
+    if (strcmp(key, "fld_event1") == 0) {
+        if (current_lang == LANG_ZH_CN) return "事件 1";
+        if (current_lang == LANG_ZH_TW) return "事件 1";
+        return "Event 1";
+    }
+    if (strcmp(key, "fld_date1") == 0) {
+        if (current_lang == LANG_ZH_CN) return "日期 1";
+        if (current_lang == LANG_ZH_TW) return "日期 1";
+        return "Date 1";
+    }
+
+    // Field labels — PC Resource
+    if (strcmp(key, "fld_pc_ip") == 0) {
+        if (current_lang == LANG_ZH_CN) return "PC IP 地址";
+        if (current_lang == LANG_ZH_TW) return "PC IP 位址";
+        return "PC IP Address";
+    }
+    if (strcmp(key, "fld_sensor_interval") == 0) {
+        if (current_lang == LANG_ZH_CN) return "感测器更新间隔 (ms)";
+        if (current_lang == LANG_ZH_TW) return "感測器更新間隔 (ms)";
+        return "Sensor Update Interval (ms)";
+    }
+
     return "";
 }
 
