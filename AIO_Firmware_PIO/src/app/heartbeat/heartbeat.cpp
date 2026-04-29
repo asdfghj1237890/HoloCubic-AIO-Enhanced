@@ -1,9 +1,11 @@
 #include "heartbeat.h"
 #include "heartbeat_gui.h"
+#include "heartbeat_config_parse.h"
 #include "sys/app_controller.h"
 #include "common.h"
 #include "network.h"
 #include <PubSubClient.h>
+#include <string.h>
 
 #define HEARTBEAT_APP_NAME "Heartbeat"
 
@@ -132,30 +134,26 @@ static void read_config(HeartbeatAppForeverData *cfg)
     }
     else
     {
-        // 解析数据
-        char *param[6] = {0};
-        int ind = 0;
-        analyseParam(info, 6, param);
+        // Delegate the snprintf-bounded field copy to the pure parser TU
+        // (heartbeat_config_parse.{h,cpp}) so the bounds invariant can be
+        // exercised by the host-side Unity tests in
+        // test/native/test_heartbeat_config without dragging this whole
+        // file's PubSubClient / AppController / FlashFS deps into the
+        // unit-test binary.
+        HeartbeatRawFields parsed;
+        heartbeat_parse_config(info, size, &parsed);
+        memcpy(cfg->mqtt_server,   parsed.mqtt_server,   sizeof(cfg->mqtt_server));
+        cfg->mqtt_port = parsed.mqtt_port;
+        memcpy(cfg->mqtt_user,     parsed.mqtt_user,     sizeof(cfg->mqtt_user));
+        memcpy(cfg->mqtt_password, parsed.mqtt_password, sizeof(cfg->mqtt_password));
+        cfg->role = parsed.role;
+        memcpy(cfg->qq_num,        parsed.qq_num,        sizeof(cfg->qq_num));
 
-        // Each field-from-flash copy uses sizeof(dst) so a malformed config
-        // (oversize value, missing newline, etc) can't blow past the struct
-        // member it's writing into.
-        snprintf(cfg->mqtt_server, sizeof(cfg->mqtt_server), "%s", param[ind++]);
         Serial.printf("mqtt_server %s\n", cfg->mqtt_server);
-
-        cfg->mqtt_port = atol(param[ind++]);
         Serial.printf("mqtt_port %u\n", cfg->mqtt_port);
-
-        snprintf(cfg->mqtt_user, sizeof(cfg->mqtt_user), "%s", param[ind++]);
         Serial.printf("mqtt_mqtt_user %s\n", cfg->mqtt_user);
-
-        snprintf(cfg->mqtt_password, sizeof(cfg->mqtt_password), "%s", param[ind++]);
         Serial.printf("mqtt_mqtt_password %s\n", cfg->mqtt_password);
-
-        cfg->role = atoi(param[ind++]);
         Serial.printf(HEARTBEAT_APP_NAME " role %d\n", cfg->role);
-
-        snprintf(cfg->qq_num, sizeof(cfg->qq_num), "%s", param[ind++]);
         Serial.printf("qq_num %s\n", cfg->qq_num);
     }
 
