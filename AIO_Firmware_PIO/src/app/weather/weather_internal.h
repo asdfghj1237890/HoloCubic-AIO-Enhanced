@@ -10,6 +10,12 @@
 #define APP_WEATHER_INTERNAL_H
 
 #include <Arduino.h>
+// FreeRTOS pulled in directly so WeatherAppRunData (BaseType_t /
+// TaskHandle_t fields) compiles regardless of include order. Pre-split,
+// the original weather.cpp got these transitively via common.h — that
+// chain doesn't exist for files that only see this header.
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "ESP32Time.h"
 #include "weather_gui.h"  // Weather, FORECAST_DAYS, TimeStr
 
