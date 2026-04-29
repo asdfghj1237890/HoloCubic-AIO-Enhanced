@@ -1,0 +1,18 @@
+# Bilibili negative-path: well-formed JSON missing the follower /
+# following keys (e.g. API response shape change). Same shape as
+# empty_response.scn; verifies the indexOf guards trip cleanly when
+# the body parses but the expected keys are absent.
+
+app bilibili
+http_fixture relation/stat bilibili_negative/missing_keys.json
+
+wait_ms 400
+assert_no_crash
+
+action UP
+wait_ms 400
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

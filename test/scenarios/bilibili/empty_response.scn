@@ -1,0 +1,24 @@
+# Bilibili negative-path: empty body. Pinned to PR-1.6's indexOf -1
+# guards in update_fans_num: a missing follower / following marker
+# must not feed a negative index into substring().
+#
+# Uses the http_fixture directive (added in the same backlog as this
+# scenario) to route the bilibili relation/stat URL — which has uid in
+# the query string and therefore can't be swapped via flash_seed — to
+# an empty fixture file. With the guard in place, update_fans_num
+# logs "follower/following marker missing — skipping refresh" and
+# leaves run_data->fans_num / follow_num at their zero defaults.
+
+app bilibili
+http_fixture relation/stat bilibili_negative/empty.json
+
+wait_ms 400
+assert_no_crash
+
+action UP
+wait_ms 400
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

@@ -117,6 +117,14 @@ int run_scenario(const char *path,
     // with non-default config (e.g. CN-market stockmarket) without
     // reaching for a per-test write_config call.
     std::vector<std::pair<std::string, std::string>> flash_seeds;
+    // http_fixture entries: (url-substring, fixture-relpath) pairs. Lets a
+    // scenario route specific URLs to a per-scenario fixture instead of the
+    // URL-derived default — needed when (a) the URL has the parameter in
+    // the query string (which the harness strips before fixture lookup,
+    // so different params share one fixture: bilibili uid) or (b) the
+    // scenario wants to inject a malformed body for a negative-path test
+    // without disturbing the happy-path golden.
+    std::vector<std::pair<std::string, std::string>> http_fixtures;
 
     char raw[512];
     int line_no = 0;
@@ -190,6 +198,19 @@ int run_scenario(const char *path,
                 }
             }
             flash_seeds.emplace_back(std::move(seed_path), std::move(content));
+        } else if (cmd == "http_fixture") {
+            // Format: http_fixture <url-substring> <fixture-relpath>
+            // The fixture-relpath is relative to test/fixtures/http/.
+            size_t sp2 = arg.find_first_of(" \t");
+            if (sp2 == std::string::npos) {
+                fprintf(stderr, "[scenario] line %d: http_fixture needs <url-substring> <fixture-relpath>\n", line_no);
+                fclose(f);
+                return 3;
+            }
+            std::string url_pattern = arg.substr(0, sp2);
+            std::string relpath = arg.substr(sp2 + 1);
+            trim(relpath);
+            http_fixtures.emplace_back(std::move(url_pattern), std::move(relpath));
         } else {
             fprintf(stderr, "[scenario] line %d: unknown command '%s'\n", line_no, cmd.c_str());
             fclose(f);
@@ -240,6 +261,16 @@ int run_scenario(const char *path,
     // intended state instead of writing fresh defaults.
     for (auto const &seed : flash_seeds) {
         g_flashCfg.writeFile(seed.first.c_str(), seed.second.c_str());
+    }
+
+    // Apply http_fixture directives. The setters live in
+    // test/stubs/stubs_runtime.cpp — declared here to avoid pulling a
+    // new header in just for two function signatures.
+    extern void clear_http_fixture_overrides();
+    extern void set_http_fixture_override(const std::string &, const std::string &);
+    clear_http_fixture_overrides();
+    for (auto const &ovr : http_fixtures) {
+        set_http_fixture_override(ovr.first, ovr.second);
     }
 
     controller->app_install(target, APP_TYPE_REAL_TIME);
