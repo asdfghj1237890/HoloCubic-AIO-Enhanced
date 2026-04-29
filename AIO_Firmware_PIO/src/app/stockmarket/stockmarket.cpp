@@ -239,12 +239,11 @@ static bool parse_sina_data(const String& payload)
     for (int i = 0; i < nameLen; i++)
         run_data->stockdata.name[i] = Stockname.charAt(i);
 
-    // Walk the next 10 fields. Sina's full payload has 30+ commas; we need
-    // F1..F10 for the assignments below (F1..F5 are price metrics, F9/F10
-    // were historically read into tradvolume/turnover — see note).
-    float fields[10] = {0};
+    // Walk the next 9 fields. Sina's full payload has 30+ commas; we need
+    // F1..F9 for the price metrics (F1..F5) plus volume (F8) + turnover (F9).
+    float fields[9] = {0};
     int cursor = first_comma;
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 9; ++i)
     {
         int next = payload.indexOf(',', cursor + 1);
         if (next < 0)
@@ -260,13 +259,9 @@ static bool parse_sina_data(const String& payload)
     run_data->stockdata.NowQuo   = fields[2];   // F3 now
     run_data->stockdata.MaxQuo   = fields[3];   // F4 max
     run_data->stockdata.MinQuo   = fields[4];   // F5 min
-    // NOTE: per the Sina payload format the volume field is F8 (vol) and the
-    // turnover field is F9, but the original parser walked one extra comma and
-    // assigned F9 -> tradvolume + F10 -> turnover. The displayed values in the
-    // committed cn_smoke golden depend on that mapping, so this PR preserves
-    // it byte-for-byte; correcting the field index is filed as a follow-up.
-    run_data->stockdata.tradvolume = fields[8]; // F9 (per original quirk)
-    run_data->stockdata.turnover   = fields[9]; // F10 (per original quirk)
+    // fields[5..6] = bid/ask (not displayed)
+    run_data->stockdata.tradvolume = fields[7]; // F8 vol (corrected; was F9)
+    run_data->stockdata.turnover   = fields[8]; // F9 turnover (corrected; was F10)
 
     return true;
 }
