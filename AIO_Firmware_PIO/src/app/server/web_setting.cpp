@@ -699,9 +699,13 @@ const char* getText(const char* key) {
         return "Flash";
     }
     if (strcmp(key, "temp") == 0) {
-        if (current_lang == LANG_ZH_CN) return "温度";
-        if (current_lang == LANG_ZH_TW) return "溫度";
-        return "Temp";
+        // ESP32 internal die-temperature sensor — uncalibrated and
+        // strongly affected by self-heating. Labelled as such so users
+        // don't read it as ambient temperature. (See web_api.cpp comment
+        // on temprature_sens_read.)
+        if (current_lang == LANG_ZH_CN) return "晶片温度";
+        if (current_lang == LANG_ZH_TW) return "晶片溫度";
+        return "Die Temp";
     }
 
     // WiFi scan card on the System page
@@ -729,6 +733,136 @@ const char* getText(const char* key) {
         if (current_lang == LANG_ZH_CN) return "扫描中…";
         if (current_lang == LANG_ZH_TW) return "掃描中…";
         return "Scanning…";
+    }
+
+    // File-ops pages (Upload / Download / Delete) — added when the
+    // file-ops trio was Glass-styled in PR #75. Originally hardcoded
+    // English; now goes through getText for parity with the rest of
+    // the Glass UI.
+    if (strcmp(key, "delete_file") == 0) {
+        if (current_lang == LANG_ZH_CN) return "删除文件";
+        if (current_lang == LANG_ZH_TW) return "刪除檔案";
+        return "Delete File";
+    }
+    if (strcmp(key, "delete_file_sub") == 0) {
+        if (current_lang == LANG_ZH_CN) return "SD 上的绝对路径，例如 /image/foo.jpg";
+        if (current_lang == LANG_ZH_TW) return "SD 上的絕對路徑，例如 /image/foo.jpg";
+        return "Absolute path on SD, e.g. /image/foo.jpg";
+    }
+    if (strcmp(key, "delete_result") == 0) {
+        if (current_lang == LANG_ZH_CN) return "删除结果";
+        if (current_lang == LANG_ZH_TW) return "刪除結果";
+        return "Delete Result";
+    }
+    if (strcmp(key, "delete_succ_msg") == 0) {
+        if (current_lang == LANG_ZH_CN) return "文件删除成功。";
+        if (current_lang == LANG_ZH_TW) return "檔案刪除成功。";
+        return "File deleted successfully.";
+    }
+    if (strcmp(key, "delete_fail_msg") == 0) {
+        if (current_lang == LANG_ZH_CN) return "删除失败 — 请检查文件路径。";
+        if (current_lang == LANG_ZH_TW) return "刪除失敗 — 請檢查檔案路徑。";
+        return "Delete failed — check the file path.";
+    }
+    if (strcmp(key, "upload_file") == 0) {
+        if (current_lang == LANG_ZH_CN) return "上传文件";
+        if (current_lang == LANG_ZH_TW) return "上傳檔案";
+        return "Upload File";
+    }
+    if (strcmp(key, "upload_file_sub") == 0) {
+        if (current_lang == LANG_ZH_CN) return "存到 SD 根目录 — 之后用绝对路径透过 Delete 清理";
+        if (current_lang == LANG_ZH_TW) return "存到 SD 根目錄 — 之後用絕對路徑透過 Delete 清理";
+        return "Saved to SD root — use absolute paths via Delete to clean up";
+    }
+    if (strcmp(key, "choose_file") == 0) {
+        if (current_lang == LANG_ZH_CN) return "选择文件";
+        if (current_lang == LANG_ZH_TW) return "選擇檔案";
+        return "Choose File";
+    }
+    if (strcmp(key, "upload_btn") == 0) {
+        if (current_lang == LANG_ZH_CN) return "上传";
+        if (current_lang == LANG_ZH_TW) return "上傳";
+        return "Upload";
+    }
+    if (strcmp(key, "file_path_label") == 0) {
+        if (current_lang == LANG_ZH_CN) return "文件路径";
+        if (current_lang == LANG_ZH_TW) return "檔案路徑";
+        return "File Path";
+    }
+    if (strcmp(key, "file_name_label") == 0) {
+        if (current_lang == LANG_ZH_CN) return "文件名称";
+        if (current_lang == LANG_ZH_TW) return "檔案名稱";
+        return "File Name";
+    }
+    if (strcmp(key, "confirm_delete") == 0) {
+        if (current_lang == LANG_ZH_CN) return "确认删除";
+        if (current_lang == LANG_ZH_TW) return "確認刪除";
+        return "Confirm Delete";
+    }
+    if (strcmp(key, "submit") == 0) {
+        if (current_lang == LANG_ZH_CN) return "送出";
+        if (current_lang == LANG_ZH_TW) return "送出";
+        return "Submit";
+    }
+    if (strcmp(key, "back") == 0) {
+        if (current_lang == LANG_ZH_CN) return "返回";
+        if (current_lang == LANG_ZH_TW) return "返回";
+        return "Back";
+    }
+    if (strcmp(key, "back_to_delete") == 0) {
+        if (current_lang == LANG_ZH_CN) return "返回删除";
+        if (current_lang == LANG_ZH_TW) return "返回刪除";
+        return "Back to Delete";
+    }
+    if (strcmp(key, "sd_card_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "SD 卡";
+        if (current_lang == LANG_ZH_TW) return "SD 卡";
+        return "SD Card";
+    }
+    if (strcmp(key, "no_sd_card_msg") == 0) {
+        if (current_lang == LANG_ZH_CN) return "未检测到 SD 卡。";
+        if (current_lang == LANG_ZH_TW) return "未偵測到 SD 卡。";
+        return "No SD card detected.";
+    }
+    if (strcmp(key, "file_not_found_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "找不到文件";
+        if (current_lang == LANG_ZH_TW) return "找不到檔案";
+        return "File Not Found";
+    }
+    if (strcmp(key, "file_not_found_msg") == 0) {
+        if (current_lang == LANG_ZH_CN) return "该文件不存在于 SD 卡上。";
+        if (current_lang == LANG_ZH_TW) return "該檔案不存在於 SD 卡上。";
+        return "The requested file does not exist on the SD card.";
+    }
+    if (strcmp(key, "upload_failed_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "上传失败";
+        if (current_lang == LANG_ZH_TW) return "上傳失敗";
+        return "Upload Failed";
+    }
+    if (strcmp(key, "upload_failed_msg") == 0) {
+        if (current_lang == LANG_ZH_CN) return "无法创建上传文件（SD 只读或已满？）。";
+        if (current_lang == LANG_ZH_TW) return "無法建立上傳檔案（SD 唯讀或已滿？）。";
+        return "Could not create the uploaded file (SD write-protected or full?).";
+    }
+    if (strcmp(key, "enter_filename_download") == 0) {
+        if (current_lang == LANG_ZH_CN) return "输入要下载的文件名";
+        if (current_lang == LANG_ZH_TW) return "輸入要下載的檔名";
+        return "Enter filename to download";
+    }
+    if (strcmp(key, "upload_success_title") == 0) {
+        if (current_lang == LANG_ZH_CN) return "上传成功";
+        if (current_lang == LANG_ZH_TW) return "上傳成功";
+        return "Upload Successful";
+    }
+    if (strcmp(key, "uploaded_file_label") == 0) {
+        if (current_lang == LANG_ZH_CN) return "文件名";
+        if (current_lang == LANG_ZH_TW) return "檔名";
+        return "File Name";
+    }
+    if (strcmp(key, "file_size_label") == 0) {
+        if (current_lang == LANG_ZH_CN) return "文件大小";
+        if (current_lang == LANG_ZH_TW) return "檔案大小";
+        return "File Size";
     }
 
     return "";
