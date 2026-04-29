@@ -43,12 +43,17 @@ void tearDown()
 
 void test_auth_flow_succeeds()
 {
+    // Walk through cmdStatus 0 → 1 → 2 BEFORE pushing the client (see
+    // ftp_test_helpers.cpp for the rationale — pushing at cmdStatus 0
+    // gets the client immediately disconnected).
+    srv->handleFTP();
+    srv->handleFTP();
+
     WiFiClient c;
     c.mark_connected(true);
     ftpServer.push_pending_client(c);
 
-    srv->handleFTP();
-    srv->handleFTP();
+    srv->handleFTP();  // picks up client + emits 220 welcome
     std::string welcome = c.take_tx_as_string();
     TEST_ASSERT_TRUE_MESSAGE(ftp_tx_contains(welcome, "220"),
                              "expected 220 welcome banner");
