@@ -122,14 +122,18 @@ void drawImg(void){
     }else if(cy_r->con!=245){//屏幕显示的图片切换完成，开始从tf卡更新此时没有显示的图片缓冲区(需要大概22.25ms左右)
         cy_r->cn++;
         if(cy_r->cn>cy_r->cyber_num)cy_r->cn=1;
-        char *path = (char*)malloc(26);//必须用char*类型，不能用uint8_t*
-        sprintf(path,"/LH&LXW/cyber/img%d.cyber",cy_r->cn);//图标路径
+        // Stack buffer (was malloc(26) + sprintf) — the heap allocation
+        // had zero slack (prefix 17 + max-2-digit cn + ".cyber" = 26 incl
+        // NUL), and -Wformat-truncation was right that any future bump
+        // of cyber_num past 99 would silently overflow. snprintf bound
+        // makes truncation safe even if that happens.
+        char path[32];
+        snprintf(path, sizeof(path), "/LH&LXW/cyber/img%d.cyber", cy_r->cn);
         cy_r->file = SD.open(path,"r");//建立File对象用于从SPIFFS中读取文件
         for(uint16_t i=0;i<1920;i++)
             if(cy_r->flg)cy_r->pic2[i] = cy_r->file.read();
             else cy_r->pic1[i] = cy_r->file.read();
         cy_r->file.close();//读取完后，关闭文件
-        free(path);
         cy_r->con=245;
         cy_r->timCon = millis();//计时cyber_play_time毫秒
     }else{ 
@@ -172,12 +176,13 @@ void cyber_pros(lv_obj_t *ym){
 
     /* 判断文件是否存在，如果都存在，此后打开就不需要判断了 */
     for(uint8_t i=1;i<=cy_r->cyber_num;i++){
-        char *test_ = (char*)malloc(26);//必须用char*类型，不能用uint8_t*
-        sprintf(test_,"/LH&LXW/cyber/img%d.cyber",i);//图标路径
+        // Stack buffer mirroring the playback loop above — same path
+        // shape, same reasoning.
+        char test_[32];
+        snprintf(test_, sizeof(test_), "/LH&LXW/cyber/img%d.cyber", i);
         cy_r->file = SD.open(test_,"r");//建立File对象用于从SPIFFS中读取文件
         if(!cy_r->file){free_cy_r();return;}
-        cy_r->file.close(); 
-        free(test_);
+        cy_r->file.close();
     }
 
     cy_r->cn=1;//从第一张图片开始
