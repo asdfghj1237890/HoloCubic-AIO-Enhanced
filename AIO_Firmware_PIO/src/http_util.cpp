@@ -15,7 +15,9 @@ inline bool is_ok_code(int code)
 
 }  // namespace
 
-int http_fetch_string(const char *url, String &out, uint32_t timeout_ms)
+int http_fetch_string(const char *url, String &out, uint32_t timeout_ms,
+                      const char *extra_header_name,
+                      const char *extra_header_value)
 {
     out = "";
     if (NULL == url || url[0] == '\0') {
@@ -31,6 +33,10 @@ int http_fetch_string(const char *url, String &out, uint32_t timeout_ms)
         return -1;
     }
 
+    if (extra_header_name && extra_header_value) {
+        http.addHeader(extra_header_name, extra_header_value);
+    }
+
     int code = http.GET();
     if (code > 0 && is_ok_code(code)) {
         out = http.getString();
@@ -40,10 +46,13 @@ int http_fetch_string(const char *url, String &out, uint32_t timeout_ms)
 }
 
 bool http_fetch_json(const char *url, JsonDocument &doc,
-                     uint32_t timeout_ms, int *http_code_out)
+                     uint32_t timeout_ms, int *http_code_out,
+                     const char *extra_header_name,
+                     const char *extra_header_value)
 {
     String body;
-    int code = http_fetch_string(url, body, timeout_ms);
+    int code = http_fetch_string(url, body, timeout_ms,
+                                 extra_header_name, extra_header_value);
     if (http_code_out) {
         *http_code_out = code;
     }

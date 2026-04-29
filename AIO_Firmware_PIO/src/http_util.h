@@ -34,7 +34,16 @@
 // is generous enough for the Beijing-hosted Sina / Taobao / AccuWeather
 // endpoints under poor WiFi; per-call overrides preserve the tighter
 // values used by weather (2000-3000 ms) and settings (1000 ms).
-int http_fetch_string(const char *url, String &out, uint32_t timeout_ms = 5000);
+//
+// Optional `extra_header_name` + `extra_header_value` set a single
+// HTTPClient header before GET. Used by stockmarket (Sina requires
+// `referer: https://finance.sina.com.cn` to return data; Yahoo Finance
+// requires a non-default `User-Agent`). Pass nullptr / nullptr to skip.
+// Single-header is enough for every current caller; refactor to a
+// header-list if a future caller needs more than one.
+int http_fetch_string(const char *url, String &out, uint32_t timeout_ms = 5000,
+                      const char *extra_header_name = nullptr,
+                      const char *extra_header_value = nullptr);
 
 // Fetch `url` and deserialize the body into `doc`. Returns true only
 // when (a) HTTP code is 2xx (or 301), AND (b) ArduinoJson parsed the
@@ -48,8 +57,13 @@ int http_fetch_string(const char *url, String &out, uint32_t timeout_ms = 5000);
 // pick its capacity to fit the expected payload — this helper does not
 // re-allocate. On failure, `doc`'s contents are unspecified (caller
 // should not read fields without checking the return value).
+//
+// Optional extra header passed through to http_fetch_string; see that
+// function's doc for usage.
 bool http_fetch_json(const char *url, JsonDocument &doc,
                      uint32_t timeout_ms = 5000,
-                     int *http_code_out = nullptr);
+                     int *http_code_out = nullptr,
+                     const char *extra_header_name = nullptr,
+                     const char *extra_header_value = nullptr);
 
 #endif
