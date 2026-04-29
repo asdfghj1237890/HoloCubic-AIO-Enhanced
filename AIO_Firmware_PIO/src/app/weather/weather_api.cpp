@@ -299,8 +299,14 @@ void get_weather(void)
                 // Wind speed (convert km/h to level)
                 float windSpeed = current["Wind"]["Speed"]["Metric"]["Value"] | 0.0f;
                 int windLevel = (int)(windSpeed / 5.0); // Rough conversion: 0-5km/h = level 0, 5-10 = level 1, etc.
+                // Symmetric clamp: a malformed/negative JSON value would
+                // otherwise reach snprintf as e.g. "-2147483648" (11 chars
+                // + NUL) and overflow windpower[10]. The >12 cap was here
+                // pre-split; <0 added so gcc's range analysis can prove
+                // the snprintf fits.
                 if (windLevel > 12) windLevel = 12;
-                snprintf(run_data->wea.windpower, 10, "%d", windLevel);
+                if (windLevel < 0)  windLevel = 0;
+                snprintf(run_data->wea.windpower, sizeof(run_data->wea.windpower), "%d", windLevel);
 
                 // Air quality estimate from UV index (since AccuWeather doesn't provide AQI in free tier)
                 int uvIndex = current["UVIndex"] | 0;
