@@ -244,6 +244,33 @@ void loop()
         isCheckAction = false;
         act_info = mpu.getAction();
     }
+
+    // Remote-control overlay: read any pending bytes, and if we see the
+    // 2-byte ~X protocol from AIO_Tool, override act_info->active so the
+    // app dispatch treats it as a virtual IMU tilt. The ~ prefix avoids
+    // accidental triggers from random text on the serial console.
+    // Zero-cost when nothing is pending (Serial.available() returns 0).
+    {
+        static char serial_remote_prev = 0;
+        while (Serial.available())
+        {
+            char c = (char)Serial.read();
+            if (serial_remote_prev == '~')
+            {
+                switch (c)
+                {
+                    case 'U': act_info->active = UP;         break;
+                    case 'D': act_info->active = DOWN;       break;
+                    case 'L': act_info->active = TURN_LEFT;  break;
+                    case 'R': act_info->active = TURN_RIGHT; break;
+                    case 'H': act_info->active = RETURN;     break;
+                    default: break;
+                }
+            }
+            serial_remote_prev = c;
+        }
+    }
+
     app_controller->main_process(act_info); // 运行当前进程
     // Serial.println(ambLight.getLux() / 50.0);
     // rgb.setBrightness(ambLight.getLux() / 500.0);
