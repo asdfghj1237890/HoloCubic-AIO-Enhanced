@@ -172,9 +172,10 @@ void init_page_header()
     // captive AP-mode boots they fall back to system fonts gracefully.
     webpage_header += F("<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\"><link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>");
     webpage_header += F("<link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap\" rel=\"stylesheet\">");
-    webpage_header += F("<style>");
-    webpage_header += FPSTR(GLASS_CSS);
-    webpage_header += F("</style>");
+    // Glass UI CSS now served from /static/glass.css (FU #2) so the
+    // browser caches it across page navigations. The PROGMEM blob is
+    // still defined above and emitted by serve_glass_css().
+    webpage_header += F("<link rel=\"stylesheet\" href=\"/static/glass.css\">");
     // Restore the saved theme (dark by default) before <body> renders so
     // the page doesn't flash dark first when light is selected.
     webpage_header += F("<script>try{if(localStorage.getItem('holocubic-theme')==='light')document.documentElement.classList.add('preload-light');}catch(e){}</script>");
@@ -501,10 +502,31 @@ static const char GLASS_JS[] PROGMEM = R"GLASS(
 void init_page_footer()
 {
     webpage_footer = F("</div></main></div>");  // close .content, .main, .app
-    webpage_footer += F("<script>");
-    webpage_footer += FPSTR(GLASS_JS);
-    webpage_footer += F("</script>");
+    // Glass UI JS now served from /static/glass.js (FU #2) for browser
+    // caching; PROGMEM blob still defined above and emitted by
+    // serve_glass_js().
+    webpage_footer += F("<script src=\"/static/glass.js\"></script>");
     webpage_footer += F("</body></html>");
+}
+
+void serve_glass_css(void)
+{
+    server.sendHeader("Cache-Control", "public, max-age=86400");
+    server.sendHeader("Content-Type", "text/css; charset=utf-8");
+    // Stream from PROGMEM via FPSTR -> String conversion. ~9KB blob;
+    // single send() call is fine for this size.
+    String body;
+    body += FPSTR(GLASS_CSS);
+    server.send(200, "text/css", body);
+}
+
+void serve_glass_js(void)
+{
+    server.sendHeader("Cache-Control", "public, max-age=86400");
+    server.sendHeader("Content-Type", "application/javascript; charset=utf-8");
+    String body;
+    body += FPSTR(GLASS_JS);
+    server.send(200, "application/javascript", body);
 }
 
 // Language texts

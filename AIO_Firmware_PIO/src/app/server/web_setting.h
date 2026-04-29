@@ -9,6 +9,12 @@ void init_page_header(void);
 void init_page_footer(void);
 void HomePage(void);
 
+// Glass UI static asset routes (FU #2). Each serves the corresponding
+// PROGMEM blob with Cache-Control: max-age so the browser caches it
+// across page loads — saves ~30KB per setting-page navigation.
+void serve_glass_css(void);
+void serve_glass_js(void);
+
 void File_Download(void);
 void File_Upload(void);
 void File_Delete(void);
