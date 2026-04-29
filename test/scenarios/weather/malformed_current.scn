@@ -1,0 +1,29 @@
+# Weather malformed-JSON guard. Pinned to PR-1.5 (Phase 1C), which
+# added an explicit DeserializationError check after deserializeJson
+# in get_weather() but committed no fixture that actually exercised it.
+# This scenario closes that gap.
+#
+# flash_seed sets location_key = BROKEN so the URL becomes
+#   .../currentconditions/v1/BROKEN?apikey=TEST_KEY
+# routing to test/fixtures/http/.../currentconditions/v1/BROKEN.json,
+# which is intentionally truncated mid-object so ArduinoJson's
+# deserializeJson returns InvalidInput / IncompleteInput. The new code
+# logs "[APP] Get weather - JSON parse error: ..." and skips the
+# JsonObject access; the scenario asserts no crash.
+#
+# The forecast endpoint deliberately has no BROKEN fixture, so it
+# returns -1 (no-fixture sentinel) and exercises that branch too.
+
+app weather
+flash_seed /weather_accu.cfg "TEST_KEY\nBeijing\nBROKEN\n900000\n900000\n0\n"
+
+wait_ms 800
+assert_no_crash
+
+action TURN_RIGHT
+wait_ms 200
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

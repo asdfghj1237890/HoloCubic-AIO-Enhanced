@@ -1,0 +1,6 @@
+[
+  {
+    "LocalObservationDateTime": "2026-04-29T14:00:00+08:00",
+    "WeatherText": "Truncated payload — closing brace is missing on purpose so deserializeJson returns InvalidInput.",
+    "Temperature": {
+      "Metric": {"Value": 22, "Unit"
