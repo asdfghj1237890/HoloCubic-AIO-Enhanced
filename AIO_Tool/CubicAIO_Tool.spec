@@ -1,5 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# esptool ships JSON stub-flasher files under
+# esptool/targets/stub_flasher/<v>/esp*.json that it loads at runtime
+# via package data. PyInstaller's static analysis doesn't pick these
+# up automatically, so the windowed build crashed at flash time with
+# "Stub flasher JSON file for ESP32 not found". collect_data_files
+# pulls in everything the package ships under its install root.
+from PyInstaller.utils.hooks import collect_data_files
+
+esptool_datas = collect_data_files('esptool')
+
 
 a = Analysis(
     ['CubicAIO_Tool.py'],
@@ -9,6 +19,7 @@ a = Analysis(
         ('cubictool.json', '.'),
         ('image', 'image'),
         ('i18n', 'i18n'),
+        *esptool_datas,
     ],
     hiddenimports=[
         'esptool',
