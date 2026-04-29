@@ -27,22 +27,45 @@
 
 // Compact field helpers. Each emits one .field row with the right
 // number of %s placeholders (text=1, password=1, radio2=2, select3=3).
-// Tip column kept as empty <span></span> placeholder; per-field tooltips
-// can be wired later by inlining "<span class=\"tip\" data-tip=\"...\">?</span>".
+//
+// Two flavours per field type:
+//   G_FIELD_<TYPE>(lbl, name, ...)         -> empty tip slot
+//   G_FIELD_<TYPE>_T(lbl, name, ..., tip)  -> populated `?` tooltip
+// The trailing `tip` is rendered in the .tip span and shown via the
+// pure-CSS hover handler from GLASS_CSS. English-only for now;
+// localising would mean injecting getText() into the snprintf format
+// strings, which doesn't fit the static-macro shape — separate PR.
 #define G_FIELD_TEXT(lbl, name) \
   "<div class=\"field\"><label>" lbl "</label>" \
   "<input type=\"text\" name=\"" name "\" value=\"%s\"><span></span></div>"
+
+#define G_FIELD_TEXT_T(lbl, name, tip) \
+  "<div class=\"field\"><label>" lbl "</label>" \
+  "<input type=\"text\" name=\"" name "\" value=\"%s\">" \
+  "<span class=\"tip\" data-tip=\"" tip "\">?</span></div>"
 
 #define G_FIELD_PWD(lbl, name) \
   "<div class=\"field\"><label>" lbl "</label>" \
   "<div class=\"secret-wrap\"><input type=\"password\" name=\"" name "\" value=\"%s\" class=\"mono\">" \
   "<button type=\"button\" class=\"eye-btn\">\xF0\x9F\x91\x81</button></div><span></span></div>"
 
+#define G_FIELD_PWD_T(lbl, name, tip) \
+  "<div class=\"field\"><label>" lbl "</label>" \
+  "<div class=\"secret-wrap\"><input type=\"password\" name=\"" name "\" value=\"%s\" class=\"mono\">" \
+  "<button type=\"button\" class=\"eye-btn\">\xF0\x9F\x91\x81</button></div>" \
+  "<span class=\"tip\" data-tip=\"" tip "\">?</span></div>"
+
 #define G_FIELD_RADIO2(lbl, name, v0, l0, v1, l1) \
   "<div class=\"field\"><label>" lbl "</label><div>" \
   "<input class=\"radio\" type=\"radio\" value=\"" v0 "\" name=\"" name "\" %s>" l0 \
   "<input class=\"radio\" type=\"radio\" value=\"" v1 "\" name=\"" name "\" %s>" l1 \
   "</div><span></span></div>"
+
+#define G_FIELD_RADIO2_T(lbl, name, v0, l0, v1, l1, tip) \
+  "<div class=\"field\"><label>" lbl "</label><div>" \
+  "<input class=\"radio\" type=\"radio\" value=\"" v0 "\" name=\"" name "\" %s>" l0 \
+  "<input class=\"radio\" type=\"radio\" value=\"" v1 "\" name=\"" name "\" %s>" l1 \
+  "</div><span class=\"tip\" data-tip=\"" tip "\">?</span></div>"
 
 #define G_FORM_OPEN(action, title) \
   "<form method=\"GET\" action=\"" action "\"><div class=\"card\">" \
@@ -57,12 +80,12 @@
 #define SYS_SETTING G_FORM_OPEN("saveSysConf", "System") \
   G_FIELD_TEXT("WiFi SSID_0 (2.4G)", "ssid_0") \
   G_FIELD_PWD ("WiFi Password_0", "password_0") \
-  G_FIELD_TEXT("Power Mode (0=eco, 1=perf)", "power_mode") \
+  G_FIELD_TEXT_T("Power Mode (0=eco, 1=perf)", "power_mode", "0 throttles CPU for cooler running; 1 maxes clock for snappier UI.") \
   G_FIELD_TEXT("Backlight (1-100)", "backLight") \
-  G_FIELD_TEXT("Rotation (0-5)", "rotation") \
-  G_FIELD_TEXT("MPU Order (0-15)", "mpu_order") \
-  G_FIELD_RADIO2("MPU6050 Auto-cal", "auto_calibration_mpu", "0", "Off", "1", "On") \
-  G_FIELD_TEXT("Auto-start App (e.g. Weather)", "auto_start_app") \
+  G_FIELD_TEXT_T("Rotation (0-5)", "rotation", "Screen orientation. 0=portrait, 1=landscape, 2/3=flipped, 4/5=mirrored.") \
+  G_FIELD_TEXT_T("MPU Order (0-15)", "mpu_order", "IMU axis remap. If tilt input feels wrong, walk 0-15 until it matches.") \
+  G_FIELD_RADIO2_T("MPU6050 Auto-cal", "auto_calibration_mpu", "0", "Off", "1", "On", "Run accelerometer auto-zero on boot. Keep the device flat for ~2s.") \
+  G_FIELD_TEXT_T("Auto-start App (e.g. Weather)", "auto_start_app", "App name to launch on boot. Leave blank for the menu.") \
   G_FORM_CLOSE
 
 #define RGB_SETTING G_FORM_OPEN("saveRgbConf", "RGB Lighting") \
@@ -72,10 +95,10 @@
   G_FORM_CLOSE
 
 #define WEATHER_SETTING G_FORM_OPEN("saveWeatherConf", "Weather (AccuWeather)") \
-  G_FIELD_PWD ("AccuWeather API Key", "api_key") \
-  G_FIELD_TEXT("City Name", "city_name") \
-  G_FIELD_TEXT("Weather Refresh (ms)", "weatherUpdataInterval") \
-  G_FIELD_TEXT("Time Refresh (ms)", "timeUpdataInterval") \
+  G_FIELD_PWD_T("AccuWeather API Key", "api_key", "Get a free key at developer.accuweather.com (50 calls/day).") \
+  G_FIELD_TEXT_T("City Name", "city_name", "English city name. AccuWeather resolves it to a location key on first fetch.") \
+  G_FIELD_TEXT_T("Weather Refresh (ms)", "weatherUpdataInterval", "Don't go below 60000 — AccuWeather rate-limits the free tier.") \
+  G_FIELD_TEXT_T("Time Refresh (ms)", "timeUpdataInterval", "NTP poll cadence. 60000 is plenty.") \
   G_FIELD_RADIO2("Display Language", "language", "0", "\xE7\xAE\x80\xE4\xBD\x93", "1", "\xE7\xB9\x81\xE9\xAB\x94") \
   G_FORM_CLOSE
 
@@ -88,55 +111,55 @@
   G_FORM_CLOSE
 
 #define BILIBILI_SETTING G_FORM_OPEN("saveBiliConf", "Bilibili Fans") \
-  G_FIELD_TEXT("Bili UID", "bili_uid") \
-  G_FIELD_TEXT("Update Interval (ms)", "updataInterval") \
+  G_FIELD_TEXT_T("Bili UID", "bili_uid", "Numeric user ID from your space URL: space.bilibili.com/<UID>.") \
+  G_FIELD_TEXT_T("Update Interval (ms)", "updataInterval", "Polling cadence. 60000ms keeps you well under any rate limit.") \
   G_FORM_CLOSE
 
 // Stock has a 3-option select rather than radio; spell it out inline
 // rather than adding a single-use G_FIELD_SELECT3 macro.
 #define STOCK_SETTING G_FORM_OPEN("saveStockConf", "Stock") \
-  G_FIELD_TEXT("Stock Symbol (AAPL, TSLA, 601126)", "stock_symbol") \
+  G_FIELD_TEXT_T("Stock Symbol (AAPL, TSLA, 601126)", "stock_symbol", "US/HK use letter tickers; CN uses 6-digit codes (e.g. 601126).") \
   "<div class=\"field\"><label>Market</label>" \
   "<select name=\"market_type\">" \
   "<option value=\"US\" %s>US</option>" \
   "<option value=\"CN\" %s>CN</option>" \
   "<option value=\"HK\" %s>HK</option>" \
-  "</select><span></span></div>" \
-  G_FIELD_TEXT("Update Interval (ms)", "updataInterval") \
+  "</select><span class=\"tip\" data-tip=\"Picks the upstream feed: US=Yahoo, CN=Sina, HK=Sina-HK.\">?</span></div>" \
+  G_FIELD_TEXT_T("Update Interval (ms)", "updataInterval", "Polling cadence. Markets quote every few seconds; 30000ms is plenty.") \
   G_FORM_CLOSE
 
 #define PICTURE_SETTING G_FORM_OPEN("savePictureConf", "Picture") \
-  G_FIELD_TEXT("Auto-switch Interval (ms)", "switchInterval") \
+  G_FIELD_TEXT_T("Auto-switch Interval (ms)", "switchInterval", "How long each image stays on screen before rotating.") \
   G_FORM_CLOSE
 
 #define MEDIA_SETTING G_FORM_OPEN("saveMediaConf", "Media Player") \
-  G_FIELD_TEXT("Auto-switch (0=off, 1=on)", "switchFlag") \
-  G_FIELD_TEXT("Power Mode (0=eco, 1=perf)", "powerFlag") \
+  G_FIELD_TEXT_T("Auto-switch (0=off, 1=on)", "switchFlag", "Auto-rotate through SD videos vs. play one until input.") \
+  G_FIELD_TEXT_T("Power Mode (0=eco, 1=perf)", "powerFlag", "1 raises CPU clock for smoother playback at higher power draw.") \
   G_FORM_CLOSE
 
 #define SCREEN_SETTING G_FORM_OPEN("saveScreenConf", "Screen Share") \
-  G_FIELD_TEXT("Power Mode (0=eco, 1=perf)", "powerFlag") \
+  G_FIELD_TEXT_T("Power Mode (0=eco, 1=perf)", "powerFlag", "1 maxes CPU for higher streamed-frame throughput.") \
   G_FORM_CLOSE
 
 #define HEARTBEAT_SETTING G_FORM_OPEN("saveHeartbeatConf", "Heartbeat (MQTT)") \
-  G_FIELD_TEXT("Role (0=heart, 1=beat)", "role") \
-  G_FIELD_TEXT("QQ Number", "qq_num") \
-  G_FIELD_TEXT("MQTT Server", "mqtt_server") \
-  G_FIELD_TEXT("MQTT Port", "mqtt_port") \
+  G_FIELD_TEXT_T("Role (0=heart, 1=beat)", "role", "0 sends touches; 1 receives. Pair must mirror — one of each.") \
+  G_FIELD_TEXT_T("QQ Number", "qq_num", "Used as MQTT topic suffix. Two devices with the same QQ pair up.") \
+  G_FIELD_TEXT_T("MQTT Server", "mqtt_server", "Broker hostname/IP. Use a public broker (test.mosquitto.org) or your own.") \
+  G_FIELD_TEXT_T("MQTT Port", "mqtt_port", "1883 plain, 8883 TLS. Public brokers usually use 1883.") \
   G_FIELD_TEXT("MQTT Username (optional)", "mqtt_user") \
   G_FIELD_PWD ("MQTT Password (optional)", "mqtt_password") \
   G_FORM_CLOSE
 
 #define ANNIVERSARY_SETTING G_FORM_OPEN("saveAnniversaryConf", "Anniversary") \
   G_FIELD_TEXT("Event 0", "event_name0") \
-  G_FIELD_TEXT("Date 0", "target_date0") \
+  G_FIELD_TEXT_T("Date 0", "target_date0", "Format: YYYY-MM-DD. Past dates count up; future dates count down.") \
   G_FIELD_TEXT("Event 1", "event_name1") \
-  G_FIELD_TEXT("Date 1", "target_date1") \
+  G_FIELD_TEXT_T("Date 1", "target_date1", "Format: YYYY-MM-DD. Past dates count up; future dates count down.") \
   G_FORM_CLOSE
 
 #define REMOTR_SENSOR_SETTING G_FORM_OPEN("savePCResourceConf", "PC Resource") \
-  G_FIELD_TEXT("PC IP Address", "pc_ipaddr") \
-  G_FIELD_TEXT("Sensor Update Interval (ms)", "sensorUpdataInterval") \
+  G_FIELD_TEXT_T("PC IP Address", "pc_ipaddr", "IP of the PC running the AIDA64/HWiNFO bridge that feeds CPU/GPU stats.") \
+  G_FIELD_TEXT_T("Sensor Update Interval (ms)", "sensorUpdataInterval", "How often to poll the bridge. 1000-2000ms is the sweet spot.") \
   G_FORM_CLOSE
 
 void sys_setting()
