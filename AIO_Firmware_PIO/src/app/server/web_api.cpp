@@ -41,17 +41,31 @@ void api_stats(void)
 {
     // ESP32's internal temperature sensor returns a raw Fahrenheit-ish
     // byte; the firmware's existing displays use a similar conversion.
-    // Skipped on disconnected WiFi (RSSI / IP / SSID would be "(null)").
-    bool wifi_up = (WiFi.status() == WL_CONNECTED);
+    //
+    // WiFi state: the cube can be in STA mode (connected to a router),
+    // AP mode (hosting its own hotspot that the user joined), or both.
+    // The previous wifi_up = (WiFi.status() == WL_CONNECTED) only saw
+    // the STA case — when the user reached the web UI via the cube's
+    // own AP, the API reported wifi.connected=false and the IP pill
+    // stayed at "--" even though the page was clearly being served.
+    //
+    // Fix: treat AP-up OR STA-up as "wifi up". Prefer the STA IP
+    // (router-routable) if available, fall back to softAPIP otherwise.
+    bool sta_up = (WiFi.status() == WL_CONNECTED);
+    IPAddress ap_ip = WiFi.softAPIP();
+    bool ap_up = (ap_ip[0] | ap_ip[1] | ap_ip[2] | ap_ip[3]) != 0;
+    bool wifi_up = sta_up || ap_up;
 
     char ip_buf[32] = {0};
-    if (wifi_up) {
+    if (sta_up) {
         IPAddress ip = WiFi.localIP();
         snprintf(ip_buf, sizeof(ip_buf), "%u.%u.%u.%u", ip[0], ip[1], ip[2], ip[3]);
+    } else if (ap_up) {
+        snprintf(ip_buf, sizeof(ip_buf), "%u.%u.%u.%u", ap_ip[0], ap_ip[1], ap_ip[2], ap_ip[3]);
     }
 
-    int rssi = wifi_up ? WiFi.RSSI() : 0;
-    String ssid = wifi_up ? WiFi.SSID() : String();
+    int rssi = sta_up ? WiFi.RSSI() : 0;
+    String ssid = sta_up ? WiFi.SSID() : (ap_up ? String("AP mode") : String());
     String mac = WiFi.macAddress();
 
     uint32_t free_heap  = ESP.getFreeHeap();
