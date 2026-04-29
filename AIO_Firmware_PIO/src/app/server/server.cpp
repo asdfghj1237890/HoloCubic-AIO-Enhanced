@@ -27,6 +27,12 @@ void start_web_config()
     // 首页
     server.on("/", HTTP_GET, HomePage);
 
+    // Glass UI static assets (FU #2). Served once + cached by the
+    // browser, so the main HTML pages no longer carry the ~30KB
+    // CSS/JS payload inline on every navigation.
+    server.on("/static/glass.css", HTTP_GET, serve_glass_css);
+    server.on("/static/glass.js",  HTTP_GET, serve_glass_js);
+
     init_page_header();
     init_page_footer();
     server.on("/download", File_Download);
