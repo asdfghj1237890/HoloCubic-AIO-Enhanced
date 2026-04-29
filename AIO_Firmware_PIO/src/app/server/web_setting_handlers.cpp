@@ -324,51 +324,61 @@ void savePCResourceConf(void)
 
 void File_Delete()
 {
-    // Glass-styled delete form. Single text-field row + Confirm/Back
-    // row-actions, mirroring the layout of every *_setting page so this
-    // page stops looking like raw browser-default HTML.
-    Send_HTML(
-        F("<form method=\"POST\" action=\"/delete_result\"><div class=\"card\">"
-          "<div class=\"card-head\"><div><div class=\"card-title\">Delete File</div>"
-          "<div class=\"card-sub\">Absolute path on SD, e.g. /image/foo.jpg</div></div></div>"
-          "<div class=\"card-body\">"
-          "<div class=\"field\"><label>File Path</label>"
-          "<input type=\"text\" name=\"delete_filepath\" placeholder=\"/image/...\" class=\"mono\">"
-          "<span></span></div>"
-          "</div>"
-          "<div class=\"row-actions\">"
-          "<button type=\"submit\" class=\"btn primary\">\xE2\x9C\x93 Confirm Delete</button>"
-          "<a href=\"/\" class=\"btn ghost\">Back</a>"
-          "</div></div></form>"));
+    // Glass-styled delete form, i18n'd. Same .card / .field /
+    // .row-actions skeleton as every *_setting page so the file-ops
+    // trio matches the rest of the Glass UI.
+    webpage = F("<form method=\"POST\" action=\"/delete_result\"><div class=\"card\">"
+                "<div class=\"card-head\"><div><div class=\"card-title\">");
+    webpage += getText("delete_file");
+    webpage += F("</div><div class=\"card-sub\">");
+    webpage += getText("delete_file_sub");
+    webpage += F("</div></div></div>"
+                 "<div class=\"card-body\">"
+                 "<div class=\"field\"><label>");
+    webpage += getText("file_path_label");
+    webpage += F("</label>"
+                 "<input type=\"text\" name=\"delete_filepath\" placeholder=\"/image/...\" class=\"mono\">"
+                 "<span></span></div>"
+                 "</div>"
+                 "<div class=\"row-actions\">"
+                 "<button type=\"submit\" class=\"btn primary\">\xE2\x9C\x93 ");
+    webpage += getText("confirm_delete");
+    webpage += F("</button>"
+                 "<a href=\"/\" class=\"btn ghost\">");
+    webpage += getText("back");
+    webpage += F("</a>"
+                 "</div></div></form>");
+    Send_HTML(webpage);
 }
 
 void delete_result(void)
 {
     String del_file = server.arg("delete_filepath");
     boolean ret = tf.deleteFile(del_file);
-    if (ret)
-    {
-        webpage = F("<div class=\"card\"><div class=\"card-head\">"
-                    "<div><div class=\"card-title\">Delete Result</div></div></div>"
-                    "<div class=\"result-msg ok\"><span class=\"icon\">\xE2\x9C\x93</span>"
-                    "File deleted successfully.</div>"
-                    "<div class=\"row-actions\">"
-                    "<a href=\"/delete\" class=\"btn\">Back to Delete</a>"
-                    "<a href=\"/\" class=\"btn ghost\">Home</a>"
-                    "</div></div>");
-        tf.listDir("/image", 250);
-    }
-    else
-    {
-        webpage = F("<div class=\"card\"><div class=\"card-head\">"
-                    "<div><div class=\"card-title\">Delete Result</div></div></div>"
-                    "<div class=\"result-msg err\"><span class=\"icon\">!</span>"
-                    "Delete failed \xE2\x80\x94 check the file path.</div>"
-                    "<div class=\"row-actions\">"
-                    "<a href=\"/delete\" class=\"btn\">Back to Delete</a>"
-                    "<a href=\"/\" class=\"btn ghost\">Home</a>"
-                    "</div></div>");
-    }
+
+    String result_class = ret ? F("ok") : F("err");
+    String icon = ret ? F("\xE2\x9C\x93") : F("!");
+    String msg = ret ? getText("delete_succ_msg") : getText("delete_fail_msg");
+
+    webpage = F("<div class=\"card\"><div class=\"card-head\">"
+                "<div><div class=\"card-title\">");
+    webpage += getText("delete_result");
+    webpage += F("</div></div></div>"
+                 "<div class=\"result-msg ");
+    webpage += result_class;
+    webpage += F("\"><span class=\"icon\">");
+    webpage += icon;
+    webpage += F("</span>");
+    webpage += msg;
+    webpage += F("</div>"
+                 "<div class=\"row-actions\">"
+                 "<a href=\"/delete\" class=\"btn\">");
+    webpage += getText("back_to_delete");
+    webpage += F("</a>"
+                 "<a href=\"/\" class=\"btn ghost\">");
+    webpage += getText("home");
+    webpage += F("</a>"
+                 "</div></div>");
     tf.listDir("/image", 250);
     Send_HTML(webpage);
 }
@@ -381,7 +391,7 @@ void File_Download()
     }
     else
     {
-        SelectInput("Enter filename to download", "download", "download");
+        SelectInput(getText("enter_filename_download"), "download", "download");
     }
 }
 
@@ -410,20 +420,29 @@ void File_Upload()
     tf.listDir("/image", 250);
 
     webpage = webpage_header;
-    // Glass-styled upload form. Same .card / .field / .row-actions
+    // Glass-styled upload form, i18n'd. Same .card / .field / .row-actions
     // skeleton as the *_setting pages so the file-ops trio looks like
     // first-class app pages.
     webpage += F("<form method=\"POST\" action=\"/fupload\" enctype=\"multipart/form-data\"><div class=\"card\">"
-                 "<div class=\"card-head\"><div><div class=\"card-title\">Upload File</div>"
-                 "<div class=\"card-sub\">Saved to SD root \xE2\x80\x94 use absolute paths via Delete to clean up</div></div></div>"
+                 "<div class=\"card-head\"><div><div class=\"card-title\">");
+    webpage += getText("upload_file");
+    webpage += F("</div><div class=\"card-sub\">");
+    webpage += getText("upload_file_sub");
+    webpage += F("</div></div></div>"
                  "<div class=\"card-body\">"
-                 "<div class=\"field\"><label>Choose File</label>"
+                 "<div class=\"field\"><label>");
+    webpage += getText("choose_file");
+    webpage += F("</label>"
                  "<input type=\"file\" name=\"fupload\" id=\"fupload\">"
                  "<span></span></div>"
                  "</div>"
                  "<div class=\"row-actions\">"
-                 "<button type=\"submit\" class=\"btn primary\">\xE2\x86\x91 Upload</button>"
-                 "<a href=\"/\" class=\"btn ghost\">Back</a>"
+                 "<button type=\"submit\" class=\"btn primary\">\xE2\x86\x91 ");
+    webpage += getText("upload_btn");
+    webpage += F("</button>"
+                 "<a href=\"/\" class=\"btn ghost\">");
+    webpage += getText("back");
+    webpage += F("</a>"
                  "</div></div></form>");
     webpage += webpage_footer;
     server.send(200, "text/html", webpage);
@@ -457,12 +476,31 @@ void handleFileUpload()
             UploadFile.close(); // Close the file again
             Serial.print(F("Upload Size: "));
             Serial.println(uploadFileStream.totalSize);
+            // Glass-styled + i18n upload-success card. Was h2/h3 before
+            // — sat awkwardly inside the Glass shell otherwise.
             webpage = webpage_header;
-            webpage += F("<h3>File was successfully uploaded</h3>");
-            webpage += F("<h2>Uploaded File Name: ");
-            webpage += filename + "</h2>";
-            webpage += F("<h2>File Size: ");
-            webpage += file_size(uploadFileStream.totalSize) + "</h2><br>";
+            webpage += F("<div class=\"card\"><div class=\"card-head\">"
+                         "<div><div class=\"card-title\">");
+            webpage += getText("upload_success_title");
+            webpage += F("</div></div></div>"
+                         "<div class=\"result-msg ok\"><span class=\"icon\">\xE2\x9C\x93</span>");
+            webpage += getText("uploaded_file_label");
+            webpage += F(": ");
+            webpage += filename;
+            webpage += F("</div>"
+                         "<div class=\"result-msg\" style=\"padding-top:0;\"><span class=\"icon\" style=\"visibility:hidden;\"></span>");
+            webpage += getText("file_size_label");
+            webpage += F(": ");
+            webpage += file_size(uploadFileStream.totalSize);
+            webpage += F("</div>"
+                         "<div class=\"row-actions\">"
+                         "<a href=\"/upload\" class=\"btn\">");
+            webpage += getText("upload_btn");
+            webpage += F("</a>"
+                         "<a href=\"/\" class=\"btn ghost\">");
+            webpage += getText("home");
+            webpage += F("</a>"
+                         "</div></div>");
             webpage += webpage_footer;
             server.send(200, "text/html", webpage);
             tf.listDir("/image", 250);
@@ -477,7 +515,8 @@ void handleFileUpload()
 void SelectInput(String heading, String command, String arg_calling_name)
 {
     // Generic single-input form helper (used by File_Download). Glass
-    // skeleton matches the other file-ops pages.
+    // skeleton matches the other file-ops pages. `heading` is passed in
+    // by callers (already i18n'd at the call site).
     //
     // Pre-fix bug: the original emitted `<type='submit' ...>` (a
     // bare `<type>` element with no leading tag name) so the submit
@@ -490,56 +529,92 @@ void SelectInput(String heading, String command, String arg_calling_name)
     webpage += heading;
     webpage += F("</div></div></div>"
                  "<div class=\"card-body\">"
-                 "<div class=\"field\"><label>File Name</label>"
+                 "<div class=\"field\"><label>");
+    webpage += getText("file_name_label");
+    webpage += F("</label>"
                  "<input type=\"text\" name=\"");
     webpage += arg_calling_name;
     webpage += F("\" placeholder=\"path on SD\" class=\"mono\">"
                  "<span></span></div>"
                  "</div>"
                  "<div class=\"row-actions\">"
-                 "<button type=\"submit\" class=\"btn primary\">\xE2\x86\x93 Submit</button>"
-                 "<a href=\"/\" class=\"btn ghost\">Back</a>"
+                 "<button type=\"submit\" class=\"btn primary\">\xE2\x86\x93 ");
+    webpage += getText("submit");
+    webpage += F("</button>"
+                 "<a href=\"/\" class=\"btn ghost\">");
+    webpage += getText("back");
+    webpage += F("</a>"
                  "</div></div></form>");
     Send_HTML(webpage);
 }
 
-// Shared error-card emitter for the three Report* helpers. Same .card
-// shape as result_msg in delete_result so error pages don't look like
-// a different generation of the UI from success pages.
-static String render_error_card(const __FlashStringHelper *title,
-                                const __FlashStringHelper *body,
-                                const String &back_target)
-{
-    String html = F("<div class=\"card\"><div class=\"card-head\">"
-                    "<div><div class=\"card-title\">");
-    html += title;
-    html += F("</div></div></div>"
-              "<div class=\"result-msg err\"><span class=\"icon\">!</span>");
-    html += body;
-    html += F("</div>"
-              "<div class=\"row-actions\">"
-              "<a href=\"/");
-    html += back_target;
-    html += F("\" class=\"btn\">Back</a>"
-              "<a href=\"/\" class=\"btn ghost\">Home</a>"
-              "</div></div>");
-    return html;
-}
+// Three Report* helpers share the same Glass error-card shape but the
+// shared-helper version (PR-75) declared its params as
+// const __FlashStringHelper * — an Arduino-specific opaque type that
+// the host test stub doesn't typedef, so the host build broke. Inlined
+// per-function so each can keep using F() for PROGMEM strings on ESP32
+// AND compile cleanly against the host stub (where F is identity).
 
 void ReportSDNotPresent()
 {
-    webpage = render_error_card(F("SD Card"), F("No SD card detected."), F(""));
+    webpage = F("<div class=\"card\"><div class=\"card-head\">"
+                "<div><div class=\"card-title\">");
+    webpage += getText("sd_card_title");
+    webpage += F("</div></div></div>"
+                 "<div class=\"result-msg err\"><span class=\"icon\">!</span>");
+    webpage += getText("no_sd_card_msg");
+    webpage += F("</div>"
+                 "<div class=\"row-actions\">"
+                 "<a href=\"/\" class=\"btn\">");
+    webpage += getText("back");
+    webpage += F("</a>"
+                 "<a href=\"/\" class=\"btn ghost\">");
+    webpage += getText("home");
+    webpage += F("</a>"
+                 "</div></div>");
     Send_HTML(webpage);
 }
 
 void ReportFileNotPresent(const String &target)
 {
-    webpage = render_error_card(F("File Not Found"), F("The requested file does not exist on the SD card."), target);
+    webpage = F("<div class=\"card\"><div class=\"card-head\">"
+                "<div><div class=\"card-title\">");
+    webpage += getText("file_not_found_title");
+    webpage += F("</div></div></div>"
+                 "<div class=\"result-msg err\"><span class=\"icon\">!</span>");
+    webpage += getText("file_not_found_msg");
+    webpage += F("</div>"
+                 "<div class=\"row-actions\">"
+                 "<a href=\"/");
+    webpage += target;
+    webpage += F("\" class=\"btn\">");
+    webpage += getText("back");
+    webpage += F("</a>"
+                 "<a href=\"/\" class=\"btn ghost\">");
+    webpage += getText("home");
+    webpage += F("</a>"
+                 "</div></div>");
     Send_HTML(webpage);
 }
 
 void ReportCouldNotCreateFile(const String &target)
 {
-    webpage = render_error_card(F("Upload Failed"), F("Could not create the uploaded file (SD write-protected or full?)."), target);
+    webpage = F("<div class=\"card\"><div class=\"card-head\">"
+                "<div><div class=\"card-title\">");
+    webpage += getText("upload_failed_title");
+    webpage += F("</div></div></div>"
+                 "<div class=\"result-msg err\"><span class=\"icon\">!</span>");
+    webpage += getText("upload_failed_msg");
+    webpage += F("</div>"
+                 "<div class=\"row-actions\">"
+                 "<a href=\"/");
+    webpage += target;
+    webpage += F("\" class=\"btn\">");
+    webpage += getText("back");
+    webpage += F("</a>"
+                 "<a href=\"/\" class=\"btn ghost\">");
+    webpage += getText("home");
+    webpage += F("</a>"
+                 "</div></div>");
     Send_HTML(webpage);
 }
