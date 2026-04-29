@@ -324,12 +324,22 @@ void savePCResourceConf(void)
 
 void File_Delete()
 {
+    // Glass-styled delete form. Single text-field row + Confirm/Back
+    // row-actions, mirroring the layout of every *_setting page so this
+    // page stops looking like raw browser-default HTML.
     Send_HTML(
-        F("<h3>Enter filename to delete</h3>"
-          "<form action='/delete_result' method='post'>"
-          "<input type='text' name='delete_filepath' placeHolder='绝对路径 /image/...'><br>"
-          "</label><input class=\"btn\" type=\"submit\" name=\"Submie\" value=\"确认删除\"></form>"
-          "<a href='/'>[Back]</a>"));
+        F("<form method=\"POST\" action=\"/delete_result\"><div class=\"card\">"
+          "<div class=\"card-head\"><div><div class=\"card-title\">Delete File</div>"
+          "<div class=\"card-sub\">Absolute path on SD, e.g. /image/foo.jpg</div></div></div>"
+          "<div class=\"card-body\">"
+          "<div class=\"field\"><label>File Path</label>"
+          "<input type=\"text\" name=\"delete_filepath\" placeholder=\"/image/...\" class=\"mono\">"
+          "<span></span></div>"
+          "</div>"
+          "<div class=\"row-actions\">"
+          "<button type=\"submit\" class=\"btn primary\">\xE2\x9C\x93 Confirm Delete</button>"
+          "<a href=\"/\" class=\"btn ghost\">Back</a>"
+          "</div></div></form>"));
 }
 
 void delete_result(void)
@@ -338,12 +348,26 @@ void delete_result(void)
     boolean ret = tf.deleteFile(del_file);
     if (ret)
     {
-        webpage = "<h3>Delete succ!</h3><a href='/delete'>[Back]</a>";
+        webpage = F("<div class=\"card\"><div class=\"card-head\">"
+                    "<div><div class=\"card-title\">Delete Result</div></div></div>"
+                    "<div class=\"result-msg ok\"><span class=\"icon\">\xE2\x9C\x93</span>"
+                    "File deleted successfully.</div>"
+                    "<div class=\"row-actions\">"
+                    "<a href=\"/delete\" class=\"btn\">Back to Delete</a>"
+                    "<a href=\"/\" class=\"btn ghost\">Home</a>"
+                    "</div></div>");
         tf.listDir("/image", 250);
     }
     else
     {
-        webpage = "<h3>Delete fail! Please check up file path.</h3><a href='/delete'>[Back]</a>";
+        webpage = F("<div class=\"card\"><div class=\"card-head\">"
+                    "<div><div class=\"card-title\">Delete Result</div></div></div>"
+                    "<div class=\"result-msg err\"><span class=\"icon\">!</span>"
+                    "Delete failed \xE2\x80\x94 check the file path.</div>"
+                    "<div class=\"row-actions\">"
+                    "<a href=\"/delete\" class=\"btn\">Back to Delete</a>"
+                    "<a href=\"/\" class=\"btn ghost\">Home</a>"
+                    "</div></div>");
     }
     tf.listDir("/image", 250);
     Send_HTML(webpage);
@@ -386,11 +410,21 @@ void File_Upload()
     tf.listDir("/image", 250);
 
     webpage = webpage_header;
-    webpage += "<h3>Select File to Upload</h3>"
-               "<FORM action='/fupload' method='post' enctype='multipart/form-data'>"
-               "<input class='buttons' style='width:40%' type='file' name='fupload' id = 'fupload' value=''><br>"
-               "<br><button class='buttons' style='width:10%' type='submit'>Upload File</button><br>"
-               "<a href='/'>[Back]</a><br><br>";
+    // Glass-styled upload form. Same .card / .field / .row-actions
+    // skeleton as the *_setting pages so the file-ops trio looks like
+    // first-class app pages.
+    webpage += F("<form method=\"POST\" action=\"/fupload\" enctype=\"multipart/form-data\"><div class=\"card\">"
+                 "<div class=\"card-head\"><div><div class=\"card-title\">Upload File</div>"
+                 "<div class=\"card-sub\">Saved to SD root \xE2\x80\x94 use absolute paths via Delete to clean up</div></div></div>"
+                 "<div class=\"card-body\">"
+                 "<div class=\"field\"><label>Choose File</label>"
+                 "<input type=\"file\" name=\"fupload\" id=\"fupload\">"
+                 "<span></span></div>"
+                 "</div>"
+                 "<div class=\"row-actions\">"
+                 "<button type=\"submit\" class=\"btn primary\">\xE2\x86\x91 Upload</button>"
+                 "<a href=\"/\" class=\"btn ghost\">Back</a>"
+                 "</div></div></form>");
     webpage += webpage_footer;
     server.send(200, "text/html", webpage);
 }
@@ -442,39 +476,70 @@ void handleFileUpload()
 
 void SelectInput(String heading, String command, String arg_calling_name)
 {
-    webpage = F("<h3>");
-    webpage += heading + "</h3>";
-    webpage += F("<FORM action='/");
-    webpage += command + "' method='post'>"; // Must match the calling argument e.g. '/chart' calls '/chart' after selection but with arguments!
-    webpage += F("<input type='text' name='");
+    // Generic single-input form helper (used by File_Download). Glass
+    // skeleton matches the other file-ops pages.
+    //
+    // Pre-fix bug: the original emitted `<type='submit' ...>` (a
+    // bare `<type>` element with no leading tag name) so the submit
+    // button never rendered — Download was effectively unusable from
+    // the browser. The Glass redesign emits a real <button>.
+    webpage = F("<form method=\"POST\" action=\"/");
+    webpage += command;
+    webpage += F("\"><div class=\"card\">"
+                 "<div class=\"card-head\"><div><div class=\"card-title\">");
+    webpage += heading;
+    webpage += F("</div></div></div>"
+                 "<div class=\"card-body\">"
+                 "<div class=\"field\"><label>File Name</label>"
+                 "<input type=\"text\" name=\"");
     webpage += arg_calling_name;
-    webpage += F("' value=''><br>");
-    webpage += F("<type='submit' name='");
-    webpage += arg_calling_name;
-    webpage += F("' value=''><br>");
-    webpage += F("<a href='/'>[Back]</a>");
+    webpage += F("\" placeholder=\"path on SD\" class=\"mono\">"
+                 "<span></span></div>"
+                 "</div>"
+                 "<div class=\"row-actions\">"
+                 "<button type=\"submit\" class=\"btn primary\">\xE2\x86\x93 Submit</button>"
+                 "<a href=\"/\" class=\"btn ghost\">Back</a>"
+                 "</div></div></form>");
     Send_HTML(webpage);
+}
+
+// Shared error-card emitter for the three Report* helpers. Same .card
+// shape as result_msg in delete_result so error pages don't look like
+// a different generation of the UI from success pages.
+static String render_error_card(const __FlashStringHelper *title,
+                                const __FlashStringHelper *body,
+                                const String &back_target)
+{
+    String html = F("<div class=\"card\"><div class=\"card-head\">"
+                    "<div><div class=\"card-title\">");
+    html += title;
+    html += F("</div></div></div>"
+              "<div class=\"result-msg err\"><span class=\"icon\">!</span>");
+    html += body;
+    html += F("</div>"
+              "<div class=\"row-actions\">"
+              "<a href=\"/");
+    html += back_target;
+    html += F("\" class=\"btn\">Back</a>"
+              "<a href=\"/\" class=\"btn ghost\">Home</a>"
+              "</div></div>");
+    return html;
 }
 
 void ReportSDNotPresent()
 {
-    webpage = F("<h3>No SD Card present</h3>");
-    webpage += F("<a href='/'>[Back]</a><br><br>");
+    webpage = render_error_card(F("SD Card"), F("No SD card detected."), F(""));
     Send_HTML(webpage);
 }
 
 void ReportFileNotPresent(const String &target)
 {
-    webpage = F("<h3>File does not exist</h3>");
-    webpage += F("<a href='/");
-    webpage += target + "'>[Back]</a><br><br>";
+    webpage = render_error_card(F("File Not Found"), F("The requested file does not exist on the SD card."), target);
     Send_HTML(webpage);
 }
 
 void ReportCouldNotCreateFile(const String &target)
 {
-    webpage = F("<h3>Could Not Create Uploaded File (write-protected?)</h3>");
-    webpage += F("<a href='/");
-    webpage += target + "'>[Back]</a><br><br>";
+    webpage = render_error_card(F("Upload Failed"), F("Could not create the uploaded file (SD write-protected or full?)."), target);
     Send_HTML(webpage);
 }
