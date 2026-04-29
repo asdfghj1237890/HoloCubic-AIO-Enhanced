@@ -102,7 +102,23 @@ build_src_filter =
 
 跑 `pio test -e native_unit` 看你的新測試出現。
 
-### 1e. Unity 常用 assert
+### 1e. 目前 cover 哪些模組
+
+寫到本文時 `native_unit` 共 **30 個 test case** 跨 4 個模組：
+
+| Test directory | 對應韌體程式碼 | cover 什麼 |
+|---|---|---|
+| `test_imu_action` | `src/driver/imu.cpp::IMU::getAction` | v_ax / v_ay 閾值表、3 連發 sample 的長按提升 |
+| `test_config` | `src/driver/analyse_param.cpp` | 每個 config parser 共用的 line splitter；basic / 空 line / partial-argc 行為 |
+| `test_app_controller` | `src/sys/send_to_dispatch.cpp` | event-queue path（cap、push）、dispatch path（handler invocation、NULL handler、missing toApp） |
+| `test_game_2048` | `src/app/game_2048/game2048_contorller.cpp::GAME2048` | init 歸零、4 個移動方向（slide + 一次 merge）、`judge()` 0/1/2 回傳 |
+
+為了讓上述模組可測試，做過 3 個小型 refactor，**沒改行為**：
+- `analyseParam` 從 `flash_fs.cpp` 抽到自己的 TU
+- `send_to_dispatch` 從 `app_controller.cpp::send_to` 抽出來
+- `game_2048::judge()` off-by-one boundary 修正（這是真的 bug — 見 [chapter 08 §12](./08-refactoring-case-studies.md)）
+
+### 1f. Unity 常用 assert
 
 | Macro | 用途 |
 |---|---|
@@ -289,7 +305,13 @@ cd lv_simulater_platformio
 
 ### 3e. HTTP fixtures — 餵 fake API response
 
-[`test/fixtures/http/<domain>/<path>.json`](../../test/fixtures/http/)。Host 端的 `HTTPClient` stub 看到 `http_fetch_json("https://api.bilibili.com/x/relation/stat?...")` 會去找 `test/fixtures/http/api.bilibili.com/x/relation/stat.json` 餵回去。
+[`test/fixtures/http/<domain>/<path>.json`](../../test/fixtures/http/)。
+
+**Resolution rule**：`HTTPClient::begin(url)` 記下 URL；`GET()` 把 query string 拿掉，去 `test/fixtures/http/<host><path>.json` 找 fixture 檔。
+- 找到 → 回 200 + 填 buffer
+- 找不到 → 回 -1（舊的「always offline」sentinel）
+
+被 bilibili（Bilibili stat endpoint）、weather（3 步 AccuWeather chain）、stockmarket（Yahoo US 跟 Sina CN parser 都用）使用。
 
 scenario 裡 `http_fixture <substring> <relpath>` 可以單次覆蓋：
 ```
@@ -301,9 +323,45 @@ http_fixture relation/stat bilibili_negative/empty.json
 
 ### 3f. Socket fixtures（pc_resource 特殊用法）
 
-`pc_resource` 用 raw `WiFiClient.print("GET /sse")` 拉 SSE stream，host stub 接到 `connect("0.0.0.0", ...)` 會去找 `test/fixtures/socket/0.0.0.0.txt` 拿整段 fake response。
+給走 raw `WiFiClient::connect`（不是 HTTPClient）的 app 用。`connect(host, port)` 把 `test/fixtures/socket/<host>.txt` 載進 client 的 read buffer；`find()` / `readStringUntil()` / `read()` 走它代替真實 socket。
+
+目前 `pc_resource` 用（HTTP-style SSE reply）。
+
+`screen_share` 不需要 — 它的可見狀態都是 "Connect succ"（已經由 WIFI_CONN routing cover），而且 JPEG decoder + `tft->pushImageDMA` 被 stub 成 no-op，所以 fake 一段 MJPEG byte stream 不會增加視覺 coverage。
 
 寫類似 streaming app 的測試時參考 [`test/scenarios/pc_resource/smoke.scn`](../../test/scenarios/pc_resource/smoke.scn)。
+
+### 3f-2. SD fixtures
+
+`SdCard::listDir(dirname)` 掃 host filesystem 上的 `test/fixtures/sd/<dirname>/` 然後 build 一個 `File_Info` linked list mirror 韌體的 circular doubly-linked layout。被 picture（`/image/`）跟 media（`/movie/`）使用。
+
+### 3f-3. Flash fixtures（`flash_seed` directive + `test/fixtures/flash/`）
+
+輕量 FlashFS 實作把 `g_flashCfg.writeFile` 呼叫持久化到 `../test/fixtures/flash/<path>`（相對 `lv_simulater_platformio/`，所以實際落到 repo root commit 的目錄）。每個 scenario 開頭會清掉那個目錄，避免 per-scenario state 在 suite 內互相污染。
+
+scenario 可以用 directive 預先 seed config：
+```
+flash_seed /stockmarket.cfg "603019\nCN\n10000\n"
+```
+
+被 `test/scenarios/stockmarket/cn_smoke.scn` 用，把 CN-market config 塞進去讓 app 走 Sina parser 而不是預設的 Yahoo path。`\n` / `\t` / `\\` / `\"` 會被 decode；包圍的雙引號會被脫掉。
+
+### 3f-4. WIFI_CONN routing（沒 fixture，是 harness 行為）
+
+真實韌體把 WIFI_CONN 訊息排進 queue，`req_event_deal` 在 `wifi_event()` 成功後才呼叫 sender 的 callback。Harness short-circuit：當 `send_to(from_app, "AppCtrl", WIFI_CONN/AP, ...)` 被呼叫，輕量 `AppController::send_to` **同步**呼叫 `from_app->message_handle("AppCtrl", from_app_name, type, message, NULL)`。
+
+意思：靠這個 callback 觸發 fetch 的 app（bilibili / weather / stockmarket / pc_resource / file_manager / screen_share）在 scenario 跑時都會走到 fetch path，**不需要任何 fixture 也會發生**。
+
+### 3f-5. 目前 cover 哪些 app（snapshot）
+
+寫到本文時：
+- **19 / 19 韌體 app** 至少有一支 smoke scenario
+- **18 / 19 app** 有 commit 的視覺 golden（共 30 張截圖）
+
+3 個明確的 golden opt-out（只跑 `assert_no_crash`、不截圖比對）：
+- `weather` page 0 — 時鐘 label 每次 render 都會跳，本質非確定
+- `settings` — 版本 label 用 auto-scrolling marquee，offset 取決於 wall-clock tick 排程
+- `idea` — main_process 是內部 `while(1)` 動畫 loop，無穩定快照時刻
 
 ### 3g. Harness flag 一覽
 
