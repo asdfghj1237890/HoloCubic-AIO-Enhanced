@@ -2,6 +2,7 @@
 #include "anniversary_gui.h"
 #include "sys/app_controller.h"
 #include "common.h"
+#include "http_util.h"
 #include "sys/time.h"
 
 #define ANNIVERSARY_APP_NAME "Anniversary"
@@ -208,44 +209,35 @@ static long long get_timestamp(String url)
     if (WL_CONNECTED != WiFi.status())
         return 0;
 
-    String time = "";
-    HTTPClient http;
-    http.setTimeout(1000);
-    http.begin(url);
-
-    int httpCode = http.GET();
-    if (httpCode > 0)
+    String payload;
+    int httpCode = http_fetch_string(url.c_str(), payload, 1000);
+    if (httpCode == HTTP_CODE_OK)
     {
-        if (httpCode == HTTP_CODE_OK)
+        Serial.println(payload);
+        // Locate the marker before computing the offset; without this guard
+        // a missing marker silently returns -1 and `+5` produces a small
+        // positive index that picks up garbage from the head of the body.
+        int marker = payload.indexOf("\"t\":\"");
+        int time_end_index = (marker >= 0) ? payload.indexOf("\"", marker + 5) : -1;
+        if (marker >= 0 && time_end_index > marker + 5)
         {
-            String payload = http.getString();
-            Serial.println(payload);
-            // Locate the marker before computing the offset; without this guard
-            // a missing marker silently returns -1 and `+5` produces a small
-            // positive index that picks up garbage from the head of the body.
-            int marker = payload.indexOf("\"t\":\"");
-            int time_end_index = (marker >= 0) ? payload.indexOf("\"", marker + 5) : -1;
-            if (marker >= 0 && time_end_index > marker + 5)
-            {
-                time = payload.substring(marker + 5, time_end_index);
-                // Use network timestamp as reference
-                run_data->preNetTimestamp = atoll(time.c_str()) + run_data->errorNetTimestamp + TIMEZERO_OFFSIZE;
-                run_data->preLocalTimestamp = GET_SYS_MILLIS();
-            }
-            else
-            {
-                Serial.println("[Anniv] taobao timestamp marker missing — keeping last known time");
-            }
+            String time = payload.substring(marker + 5, time_end_index);
+            // Use network timestamp as reference
+            run_data->preNetTimestamp = atoll(time.c_str()) + run_data->errorNetTimestamp + TIMEZERO_OFFSIZE;
+            run_data->preLocalTimestamp = GET_SYS_MILLIS();
+        }
+        else
+        {
+            Serial.println("[Anniv] taobao timestamp marker missing — keeping last known time");
         }
     }
     else
     {
-        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+        Serial.printf("[HTTP] GET... failed (code=%d)\n", httpCode);
         // 得不到网络时间戳时
         run_data->preNetTimestamp = run_data->preNetTimestamp + (GET_SYS_MILLIS() - run_data->preLocalTimestamp);
         run_data->preLocalTimestamp = GET_SYS_MILLIS();
     }
-    http.end();
 
     return run_data->preNetTimestamp;
 }
