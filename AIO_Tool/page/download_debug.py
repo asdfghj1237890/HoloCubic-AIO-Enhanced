@@ -118,9 +118,24 @@ class DownloadDebug:
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.init_log(self.connor_log_frame)
 
-        # Serial receive section（下排，固定寬度 1170 高度 410）
-        self.connor_info_frame = ctk.CTkFrame(self.__father, width=1170, height=410)
-        self.connor_info_frame.place(x=11, y=290)
+        # Remote control panel (between upper area and serial receive).
+        # Sends 2-byte ~X commands over the open serial port to override
+        # the firmware's IMU action for one tick — see HoloCubic_AIO.cpp's
+        # "Remote-control overlay" block for the firmware-side parser.
+        self.connor_remote_frame = ctk.CTkFrame(self.__father, width=1170, height=78)
+        self.connor_remote_frame.place(x=11, y=285)
+        self.connor_remote_frame.pack_propagate(False)
+        ctk.CTkLabel(
+            self.connor_remote_frame,
+            text=self.i18n.t("remote_control"),
+            font=ctk.CTkFont(weight="bold"),
+        ).pack(anchor=tk.W, padx=10, pady=(6, 0))
+        self.init_remote_control(self.connor_remote_frame)
+
+        # Serial receive section — pushed down by 80px to make room for
+        # the remote-control panel above.
+        self.connor_info_frame = ctk.CTkFrame(self.__father, width=1170, height=330)
+        self.connor_info_frame.place(x=11, y=370)
         self.connor_info_frame.pack_propagate(False)
         ctk.CTkLabel(
             self.connor_info_frame,
@@ -129,7 +144,7 @@ class DownloadDebug:
         ).pack(anchor=tk.W, padx=10, pady=(8, 4))
         self.init_serial_receive(self.connor_info_frame)
 
-        # 響應式佈局：tab 頁面尺寸變化時，log + info frame 跟著伸縮
+        # 響應式佈局：tab 頁面尺寸變化時，log + info + remote frame 跟著伸縮
         # （grid + firmware 維持固定尺寸 — 內容也是固定大小）
         self.__father.bind("<Configure>", self._on_father_resize)
 
@@ -147,9 +162,12 @@ class DownloadDebug:
         # log frame：右上角，從 x=790 延伸到右邊距 11 px
         log_w = max(200, pw - 790 - 11)
         self.connor_log_frame.configure(width=log_w)
-        # info frame：下排，左右各 11 px 邊距，y=290 起延伸到底部 10 px 邊距
+        # remote-control frame：橫條 y=285，左右 11 px 邊距
+        remote_w = max(800, pw - 22)
+        self.connor_remote_frame.configure(width=remote_w)
+        # info frame：下排，左右各 11 px 邊距，y=370 起延伸到底部 10 px 邊距
         info_w = max(800, pw - 22)
-        info_h = max(300, ph - 290 - 10)
+        info_h = max(220, ph - 370 - 10)
         self.connor_info_frame.configure(width=info_w, height=info_h)
 
     def api(self, action: str, param: object = None) -> None:
@@ -579,6 +597,74 @@ class DownloadDebug:
             else:
                 self.print_log("Flash firmware failed, please check the serial port.")
 
+    def init_remote_control(self, father: tk.Misc) -> None:
+        """4-button directional remote-control row.
+
+        Sends 2-byte ~X commands over the open serial port that the
+        firmware (HoloCubic_AIO.cpp main loop) parses into virtual IMU
+        actions. Buttons start DISABLED and are enabled by com_connect
+        once the serial port opens, mirroring the m_reboot/m_download
+        pattern.
+        """
+        btn_frame = ctk.CTkFrame(father, fg_color="transparent")
+        btn_frame.pack(side=tk.TOP, padx=10, pady=(0, 6))
+
+        self.m_remote_up_btn = ctk.CTkButton(
+            btn_frame,
+            text="↑ " + self.i18n.t("btn_up"),
+            command=lambda: self._send_remote(b"~U"),
+            width=110,
+            height=32,
+            state=tk.DISABLED,
+        )
+        self.m_remote_left_btn = ctk.CTkButton(
+            btn_frame,
+            text="← " + self.i18n.t("btn_left"),
+            command=lambda: self._send_remote(b"~L"),
+            width=110,
+            height=32,
+            state=tk.DISABLED,
+        )
+        self.m_remote_right_btn = ctk.CTkButton(
+            btn_frame,
+            text=self.i18n.t("btn_right") + " →",
+            command=lambda: self._send_remote(b"~R"),
+            width=110,
+            height=32,
+            state=tk.DISABLED,
+        )
+        self.m_remote_home_btn = ctk.CTkButton(
+            btn_frame,
+            text="\U0001f3e0 " + self.i18n.t("btn_home"),
+            command=lambda: self._send_remote(b"~H"),
+            width=110,
+            height=32,
+            state=tk.DISABLED,
+        )
+        for btn in (
+            self.m_remote_up_btn,
+            self.m_remote_left_btn,
+            self.m_remote_right_btn,
+            self.m_remote_home_btn,
+        ):
+            btn.pack(side=tk.LEFT, padx=4)
+
+    def _send_remote(self, cmd: bytes) -> None:
+        """Write a 2-byte remote-control command to the open serial port.
+
+        Surfaces SerialException to the operation log instead of dying
+        silently in a Tk callback handler (same pattern as PR #74's
+        com_connect / esp_reset).
+        """
+        if self.ser is None:
+            return  # buttons are state=DISABLED in this case but be safe
+        try:
+            self.ser.write(cmd)
+            self.print_log("→ " + cmd.decode("ascii", errors="replace"))
+        except (serial.SerialException, OSError) as err:
+            logger.error("remote send failed: %s", err)
+            self.print_log(f"remote send failed: {err}")
+
     def init_log(self, father: tk.Misc) -> None:
         """初始化日誌打印框（保留 tk.Text 給彩色標記）。"""
         info_width = 39
@@ -851,6 +937,12 @@ class DownloadDebug:
                 self.m_reboot_button.configure(state=tk.DISABLED)
                 self.m_clean_flash_botton.configure(state=tk.DISABLED)
                 self.m_download_botton.configure(state=tk.DISABLED)
+                # Remote-control buttons enable AS the serial port opens
+                # (inverse of reboot/flash which need exclusive port use)
+                self.m_remote_up_btn.configure(state=tk.NORMAL)
+                self.m_remote_left_btn.configure(state=tk.NORMAL)
+                self.m_remote_right_btn.configure(state=tk.NORMAL)
+                self.m_remote_home_btn.configure(state=tk.NORMAL)
         else:
             self.m_connect_button.configure(text=self.i18n.t("open_serial"))
             self.m_com_select["state"] = tk.NORMAL
@@ -861,6 +953,11 @@ class DownloadDebug:
             self.m_reboot_button.configure(state=tk.NORMAL)
             self.m_clean_flash_botton.configure(state=tk.NORMAL)
             self.m_download_botton.configure(state=tk.NORMAL)
+            # No serial port → can't send remote commands
+            self.m_remote_up_btn.configure(state=tk.DISABLED)
+            self.m_remote_left_btn.configure(state=tk.DISABLED)
+            self.m_remote_right_btn.configure(state=tk.DISABLED)
+            self.m_remote_home_btn.configure(state=tk.DISABLED)
 
             if self.ser is not None:
                 self.ser.close()  # 关闭串口
