@@ -40,9 +40,14 @@ public:
     int connected() { return b_->connected ? 1 : 0; }
     operator bool() { return b_->connected; }
     void stop() {
+        // Mark disconnected + drop pending input only. Bytes already in
+        // tx must remain readable: FtpServer's disconnectClient pattern
+        // is `println("221"); stop();` and the test inspects tx AFTER
+        // QUIT — clearing tx here would wipe the response. (Real TCP
+        // flushes the write buffer before the FIN, so this matches
+        // observable behaviour from the test side.)
         b_->connected = false;
         b_->rx.clear();
-        b_->tx.clear();
     }
     int available() { return (int)b_->rx.size(); }
     int read() {

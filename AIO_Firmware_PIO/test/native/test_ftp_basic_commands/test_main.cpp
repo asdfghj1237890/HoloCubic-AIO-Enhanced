@@ -8,9 +8,9 @@
 //
 // Coverage target: the four functional clusters the split will produce
 //   - auth  (userIdentity, userPassword)         → tested via ftp_connect_and_auth
-//   - commands (processCommand switch)           → SYST, PWD, TYPE, NOOP
-//   - util  (path/string helpers via PWD/CWD)    → CWD echoes back
-//   - error path (unknown command)               → "FOO" → 500
+//   - commands (processCommand switch)           → PWD, FEAT, NOOP, QUIT
+//   - util  (path/string helpers via PWD)        → 257 + "/" in response
+//   - error path (unknown command)               → "XYZZY" → 500 Unknow
 //
 // Not covered (intentionally): data-transfer (RETR/STOR) — needs PASV
 // data-port wiring + a second WiFiServer queue. If PR-3.3 ends up
@@ -89,12 +89,17 @@ void test_pwd_echoes_root_after_login()
                              "expected current dir / in PWD response");
 }
 
-void test_syst_returns_unix_type()
+void test_feat_lists_extensions()
 {
+    // SYST isn't implemented in this FtpServer — falls through to the
+    // unknown-command branch. FEAT is the next-best command in the
+    // server-info cluster: it returns 211-/211 with " MLSD" between.
     WiFiClient c = ftp_connect_and_auth(*srv);
-    std::string resp = ftp_send_command(*srv, c, "SYST\r\n");
-    TEST_ASSERT_TRUE_MESSAGE(ftp_tx_contains(resp, "215"),
-                             "expected 215 from SYST");
+    std::string resp = ftp_send_command(*srv, c, "FEAT\r\n");
+    TEST_ASSERT_TRUE_MESSAGE(ftp_tx_contains(resp, "211"),
+                             "expected 211 from FEAT");
+    TEST_ASSERT_TRUE_MESSAGE(ftp_tx_contains(resp, "MLSD"),
+                             "expected MLSD listed in FEAT response");
 }
 
 void test_noop_returns_200()
@@ -119,7 +124,7 @@ int main(int, char **)
     RUN_TEST(test_auth_flow_succeeds);
     RUN_TEST(test_unknown_command_returns_500);
     RUN_TEST(test_pwd_echoes_root_after_login);
-    RUN_TEST(test_syst_returns_unix_type);
+    RUN_TEST(test_feat_lists_extensions);
     RUN_TEST(test_noop_returns_200);
     RUN_TEST(test_quit_disconnects_client);
     return UNITY_END();
