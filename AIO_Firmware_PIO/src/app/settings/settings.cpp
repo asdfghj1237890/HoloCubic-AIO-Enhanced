@@ -3,6 +3,7 @@
 #include "settings_gui.h"
 #include "sys/app_controller.h"
 #include "common.h"
+#include "http_util.h"
 
 #define NEW_VERSION "http://climbsnail.cn:5001/holocubicAIO/sn/v1/version/firmware"
 #define SETTINGS_APP_NAME "Settings"
@@ -209,16 +210,25 @@ static void settings_process(AppController *sys,
 
 static void get_new_version(char *version)
 {
-    HTTPClient httpClient;
-    httpClient.setTimeout(1000);
-    bool status = httpClient.begin(NEW_VERSION);
-    if (status == false)
+    // Fixes two latent bugs in the original:
+    //  (1) On HTTPClient::begin() failure the original wrote "v UNKNOWN" and
+    //      then FELL THROUGH to call GET on the failed client + read empty
+    //      garbage + overwrite the just-set value via c_str()+13 (which
+    //      would itself read past the trailing NUL).
+    //  (2) `httpResponse.c_str() + 13` assumed the body was at least 13
+    //      characters long; a shorter body (server hiccup, timeout,
+    //      partial response) reads past the NUL into adjacent memory.
+    // The migration centralises the fetch in http_util and adds the missing
+    // length guard in front of the +13 offset.
+    String httpResponse;
+    int httpCode = http_fetch_string(NEW_VERSION, httpResponse, 1000);
+    if (httpCode != HTTP_CODE_OK || httpResponse.length() < 13)
     {
         snprintf(version, 16, "v UNKNOWN");
+        Serial.printf("latest version = %s (fetch code=%d, body len=%u)\n",
+                      version, httpCode, (unsigned)httpResponse.length());
+        return;
     }
-    int httpCode = httpClient.GET();
-    String httpResponse = httpClient.getString();
-    httpClient.end();
     snprintf(version, 16, "%s", httpResponse.c_str() + 13);
     Serial.printf("latest version = %s\n", version);
 }
