@@ -16,6 +16,12 @@
 # bilibili / stockmarket use after their action+screenshot pairs.
 
 app pc_resource
+# 02_with_data has subpixel-level non-determinism on the FontAwesome
+# net-speed glyphs even after the wait_ms 400 padding (rerun #25102335574
+# diffed 2.4% on what was a clean rerun the next attempt). Allow up to
+# 3% so transient render variance doesn't false-fail CI; a real
+# regression in the pc_resource_gui values would still exceed this.
+threshold 3.0
 
 wait_ms 1200
 screenshot 01_initial

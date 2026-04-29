@@ -125,6 +125,12 @@ int run_scenario(const char *path,
     // scenario wants to inject a malformed body for a negative-path test
     // without disturbing the happy-path golden.
     std::vector<std::pair<std::string, std::string>> http_fixtures;
+    // Per-scenario diff-threshold override. Defaults to opts.diff_threshold_pct
+    // (0.5%); a scenario can opt to a wider threshold via `threshold N.N`
+    // when its render legitimately has subpixel variance — e.g. pc_resource
+    // whose FontAwesome glyphs and 4-arc layout don't always settle to the
+    // same byte sequence even after wait_ms padding.
+    double scenario_threshold = opts.diff_threshold_pct;
 
     char raw[512];
     int line_no = 0;
@@ -198,6 +204,15 @@ int run_scenario(const char *path,
                 }
             }
             flash_seeds.emplace_back(std::move(seed_path), std::move(content));
+        } else if (cmd == "threshold") {
+            // Format: threshold <pct>  (e.g. `threshold 3.0` for 3% tolerance)
+            scenario_threshold = atof(arg.c_str());
+            if (scenario_threshold <= 0.0) {
+                fprintf(stderr, "[scenario] line %d: threshold needs a positive number, got '%s'\n",
+                        line_no, arg.c_str());
+                fclose(f);
+                return 3;
+            }
         } else if (cmd == "http_fixture") {
             // Format: http_fixture <url-substring> <fixture-relpath>
             // The fixture-relpath is relative to test/fixtures/http/.
@@ -355,7 +370,7 @@ int run_scenario(const char *path,
                     fclose(gf);
                     double pct = 0.0;
                     bool ok = aio_screenshot::compare_pngs(actual_path, golden_path,
-                                                           diff_path, opts.diff_threshold_pct, &pct);
+                                                           diff_path, scenario_threshold, &pct);
                     if (ok) {
                         printf("[scenario] step %zu (line %d): screenshot '%s' -> match (%.3f%% differ)\n",
                                i + 1, s.line_no, s.str_arg.c_str(), pct);
@@ -363,7 +378,7 @@ int run_scenario(const char *path,
                         printf("[scenario] step %zu (line %d): screenshot '%s' -> "
                                "DIFF %.3f%% > %.3f%%, see %s\n",
                                i + 1, s.line_no, s.str_arg.c_str(), pct,
-                               opts.diff_threshold_pct, diff_path);
+                               scenario_threshold, diff_path);
                         ++failures;
                     }
                 }
