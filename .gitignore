@@ -4,6 +4,8 @@ Docs/LvglFontTool
 AIO_Firmware_PIO/src/app/app_conf.h
 AIO_Firmware_PIO/platformio.ini
 Docs/*
+!Docs/development/
+!Docs/development/**
  SD_Card/movie/Hologram02.mjpeg
  SD_Card/Hologram 3D-minions.mp4
  SD_Card/Hologram 3D.mp4
