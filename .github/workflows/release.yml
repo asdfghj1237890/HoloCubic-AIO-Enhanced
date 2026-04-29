@@ -67,7 +67,8 @@ jobs:
         id: tool_version
         shell: pwsh
         run: |
-          $match = Select-String -Path "AIO_Tool\util\common.py" -Pattern 'TOOL_VERSION\s*=\s*"([^"]+)"' -AllMatches
+          # Allow optional ': str' type annotation: e.g. TOOL_VERSION: str = "v2.5.0"
+          $match = Select-String -Path "AIO_Tool\util\common.py" -Pattern 'TOOL_VERSION[^=]*=\s*"([^"]+)"' -AllMatches
           if (-not $match) {
             Write-Error "TOOL_VERSION not found"
             exit 1
