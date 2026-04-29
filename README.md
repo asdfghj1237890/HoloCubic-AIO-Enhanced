@@ -436,6 +436,8 @@ with open(out_path, 'wb') as f:
 
 ## 🛠️ Development & Compilation
 
+> 📚 **Want to contribute code?** Read the [**developer tutorial set**](./Docs/development/README.md) first — covers firmware architecture, writing a new app from scratch, the AIO_Tool Python codebase, all three test environments, and the CI / release pipeline. ~1800 lines, ~3 hour read end-to-end.
+
 ### Build Environment
 
 This project is developed using **PlatformIO** on **VSCode** with the **ESP32-Pico Arduino** platform.

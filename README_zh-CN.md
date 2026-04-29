@@ -450,6 +450,8 @@ with open(out_path, 'wb') as f:
 
 ## 🛠️ 开发与编译
 
+> 📚 **想贡献代码？** 先看 [**开发者教学合集**](./Docs/development/README.md) — 涵盖韧体架构、从零写一个新 app、AIO_Tool Python 程式码、三套测试环境、CI / release 流程。~1800 行，从头读到尾约 3 小时。
+
 ### 构建环境
 
 本项目基于**VSCode**的**PlatformIO**插件，使用**ESP32-Pico Arduino**平台开发。
