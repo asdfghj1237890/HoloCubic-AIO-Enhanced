@@ -270,7 +270,9 @@ boolean FtpServer::processCommand()
     if (!strcmp(command, "CDUP"))
     {
         String cwd = get_file_cwd(cwdName);
-        strncpy(cwdName, cwd.c_str(), FTP_CWD_SIZE);
+        // strncpy(dst, src, n) does NOT NUL-terminate when src length >= n;
+        // snprintf is the simpler always-terminating equivalent here.
+        snprintf(cwdName, sizeof(cwdName), "%s", cwd.c_str());
         client.println("250 Ok. Current directory is " + String(cwdName));
     }
     //
@@ -1008,9 +1010,14 @@ boolean FtpServer::makePath(char *fullName, char *param)
     if (param[0] != '/')
     {
         snprintf(fullName, FTP_CWD_SIZE, "%s", cwdName);
+        // strncat(dst, src, n) treats `n` as the max number of chars to copy
+        // FROM src, not the total destination size. The previous calls passed
+        // FTP_CWD_SIZE (total) as `n` — happened to be safe for a 1-char "/"
+        // and short relative names, but unsafe for any near-cap-length param.
+        // strlcat takes the total dest size and truncates correctly.
         if (fullName[strlen(fullName) - 1] != '/')
-            strncat(fullName, "/", FTP_CWD_SIZE);
-        strncat(fullName, param, FTP_CWD_SIZE);
+            strlcat(fullName, "/", FTP_CWD_SIZE);
+        strlcat(fullName, param, FTP_CWD_SIZE);
     }
     else
         snprintf(fullName, FTP_CWD_SIZE, "%s", param);
