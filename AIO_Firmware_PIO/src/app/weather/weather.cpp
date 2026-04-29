@@ -339,7 +339,11 @@ static bool get_location_key(void)
     // Search results may include multiple cities -> 4096-byte doc.
     DynamicJsonDocument doc(4096);
     int httpCode = 0;
-    bool ok = http_fetch_json(api, doc, 3000, &httpCode);
+    // ESP32-Weather-Station UA was set on this site by the original code
+    // (PR-2.2a dropped it because the helper had no header support yet);
+    // restored via the optional-header param added in PR-2.4.
+    bool ok = http_fetch_json(api, doc, 3000, &httpCode,
+                              "User-Agent", "ESP32-Weather-Station");
     Serial.printf("[HTTP] Response code: %d\n", httpCode);
     if (!ok)
     {
@@ -407,7 +411,9 @@ static bool get_location_key(void)
 
         DynamicJsonDocument doc2(2048);
         int httpCode2 = 0;
-        if (http_fetch_json(api, doc2, 3000, &httpCode2) && doc2.is<JsonObject>())
+        // Same UA restore as the primary fetch above.
+        if (http_fetch_json(api, doc2, 3000, &httpCode2,
+                            "User-Agent", "ESP32-Weather-Station") && doc2.is<JsonObject>())
         {
             JsonObject location2 = doc2.as<JsonObject>();
             if (!location2.isNull() && location2.containsKey("Key"))
