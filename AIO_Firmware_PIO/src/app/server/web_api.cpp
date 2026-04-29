@@ -107,11 +107,7 @@ void api_wifi_scan(void)
     int n = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/false);
     String current_ssid = WiFi.SSID();
 
-    // 80 bytes per network is a generous upper bound (ssid 32 + sec 12 +
-    // numeric + delimiters); 32 networks fits comfortably in 3 KB.
-    String body;
-    body.reserve(64 + (n > 0 ? n : 0) * 96);
-    body += "{\"networks\":[";
+    String body = "{\"networks\":[";
     for (int i = 0; i < n; ++i) {
         if (i > 0) body += ',';
         String ssid = WiFi.SSID(i);
@@ -119,7 +115,6 @@ void api_wifi_scan(void)
         // ASCII but the JSON string has to stay well-formed if a router
         // operator put a quote in their network name.
         String esc;
-        esc.reserve(ssid.length() + 4);
         for (size_t k = 0; k < ssid.length(); ++k) {
             char c = ssid[k];
             if (c == '"' || c == '\\') esc += '\\';
