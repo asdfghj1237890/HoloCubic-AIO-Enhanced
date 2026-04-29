@@ -1,8 +1,18 @@
 # 08 — 重構與優化案例集
 
-這份文件列舉 v2.6.x 系列做過的真實重構，每一個都記下「**舊的長什麼樣 → 為什麼那樣不好 → 新的長什麼樣 → 為什麼這樣解**」。目的不是讓你複製 commit hash，是讓你看到**思考過程**，下次自己遇到類似情境能比較快推理。
+這份文件列舉真實的舊 → 新案例，每一個都記下「**舊的長什麼樣 → 為什麼那樣不好 → 新的長什麼樣 → 為什麼這樣解**」。目的不是讓你複製 commit hash，是讓你看到**思考過程**，下次自己遇到類似情境能比較快推理。
 
-每一節獨立，可以跳著讀。但案例的順序大致從「明顯錯誤」到「設計取捨」排列。
+兩部分：
+- **Part A（§1-§10）** — 主動 refactor / 優化（v2.6.x 系列做過的）
+- **Part B（§11-§14）** — 寫測試框架時被動翻出來的 latent bug
+
+每一節獨立，可以跳著讀。
+
+---
+
+# Part A — 主動優化案例
+
+順序大致從「明顯錯誤」到「設計取捨」排列。
 
 ---
 
@@ -620,14 +630,143 @@ WiFiClient ftp_connect_and_auth(FtpServer &srv, const char *user, const char *pa
 
 ---
 
+---
+
+# Part B — 框架抓出來的 latent bug（被動發現）
+
+前面 1-10 是**主動 refactor / 優化**的案例。下面 4 條是不一樣的角色：寫測試框架的過程**順手翻出來的**真實 bug。每條都是「latent 已久、誰都沒注意、加了某個測試機制才被照出來」。
+
+它們的價值不是教你怎麼改 code（修法很短），而是示範**測試機制本身的回報率** — 加一個 fixture 機制就抓到一個 bug 是常見的事。
+
+---
+
+## 11. stockmarket — `lv_obj_del(stockmarket_gui)` 把 active screen 刪掉
+
+**Severity**：app exit 時 crash
+**Fix**：commit `ba4fb82` — 把 `stockmarket_gui_del` 裡的 `lv_obj_del` 改成 `lv_obj_clean`
+**檔案**：`AIO_Firmware_PIO/src/app/stockmarket/stockmarket_gui.c:230`
+
+### 症狀
+
+stockmarket 的 smoke scenario 在跑到 RETURN action 半路就 reliably segfault。原本只有 `Serial.println` 可看時是**靜悄悄**的 — process exit code 0、CI 就以為「completed with 0 failure(s)」過了，因為當時 SIGSEGV handler 用 `_exit(0)`-style semantics 繞過了 harness exit code。
+
+### Root cause
+
+`stockmarket_gui_del` 是整個 codebase **唯一一個**在自己的 top-level screen object 上呼叫 `lv_obj_del` 的 `_gui_del` — 其他每個 app（bilibili、anniversary、example、game_2048、game_snake、heartbeat）都用 `lv_obj_clean`。順序很關鍵：`AppController::app_exit` **先**呼叫 app 的 `exit_callback`，**再** `app_control_display_scr` 載下一個 screen。當 stockmarket 在那個 callback 裡刪掉 active screen，LVGL 就把 `disp->act_scr = NULL`（並且 print 出 `"the active screen was deleted"` 我們最後在 log 才看到），下一個 refresh tick 在 `lv_obj_update_layout` 裡 dereference NULL act_scr 就 segfault。
+
+### 怎麼抓 regression
+
+- **GUI scenario harness** stockmarket smoke scenario 直接 segfault — `test/harness/main.cpp` 安裝的 SIGSEGV handler 把 backtrace print 到 stderr；CI workflow 跑 addr2line 把 `+0xN` offset decode 成 file:line。crash 經由 exit code 139 propagate 出來。
+
+---
+
+## 12. game_2048 — `judge()` off-by-one 讓「敗北」永不到達
+
+**Severity**：邏輯 — game state 永遠不可能 report 敗北；如果 ship 出去使用者會看到「板子滿了之後遊戲永遠繼續」
+**Fix**：commit `13c88b2` — `<= SCALE_SIZE * SCALE_SIZE` → `< SCALE_SIZE * SCALE_SIZE`
+**檔案**：`AIO_Firmware_PIO/src/app/game_2048/game2048_contorller.cpp::GAME2048::judge()`
+
+### 症狀
+
+unit-test setup 把 4×4 板子塞滿不會 merge 的 2/4/2/4 交替 pattern（無零、無相鄰相等），預期 `judge()` 回 2（敗北）。它回 0（繼續）。
+
+### Root cause
+
+```cpp
+for (int i = 0; i <= SCALE_SIZE * SCALE_SIZE; i++) {  // <= 16, off by one
+    if (board[i / 4][i % 4] == 0) return 0;
+}
+```
+
+`i <= 16` 讀到 `board[16/4][16%4] = board[4][0]` — 4×4 array 後面一格。class layout 把 `previous[0][0]` 接在後面，post-init 時值是 0，所以 empty-check loop 永遠在那第 17 次讀到 0 然後 return 0。
+
+### 怎麼抓 regression
+
+- **Unity unit test (Track B)** `test_judge_returns_2_when_full_board_no_merges` 現在 assert 預期的「回 2」path。同一個 test 抓到了原本的 bug。
+
+---
+
+## 13. media_player — 含 `fs::File` 的 struct 用 `calloc` 是 UB
+
+**Severity**：第一次解析到 SD 卡的 fetch 就 crash
+**Fix**：commit `e31e70f` — `calloc` 後對 `File` member 做 placement-new
+**檔案**：`AIO_Firmware_PIO/src/app/media_player/media_player.cpp::media_player_init`
+
+### 症狀
+
+SD fixture 補完之後，`tf.listDir("/movie")` 開始真的回 non-empty list，media_player 第一個 process tick 就在 `fs::File::operator=(fs::File&&)` → `String::operator=(String&&)` 裡 segfault。
+
+### Root cause
+
+```cpp
+struct MediaAppRunData {
+    ...
+    File file;       // 內含 String fname / std::string s
+};
+run_data = (MediaAppRunData *)calloc(1, sizeof(MediaAppRunData));
+...
+run_data->file = tf.open(file_name);
+```
+
+`calloc` 把 raw memory 全部歸零但**從不跑 constructor**。`File` 內部的 `String` 變成 `std::string`，內部 SSO buffer pointer 被歸零而不是被正確 setup。`run_data->file = ...` 的 move-assign 接著 dereference 那些指標就 crash。在 ESP32 上能跑是因為 Arduino 的 `String` 對 zero-initialised state 比 `std::string` 寬容。
+
+### 怎麼抓 regression
+
+- **GUI scenario harness** media smoke scenario 的 SIGSEGV，addr2line trace 指向 media_player.cpp line 110。修法是 2 行的 `new (&run_data->file) File()` placement-new。
+
+---
+
+## 14. FlashFS — `mkdir` 父目錄不存在，所有 write 靜悄悄失敗
+
+**Severity**：infrastructure — 每個 app 的 `read_config` / `write_config` 在 host harness 上都是 no-op，被韌體「graceful fallback to defaults」行為遮掉了
+**Fix**：commit `ae1058e` — 把 `FLASH_FIXTURE_DIR` 從 `"test/fixtures/flash"` 改成 `"../test/fixtures/flash"`
+**檔案**：`test/stubs/stubs_runtime.cpp`
+
+### 症狀
+
+新加的 `flash_seed` scenario directive（為了 Sina stockmarket test）在 app_init 跑前寫了 `/stockmarket.cfg`，但 `read_config` 還是拿到預設的 `AAPL/US` config。seed 被 ignore — 走的是 `parse_yahoo_data` 而不是 `parse_sina_data`。
+
+### Root cause
+
+```cpp
+static const char *FLASH_FIXTURE_DIR = "test/fixtures/flash";  // 錯
+mkdir(FLASH_FIXTURE_DIR, 0755);
+FILE *f = fopen(full.c_str(), "wb");
+if (!f) return;
+```
+
+native_test binary 從 `lv_simulater_platformio/` 跑，所以 relative path 解到 `lv_simulater_platformio/test/fixtures/flash` — 一個父目錄（`lv_simulater_platformio/test/`）根本不存在的目錄。`mkdir` 回 `ENOENT`（沒檢查），`fopen` 回 NULL（靜悄悄 bail），每個 `writeFile` 都是 no-op。
+
+這個 bug **自從 FlashFS stub 第一天就 latent**。沒被 regression 注意到是因為每個會寫 config 的 scenario 也都會在 boot 上重新 derive 自己的資料，所以「persistence missing」從外面看不到。
+
+### 怎麼抓 regression
+
+- **GUI scenario harness** Sina stockmarket scenario 透過 screenshot diff assert parse 出來的資料是 `海得控制 / 11.65` 而不是 `AAPL / 175.50`。任何用 `flash_seed` 的 scenario 現在都是 FlashFS read/write pipeline 的 end-to-end 測試。
+
+---
+
+## 框架機制 vs 抓到的 bug 對照表
+
+| Bug | 偵測機制 |
+|---|---|
+| 11. stockmarket active-screen del | GUI scenario + SIGSEGV+addr2line |
+| 12. game_2048 judge() | Unity unit test assertion |
+| 13. media_player calloc/String UB | GUI scenario + SD fixture path coverage |
+| 14. FlashFS mkdir | flash_seed end-to-end through screenshot diff |
+
+四個 bug 跨四種獨立機制 — 這就是「**多元測試機制**」的價值：先有任何一種機制就能在對應 code path 被走到時把 bug 翻出來。
+
+---
+
 ## 結語 — 共通的 pattern
 
-讀完 10 個案例，幾個重複出現的教訓：
+14 個案例（10 個主動優化 + 4 個被動發現）讀完，幾個重複出現的教訓：
 
-1. **「看似 work」不等於「真的 work」**。CTkButton 的 silent no-op、Cache 過期、AP mode 看不到... 都是行為錯了但沒 error。**Surface error first**（PR #74 加 `report_callback_exception` 是模板）
+1. **「看似 work」不等於「真的 work」**。CTkButton 的 silent no-op、Cache 過期、AP mode 看不到、stockmarket exit segfault 但 CI 看不見... 都是行為錯了但沒明顯 error。**Surface error first**（PR #74 加 `report_callback_exception`、SIGSEGV+addr2line handler 都是模板）
 2. **每次只做一件事**。HTTP helper 抽取 PR 不偷塞 retry 邏輯。Refactor 跟 feature 分開
-3. **Library 假設不會自己冒出來**。snprintf 比 strcpy 好、cget 比 [...]好、`| fallback` 比 `.as<T>()` 好 — 都是踩過才知道
-4. **Test 環境跟 production 不一樣**。Time ordering、buffer sharing、stdout 存在性...都不能假設
+3. **Library 假設不會自己冒出來**。snprintf 比 strcpy 好、cget 比 [...]好、`| fallback` 比 `.as<T>()` 好、`lv_obj_clean` 比 `lv_obj_del` 安全、`calloc` 不會跑 constructor — 都是踩過才知道
+4. **Test 環境跟 production 不一樣**。Time ordering、buffer sharing、stdout 存在性、relative path resolution...都不能假設
 5. **`delay()` 是萬惡之源**（在 cooperative event loop 裡）
+6. **加新測試機制 ≈ 順便發現 latent bug**。Part B 的 4 條都是「為了寫測試框架而踩出來」的 — 只要測試覆蓋擴一塊，那塊本來藏的 bug 就跑出來
 
 下次寫類似情境的 code 時，記得回來翻這份。
