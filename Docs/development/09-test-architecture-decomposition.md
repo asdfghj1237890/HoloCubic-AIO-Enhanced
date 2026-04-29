@@ -364,9 +364,172 @@ LVGL widget tree 變成 framebuffer 變成 PNG。
 
 ---
 
-## 8. 兩個典型 fail 的 trace — 從 bug 到 root cause
+## 8. 長時間 leak detection — coverage gap deep dive
 
-### 8.1 「按鈕沒反應」class（CTkButton dict-access）
+§7 列了三大弱項，但其中**最隱蔽的一類**值得獨立展開：**長時間連續操作才會炸的 memory leak**。
+
+### 8.1 真實案例：[stockmarket leak (commit 7e7b742)](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/commit/7e7b742)
+
+兩個獨立的 leak 疊在一起：
+
+**Leak A：每次 refresh 重建 LVGL widget tree**
+```c
+// 舊的
+void display_stockmarket_init(void) {
+    lv_obj_t *act_obj = lv_scr_act();
+    if (act_obj == stockmarket_gui) return;   // ← 這個 guard 不可靠
+    stockmarket_gui_del();
+    lv_obj_clean(act_obj);
+    stockmarket_gui = lv_obj_create(NULL);    // 每秒 refresh → 每秒重建
+    // ...
+}
+```
+
+**Leak B：`lv_obj_add_style` 累加**
+```c
+lv_obj_add_style(nowQuoLabel, &numberBigRed_style, LV_STATE_DEFAULT);
+```
+LVGL 的 `add_style` 是 **append**，不是 replace。同一個 label 每 refresh 一次，style list 多一筆。
+
+修法：
+```c
+// Leak A: 早退 — 只 init 一次
+if (stockmarket_gui != NULL) return;
+
+// Leak B: 用 set_style_*（覆蓋語意），不用 add_style
+lv_obj_set_style_text_color(nowQuoLabel, lv_color_hex(0xff0000), LV_PART_MAIN);
+lv_obj_set_style_text_font(nowQuoLabel, &lv_font_montserrat_48, LV_PART_MAIN);
+```
+
+**這 bug 為什麼很容易 escape**：
+- 不是 logic bug — code 讀起來很 reasonable
+- Code review 看不出來 — 要熟 LVGL 內部才知道 `add_style` 語意
+- compile pass、scenario screenshot 對 golden、unit test 過 → CI **全綠**
+- 真機開機後**頭幾分鐘也運作正常**
+
+只有跑了**夠久之後**才會 OOM crash → 「不知道為什麼跑一陣子就重開機」。**Production-only bug class**。
+
+### 8.2 為什麼 4 個 env 都抓不到
+
+| Env | 為什麼漏 |
+|---|---|
+| `native_unit` | 純邏輯，根本沒 link LVGL，看不到 widget tree 怎麼成長 |
+| `native_ftp` | 同上，只 link FtpServer + fake SD |
+| `native_test` (GUI scenario) | **link 了 LVGL**，本來有機會抓 — 但 scenario 預設只跑單次（init → 幾個 action → screenshot → exit）。沒有「重複 1000 次看 heap 漲不漲」的 pattern。Screenshot diff 只看畫面像不像，不看記憶體 |
+| `firmware-build` | 只編譯不執行 |
+| 真機 | 理論上會 OOM crash，但要等 30 分鐘到 2 小時 — 正常 PR review 跟 release 流程沒人在燒板子放 1 小時 |
+
+### 8.3 還有哪些 app 可能有同類 leak
+
+任何「**主畫面會週期性 refresh**」的 app 都是嫌疑犯：
+
+- `weather` — 每 weatherUpdataInterval ms 重畫
+- `pc_resource` — 每秒 SSE stream 進來都重畫
+- `bilibili_fans` — 每 updateInterval ms 重畫
+- `anniversary` — 每秒倒數重畫
+- `picture` — 自動切換 image
+- `media_player` — 影格更新
+- `idea_anim` — 持續動畫
+
+我們**沒測試任何一個**對 long-run heap 走勢有沒有問題。
+
+### 8.4 補 cover 的 4 個方向（從便宜到貴）
+
+#### 選項 A：scenario harness 加 `loop N` + 記憶體 baseline assertion
+
+**新 directive**：
+```
+mem_baseline                       # 記下當前 heap free
+loop 100
+  http_fixture sina_data ...
+  wait_ms 100                      # 觸發 display_stockmarket
+end_loop
+mem_assert_delta_lt 4096           # 跑完後 heap 不該漲超過 4KB
+```
+
+**需要改的東西**：
+1. `scenario_runner.cpp` 加 3 個新 directive（`mem_baseline` / `loop N`/`end_loop` / `mem_assert_delta_lt N`）
+2. host 端 `esp_get_free_heap_size` mock 接到 instrumented allocator counter（包 `malloc` / `free`）
+3. 對 `lv_mem_alloc` / `lv_mem_free` 也要包
+
+**ROI**：高。可重用 — 任何「重複 N 次預期 stable」的 leak 都能抓。
+
+**風險**：
+- LVGL 內部本身有 cache / pool，跑 100 次 + 4KB tolerance 可能 false positive。要先跑乾淨韌體 calibrate baseline
+- Host 上的 malloc 跟 ESP32 的 malloc 行為不完全一樣（fragmentation pattern 差），數字非 1:1 對應 — 但**趨勢**對得上
+
+#### 選項 B：AddressSanitizer (ASAN) build
+
+PlatformIO 加 `build_flags = -fsanitize=address` 跑 host build。ASAN 會抓 leak、use-after-free、buffer overflow。
+
+**需要改的東西**：
+1. 新 `[env:native_test_asan]` env
+2. CI 多一個 job 跑 ASAN build
+
+**ROI**：中。對 stock leak A（widget tree 沒釋放，純粹的 alloc-without-free）有效；對 leak B（`add_style` 內部 list 累加）**無效** — ASAN 看到 LVGL 該配置的 style entry 都被 module 內的 list **持有**，所有指標都還在 → 不算 leak，只是「持續成長的合法資料結構」。
+
+**額外問題**：
+- LVGL / SDL2 內部本來就有一些 leak-on-purpose（global cache 永遠不釋放）→ 大量 false positive，要寫 suppressions file
+- 跑速度約慢 2-3 倍
+
+#### 選項 C：LVGL `lv_mem_monitor()` 整合進 scenario assert
+
+LVGL 自己提供 [`lv_mem_monitor(lv_mem_monitor_t *mon)`](https://docs.lvgl.io/8.3/overview/memory.html)，回傳 total / free / used / max_used / frag_pct。
+
+**新 directive**：
+```
+mem_lv_assert_used_lt 50000     # LVGL 用掉的記憶體不超過 50KB
+mem_lv_assert_max_used_lt 60000 # 過程中峰值不超過 60KB
+```
+
+**需要改的東西**：
+1. `scenario_runner.cpp` 加 directive
+2. 直接呼叫 LVGL API，不用自己 instrument
+
+**ROI**：很高。**這就是專為 stock leak B 設計的工具** — `lv_obj_add_style` 累加會直接讓 LVGL `used` 持續上升。
+
+**搭配選項 A 的 loop directive 一起用 = 完整解**。leak A 用「整體 heap delta」抓、leak B 用「LVGL used delta」抓。
+
+#### 選項 D：真機 soak test（最遠期，不在 CI）
+
+設一台 cube 接 USB 一直跑，定期 ping `/api/stats` 紀錄 heap 走勢。發現**長期下降**就 alert。
+
+**需要的東西**：硬體 + monitoring server / cron job
+
+**ROI**：最真實，但**貴 + 慢**。發現問題到通知到開 ticket → 24 hr 起跳。Release CI 不能用，只能定期 release 後跑（例如每月一次）。
+
+### 8.5 推薦實作順序
+
+| 階段 | 選項 | 規模 | ROI |
+|---|---|---|---|
+| 1 | C：`lv_mem_monitor` 整合 | ~150 LOC harness 改動 + 5-6 個 mem-leak scenarios | 立即 cover stock-class leak |
+| 2 | A：通用 loop + heap-delta directive | ~300 LOC harness + 對所有可疑 app 加 mem scenario | cover 任何「重複 → 預期 stable」的 leak |
+| 3 (跳過) | B：ASAN | — | 對最常見的 leak class 無效 + suppressions 維護成本高 |
+| 4 (長期) | D：真機 soak | infra | release 後 monthly 跑，補 host 抓不到的物理現象 |
+
+### 8.6 「如果現在重做這個 bug 會被抓到嗎？」
+
+| 環境 | 結果 |
+|---|---|
+| 選項 C 已實作 | ✅ `mem_lv_assert_used_lt` 在 100 次 refresh 後 fail |
+| 選項 A 已實作 | ✅ heap delta > 4KB tolerance |
+| **目前狀態** | ❌ escape 到 production，跟當年一樣 |
+
+### 8.7 為什麼這個 gap 還沒補
+
+純粹是優先順序問題 — leak 出現得不頻繁（過去一年只一次明顯的 stock leak），相比 i18n / Glass UI 之類使用者看得到的東西優先順序低。但**作為 architectural gap**它應該被明寫，下一個發生 leak 時不要假裝沒料到。
+
+如果你（或未來的 maintainer）讀到這裡並且：
+1. 剛踩到一個 long-run leak
+2. 或者要 refactor 跟 LVGL widget lifecycle 有關的 code
+
+→ **回來實作選項 C**。150 LOC 投資換掉一整類「production-only bug」。
+
+---
+
+## 9. 兩個典型 fail 的 trace — 從 bug 到 root cause
+
+### 9.1 「按鈕沒反應」class（CTkButton dict-access）
 
 User report：「我按開啟序列埠沒反應，按關閉也沒反應」
 
@@ -389,7 +552,7 @@ Layer 4 (System)     -  N/A (不在 system)
 
 **怎麼預防**：要寫 GUI 測試很麻煩（CTk 跑不了 headless？要再研究），目前還在「使用者回報」模式。**known coverage gap**。
 
-### 8.2 「release tag fail」class（PR-3.3 missing `<WiFi.h>`）
+### 9.2 「release tag fail」class（PR-3.3 missing `<WiFi.h>`）
 
 CI report：v2.6.1 release workflow 的 build_firmware step fail with `'WiFiServer' does not name a type`
 
@@ -411,7 +574,7 @@ Layer 3-7            -   後續沒跑到
 
 ---
 
-## 9. 測試系統的演化路徑（怎麼長成現在這樣）
+## 10. 測試系統的演化路徑（怎麼長成現在這樣）
 
 時間軸：
 
@@ -448,7 +611,7 @@ v2.6.x    -- AIO_Tool pytest（漸進加）
 
 ---
 
-## 10. 寫新 layer 測試的 checklist
+## 11. 寫新 layer 測試的 checklist
 
 如果你判斷某個 layer / module 沒被 cover、想補：
 
@@ -476,21 +639,21 @@ v2.6.x    -- AIO_Tool pytest（漸進加）
 
 ---
 
-## 11. 最常被誤解的事
+## 12. 最常被誤解的事
 
-### 11.1 「Coverage 100% = bug-free」
+### 12.1 「Coverage 100% = bug-free」
 錯。Coverage 高代表「這條路徑跑過至少一次」，不代表「這條路徑的所有 input 組合都驗過」。100% line coverage 的 code 一樣可能 fail edge case。
 
-### 11.2 「GUI scenario 過了 = UI 沒問題」
+### 12.2 「GUI scenario 過了 = UI 沒問題」
 錯。GUI scenario 只驗你**寫到的那幾個 screenshot 時刻**像 golden。沒 screenshot 的 frame、沒 trigger 的互動、沒測的螢幕大小... 都沒 cover。
 
-### 11.3 「Unit test 越多越好」
+### 12.3 「Unit test 越多越好」
 錯。Unit test 對「容易隔離的純邏輯」回報率最高，對「強耦合的 IO」回報率低（要建大量 mock，mock 維護成本高、又不會抓到 mock 跟 production 行為不一致的 bug — chapter 08 §10 那種）。**該寫的地方寫，不該寫的地方寫了反而拖累**。
 
-### 11.4 「Mock 越真實越好」
+### 12.4 「Mock 越真實越好」
 錯。Mock 越真實 → 越靠近 production behavior → 越像在跑 production code → 越失去 mock 的快速 + 隔離優勢。Mock 該**只 cover 你被測模組需要的最小 surface**。
 
-### 11.5 「測試應該驗實作」
+### 12.5 「測試應該驗實作」
 錯。測試應該驗**對外行為 / 公開 API**，不該驗實作細節。實作細節改了測試也得改 = 你在重寫測試而不是真的測東西。**只測 public surface，refactor 才不會帶大量 test 改動**。
 
 ---
