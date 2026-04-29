@@ -264,6 +264,7 @@ void loop()
                     case 'L': act_info->active = TURN_LEFT;  break;
                     case 'R': act_info->active = TURN_RIGHT; break;
                     case 'H': act_info->active = RETURN;     break;
+                    case 'F': act_info->active = GO_FORWORD; break;
                     default: break;
                 }
             }
