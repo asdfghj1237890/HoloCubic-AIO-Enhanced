@@ -25,6 +25,8 @@
 #include "ESPmDNS.h"
 #include "TJpg_Decoder.h"
 #include "HTTPClient.h"
+#include <vector>
+#include <utility>
 
 // ---------- Hardware singleton stubs ----------
 HardwareSerial Serial;
@@ -298,9 +300,43 @@ static bool resolve_http_fixture(const String &url, String *out_path) {
     return true;
 }
 
+// Per-scenario HTTP fixture overrides. A scenario can register
+//   http_fixture <url-substring> <fixture-relpath>
+// to route any URL containing the substring to a specific fixture file
+// under test/fixtures/http/. Overrides take precedence over the
+// URL-derived path; cleared between scenarios so they don't leak.
+//
+// Used by bilibili negative-path scenarios (empty body / missing keys),
+// where the URL has uid in the query string — query-stripping fixture
+// lookup means different uids share one fixture, so per-scenario
+// override is the only way to swap in a malformed body without
+// breaking other scenarios that hit the same endpoint.
+static std::vector<std::pair<std::string, std::string>> g_http_fixture_overrides;
+
+void set_http_fixture_override(const std::string &url_substring,
+                                const std::string &fixture_relpath) {
+    g_http_fixture_overrides.emplace_back(url_substring, fixture_relpath);
+}
+
+void clear_http_fixture_overrides() {
+    g_http_fixture_overrides.clear();
+}
+
 int HTTPClient::GET() {
     String fixture;
-    if (!resolve_http_fixture(m_url, &fixture)) return -1;
+    bool from_override = false;
+    for (const auto &ovr : g_http_fixture_overrides) {
+        if (m_url.indexOf(ovr.first.c_str()) >= 0) {
+            fixture = String(HTTP_FIXTURE_DIR);
+            fixture += "/";
+            fixture += String(ovr.second.c_str());
+            from_override = true;
+            break;
+        }
+    }
+    if (!from_override) {
+        if (!resolve_http_fixture(m_url, &fixture)) return -1;
+    }
     FILE *f = fopen(fixture.c_str(), "rb");
     if (!f) return -1;
     fseek(f, 0, SEEK_END);
