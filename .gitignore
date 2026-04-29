@@ -21,6 +21,10 @@ __pycache__/
 AIO_Tool/.venv/
 AIO_Tool/build/
 AIO_Tool/dist/
-# User-specific runtime state (language preference, etc.)
+# User-specific runtime state (language preference, log file)
+# Catch both AIO_Tool/OutFile/ (when launched from AIO_Tool dir)
+# and root OutFile/ (when launched from repo root)
 AIO_Tool/tool_config.json
+tool_config.json
 AIO_Tool/OutFile/
+OutFile/
