@@ -3,8 +3,10 @@
 // this TU is linked into every test_main.cpp under native/test_ftp_*.
 
 #include "Arduino.h"
+#include "WiFi.h"
 #include "SD.h"
 
 HardwareSerial Serial;
 unsigned long g_fake_millis = 0;
 FakeSD SD;
+WiFiClass WiFi;

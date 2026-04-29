@@ -18,4 +18,12 @@ public:
     uint8_t &operator[](int i) { return a[i & 3]; }
 };
 
+// Minimal WiFi singleton. FtpServer only touches WiFi.localIP() to
+// fill in dataIp on PASV mode; we return a fixed AP address.
+class WiFiClass {
+public:
+    IPAddress localIP() { return IPAddress(192, 168, 4, 1); }
+};
+extern WiFiClass WiFi;
+
 #endif

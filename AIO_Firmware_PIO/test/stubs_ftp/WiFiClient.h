@@ -59,6 +59,9 @@ public:
         }
         return (int)take;
     }
+    // FtpServer's data-transfer loop uses readBytes for STOR.
+    size_t readBytes(uint8_t *dst, size_t n) { return (size_t)read(dst, n); }
+    size_t readBytes(char *dst, size_t n) { return (size_t)read((uint8_t *)dst, n); }
     size_t write(uint8_t c) override {
         b_->tx.push_back(c);
         return 1;

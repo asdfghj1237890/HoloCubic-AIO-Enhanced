@@ -39,6 +39,9 @@ public:
     String substring(size_t from, size_t to) const { return String(s.substr(from, to - from)); }
     int indexOf(char c) const { auto p = s.find(c); return p == std::string::npos ? -1 : (int)p; }
     int indexOf(const char *needle) const { auto p = s.find(needle); return p == std::string::npos ? -1 : (int)p; }
+    void remove(size_t from, size_t count = std::string::npos) {
+        if (from < s.length()) s.erase(from, count);
+    }
     String &operator+=(const String &o) { s += o.s; return *this; }
     String &operator+=(const char *c) { s += (c ? c : ""); return *this; }
     String &operator+=(char c) { s += c; return *this; }
@@ -99,5 +102,9 @@ extern unsigned long g_fake_millis;
 inline unsigned long millis() { return g_fake_millis; }
 inline void delay(unsigned long ms) { g_fake_millis += ms; }
 inline void advance_millis(unsigned long ms) { g_fake_millis += ms; }
+
+// FreeRTOS yield() — no-op on host. FtpServer calls it inside the
+// data-transfer loops to feed the watchdog; we don't model that.
+inline void yield() {}
 
 #endif
