@@ -247,7 +247,15 @@ int8_t FtpServer::readChar()
                     else if (strlen(cmdLine) > 4)
                         rc = -2; // Syntax error.
                     else
-                        snprintf(command, sizeof(command), "%s", cmdLine);
+                    {
+                        // Manual truncate-and-NUL: snprintf here triggers
+                        // -Wformat-truncation because gcc doesn't follow
+                        // the >4 guard above, but cmdLine is already
+                        // proven to fit. Mirror the strncpy pattern
+                        // already used 16 lines up (line 234).
+                        strncpy(command, cmdLine, sizeof(command) - 1);
+                        command[sizeof(command) - 1] = 0;
+                    }
                     iCL = 0;
                 }
             }

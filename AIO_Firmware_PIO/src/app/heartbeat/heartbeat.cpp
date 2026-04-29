@@ -81,31 +81,35 @@ void HeartbeatAppForeverData::callback(char *topic, byte *payload, unsigned int 
 
 static void write_config(HeartbeatAppForeverData *cfg)
 {
-    char tmp[32];
+    // 64 (not 32) so a fully-loaded mqtt_server[32] (31 chars + NUL)
+    // plus the trailing "\n" still fits — the previous tmp[32] silently
+    // dropped the newline at full capacity, which then broke the
+    // line-delimited reader on the next read_config.
+    char tmp[64];
     String w_data;
 
-    memset(tmp, 0, 32);
-    snprintf(tmp, 32, "%s\n", cfg->mqtt_server);
+    memset(tmp, 0, sizeof(tmp));
+    snprintf(tmp, sizeof(tmp), "%s\n", cfg->mqtt_server);
     w_data += tmp;
 
-    memset(tmp, 0, 32);
-    snprintf(tmp, 32, "%u\n", cfg->mqtt_port);
+    memset(tmp, 0, sizeof(tmp));
+    snprintf(tmp, sizeof(tmp), "%u\n", cfg->mqtt_port);
     w_data += tmp;
 
-    memset(tmp, 0, 32);
-    snprintf(tmp, 32, "%s\n", cfg->mqtt_user);
+    memset(tmp, 0, sizeof(tmp));
+    snprintf(tmp, sizeof(tmp), "%s\n", cfg->mqtt_user);
     w_data += tmp;
 
-    memset(tmp, 0, 32);
-    snprintf(tmp, 32, "%s\n", cfg->mqtt_password);
+    memset(tmp, 0, sizeof(tmp));
+    snprintf(tmp, sizeof(tmp), "%s\n", cfg->mqtt_password);
     w_data += tmp;
 
-    memset(tmp, 0, 32);
-    snprintf(tmp, 16, "%d\n", cfg->role);
+    memset(tmp, 0, sizeof(tmp));
+    snprintf(tmp, sizeof(tmp), "%d\n", cfg->role);
     w_data += tmp;
 
-    memset(tmp, 0, 32);
-    snprintf(tmp, 32, "%s\n", cfg->qq_num);
+    memset(tmp, 0, sizeof(tmp));
+    snprintf(tmp, sizeof(tmp), "%s\n", cfg->qq_num);
     w_data += tmp;
 
     g_flashCfg.writeFile(HEARTBEAT_CONFIG_PATH, w_data.c_str());

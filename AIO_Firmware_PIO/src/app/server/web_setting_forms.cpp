@@ -164,7 +164,13 @@
 
 void sys_setting()
 {
-    char buf[2048];
+    // 4096 (not 2048): the SYS_SETTING template grew past 1889 bytes
+    // when tooltips were added (Glass FU #3, PR #66), and the worst-case
+    // format with full-capacity ssid_0/password_0/auto_start_app (each
+    // char[32]) reaches ~2159 bytes — gcc's -Wformat-truncation flagged
+    // the 2048 buffer correctly. Other *_setting handlers are smaller
+    // and stay at 2048.
+    char buf[4096];
     char ssid_0[32];
     char password_0[32];
     char power_mode[32];
