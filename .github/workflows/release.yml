@@ -37,15 +37,18 @@ jobs:
         run: uvx platformio run --environment HoloCubic_AIO_Releases
 
       - name: Package firmware artifact
+        # Filename uses the release tag (github.ref_name) for consistency
+        # across all 5 assets in a release. The internal AIO_VERSION
+        # (firmware_version output) still feeds into the release body.
         run: |
           mkdir -p release
-          cp AIO_Firmware_PIO/.pio/build/HoloCubic_AIO_Releases/firmware.bin release/HoloCubic_AIO_firmware_${{ steps.firmware_version.outputs.value }}.bin
+          cp AIO_Firmware_PIO/.pio/build/HoloCubic_AIO_Releases/firmware.bin release/HoloCubic_AIO_firmware_${{ github.ref_name }}.bin
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: firmware
-          path: release/HoloCubic_AIO_firmware_${{ steps.firmware_version.outputs.value }}.bin
+          path: release/HoloCubic_AIO_firmware_${{ github.ref_name }}.bin
           if-no-files-found: error
 
   build_tool:
@@ -93,18 +96,20 @@ jobs:
           uv run pyinstaller $spec
 
       - name: Package tool artifact
+        # Filename uses the release tag (github.ref_name); the internal
+        # TOOL_VERSION (tool_version output) still feeds into the release body.
         shell: pwsh
         run: |
           $artifactDir = "release"
           New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
-          $toolVersion = "${{ steps.tool_version.outputs.value }}"
-          Copy-Item -Path "AIO_Tool\dist\CubicAIO_Tool.exe" -Destination (Join-Path $artifactDir ("HoloCubic_AIO_Tool_$toolVersion.exe")) -Force
+          $tag = "${{ github.ref_name }}"
+          Copy-Item -Path "AIO_Tool\dist\CubicAIO_Tool.exe" -Destination (Join-Path $artifactDir ("HoloCubic_AIO_Tool_$tag.exe")) -Force
 
       - name: Upload tool artifact
         uses: actions/upload-artifact@v4
         with:
           name: tool
-          path: release/HoloCubic_AIO_Tool_${{ steps.tool_version.outputs.value }}.exe
+          path: release/HoloCubic_AIO_Tool_${{ github.ref_name }}.exe
           if-no-files-found: error
 
   publish_release:
@@ -145,8 +150,8 @@ jobs:
             ## Files
             | File | Flash address | Notes |
             |---|---|---|
-            | `HoloCubic_AIO_firmware_${{ needs.build_firmware.outputs.version }}.bin` | `0x10000` | Application firmware |
-            | `HoloCubic_AIO_Tool_${{ needs.build_tool.outputs.version }}.exe` | — | Windows GUI flasher |
+            | `HoloCubic_AIO_firmware_${{ github.ref_name }}.bin` | `0x10000` | Application firmware (internal AIO_VERSION = `${{ needs.build_firmware.outputs.version }}`) |
+            | `HoloCubic_AIO_Tool_${{ github.ref_name }}.exe` | — | Windows GUI flasher (internal TOOL_VERSION = `${{ needs.build_tool.outputs.version }}`) |
             | `bootloader_qio_80m.bin` | `0x1000` | ESP32 second-stage bootloader |
             | `partitions.bin` | `0x8000` | Custom partition table (HoloCubic AIO layout) |
             | `boot_app0.bin` | `0xe000` | OTA boot selector |
@@ -156,8 +161,8 @@ jobs:
 
             See [AIO_Tool/CHANGELOG.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/AIO_Tool/CHANGELOG.md) for tool changes.
           files: |
-            release/HoloCubic_AIO_firmware_${{ needs.build_firmware.outputs.version }}.bin
-            release/HoloCubic_AIO_Tool_${{ needs.build_tool.outputs.version }}.exe
+            release/HoloCubic_AIO_firmware_${{ github.ref_name }}.bin
+            release/HoloCubic_AIO_Tool_${{ github.ref_name }}.exe
             release/bootloader_qio_80m.bin
             release/partitions.bin
             release/boot_app0.bin
