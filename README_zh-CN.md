@@ -63,13 +63,22 @@
 
 **功能操作演示**: https://www.bilibili.com/video/BV1wS4y1R7YF/
 
-<details>
-<summary>📸 界面截图</summary>
+### 🎨 网页配置界面（Glass 重构版）
 
-![主页](Image/holocubic_main.jpg)
-![首页](Image/holocubic_home.png)
-![上传页面](Image/holocubic_upload.png)
-![设置页面](Image/holocubic_setting.png)
+网页配置界面用「Glass」设计语言重做了一遍 — 毛玻璃面板、深色底、完整 i18n 支援（English / 简体中文 / 繁體中文）、首页即时设备状态卡片、表单栏位悬停提示。**首页仪表盘**、**设置表单**、**文件上传 / 下载 / 删除**、**系统页的 WiFi 扫描卡片** 全部统一风格。
+
+| 首页（即时 KPI） | 设置表单（i18n + 提示） |
+|---|---|
+| ![首页仪表盘](Image/holocubic_home.png) | ![设置表单](Image/holocubic_setting.png) |
+
+| 文件上传页 | 网页整体外观 |
+|---|---|
+| ![上传页](Image/holocubic_upload.png) | ![网页全貌](Image/holocubic_web.png) |
+
+<details>
+<summary>📸 硬件照片</summary>
+
+![硬件](Image/holocubic_main.jpg)
 
 </details>
 
@@ -97,13 +106,13 @@
 
 **视频教程**: https://b23.tv/5e6uDh
 
-<details>
-<summary>🖼️ 工具截图</summary>
+### 🛠️ AIO 工具（PC 烧录器 + 遥控）
 
-![AIO工具](Image/holocubic_aio_tool.png)
-![AIO工具](https://gitee.com/ClimbSnailQ/Project_Image/raw/master/OtherProject/holocubic_aio_tool.png)
+Windows 桌面工具一次烧录 firmware/bootloader/partitions，开启序列埠看即时 debug log，並且（v2.6.3 起）支援远端送方向指令到 cube — 不用实际拿起来倾斜，方便测试、展示、以及 MPU6050 没焊好的开发情境。5 颗按钮 1:1 对应韧体 IMU action enum：
 
-</details>
+- ↑ → `UP` · ← → `TURN_LEFT` · → → `TURN_RIGHT` · ✓ → `GO_FORWORD`（确认 / 刷新）· 🏠 → `RETURN`（返回 launcher）
+
+![AIO 工具](Image/holocubic_aio_tool.png)
 
 ---
 

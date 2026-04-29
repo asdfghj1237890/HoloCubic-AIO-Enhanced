@@ -48,13 +48,22 @@ This firmware is fully open-source for learning and experimentation. If you use 
 
 **Video Tutorial**: https://www.bilibili.com/video/BV1wS4y1R7YF/
 
-<details>
-<summary>📸 Screenshots</summary>
+### 🎨 Web UI (Glass redesign)
 
-![HomePage](Image/holocubic_main.jpg)
-![HomePage](Image/holocubic_home.png)
-![UploadPage](Image/holocubic_upload.png)
-![SettingPage](Image/holocubic_setting.png)
+The web configuration interface was rebuilt around a "Glass" design language — frosted panels, dark navy backdrop, full i18n (English / 简体中文 / 繁體中文), live device-stats hero, and per-field tooltips on the configuration forms. Pages match in look-and-feel across the **Home dashboard**, **Settings forms**, **File upload / download / delete**, and the **WiFi-scan card** on the System page.
+
+| Home (live KPIs) | Settings form (i18n + tooltips) |
+|---|---|
+| ![Home dashboard](Image/holocubic_home.png) | ![Settings form](Image/holocubic_setting.png) |
+
+| File upload page | Whole web view |
+|---|---|
+| ![Upload page](Image/holocubic_upload.png) | ![Web overview](Image/holocubic_web.png) |
+
+<details>
+<summary>📸 Hardware shots</summary>
+
+![Hardware](Image/holocubic_main.jpg)
 
 </details>
 
@@ -83,13 +92,13 @@ Download the PC tool from the release page to flash the firmware.
 
 **Video Tutorial**: https://b23.tv/5e6uDh
 
-<details>
-<summary>🖼️ Tool Screenshots</summary>
+### 🛠️ AIO Tool (PC flasher + remote control)
 
-![AIO_TOOL](Image/holocubic_aio_tool.png)
-![AIO_TOOL](https://gitee.com/ClimbSnailQ/Project_Image/raw/master/OtherProject/holocubic_aio_tool.png)
+The Windows desktop tool flashes firmware/bootloader/partitions in one shot, opens the device serial port for live debug logging, and (since v2.6.3) sends directional commands to the cube without needing to physically tilt it — useful for testing, demos, and developers without an MPU6050. Five buttons map 1:1 to the firmware's IMU action enum:
 
-</details>
+- ↑ → `UP`  · ← → `TURN_LEFT`  · → → `TURN_RIGHT`  · ✓ → `GO_FORWORD` (select / refresh)  · 🏠 → `RETURN` (back to launcher)
+
+![AIO Tool](Image/holocubic_aio_tool.png)
 
 ---
 
