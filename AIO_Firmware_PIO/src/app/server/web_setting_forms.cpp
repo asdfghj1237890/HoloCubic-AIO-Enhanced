@@ -148,8 +148,10 @@ void sys_setting()
 
     SysUtilConfig cfg = app_controller->sys_cfg;
 
+    // String reserve(2400) would help fragmentation but the host-test
+    // String stub doesn't implement it — skip and let the default
+    // doubling-growth handle it. Form is ~2300 bytes worst-case.
     String form;
-    form.reserve(2400);
 
     // WiFi-scan card prepended above the form (PR Glass FU #1 — populated
     // by the rescanBtn handler in GLASS_JS).
