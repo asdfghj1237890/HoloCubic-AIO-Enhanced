@@ -11,8 +11,9 @@
 | 03 | [寫你的第一個 App](./03-firmware-write-your-first-app.md) | 從 `example/` 複製出來，加進主 loop，看到畫面 | 1 hr |
 | 04 | [工具函式 + 常用模式](./04-firmware-utilities.md) | `http_util` / `json_util` / 設定持久化 / `Send_HTML` / 何時用 PROGMEM | 30 min |
 | 05 | [AIO_Tool (Python 上位機)](./05-aio-tool.md) | tab + page 結構、加按鈕、i18n、build .exe | 45 min |
-| 06 | [測試完整指南](./06-testing.md) | 三套測試環境（unit / ftp / GUI scenario）怎麼寫、怎麼跑、怎麼讀 fail | 1 hr |
+| 06 | [測試完整指南](./06-testing.md) | 三套測試環境（unit / ftp / GUI scenario）怎麼寫、怎麼跑、怎麼讀 fail；TDD walkthrough、harness 內部、stub 設計、goldens workflow、真實 CI fail 案例 | 1.5 hr |
 | 07 | [CI + Release](./07-ci-and-release.md) | GitHub Actions 三個 workflow、tag 怎麼觸發 release、PR 流程 | 20 min |
+| 08 | [重構與優化案例集](./08-refactoring-case-studies.md) | 10 個真實 PR 的「舊長什麼樣 → 為什麼不好 → 新的怎麼解 → 為什麼這樣解」，覆蓋 strcpy/JSON/MQTT callback/delay()/HTTPClient dedupe/CTkButton/PyInstaller/WiFi STA-vs-AP/cache busting/test design | 1 hr |
 
 ## 路徑慣例
 
