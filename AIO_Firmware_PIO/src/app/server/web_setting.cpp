@@ -434,7 +434,7 @@ static const char GLASS_JS[] PROGMEM = R"GLASS(
       if(wifiText) wifiText.textContent = d.wifi.connected ? (d.wifi.ssid + ' · ' + d.wifi.rssi + ' dBm') : 'WiFi off';
       if(wifiDot)  wifiDot.style.background = d.wifi.connected ? 'var(--good)' : 'var(--bad)';
       if(ipPill)   ipPill.textContent = d.wifi.connected ? d.wifi.ip : '--';
-      var u=document.getElementById('kpiUptime');  if(u) u.innerHTML = fmtUptime(d.uptime_ms) + '<span class="unit">h</span>';
+      var u=document.getElementById('kpiUptime');  if(u) u.innerHTML = fmtUptime(d.uptime_ms) + '<span class="unit">hh:mm:ss</span>';
       var fh=document.getElementById('kpiHeap');   if(fh) fh.innerHTML = fmtKB(d.free_heap) + '<span class="unit">/' + fmtKB(d.total_heap) + ' KB</span>';
       var hb=document.getElementById('kpiHeapBar');if(hb) hb.style.width = (100*d.free_heap/d.total_heap).toFixed(0)+'%';
       var fl=document.getElementById('kpiFlash');  if(fl) fl.innerHTML = fmtMB(d.flash_used) + '<span class="unit">/' + fmtMB(d.flash_total) + ' MB</span>';
