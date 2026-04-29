@@ -6,6 +6,14 @@
 #   updated run_data, so gauges show 0%/0°C/etc.
 # - 02_with_data: after `action UP` re-runs process which now reads
 #   the parsed CPU 45 / 65°C / GPU 35 / RAM 50 / NET 100/500 KB/s.
+#
+# wait_ms 400 between action UP and screenshot 02_with_data: the
+# default tick_for(50) the harness applies after each action step
+# is too tight for pc_resource's 4-arc + multi-label layout to settle
+# deterministically — runs were occasionally diffing 2-3% (over the
+# 0.5% golden tolerance) when LVGL's render cadence didn't align
+# perfectly with the screenshot tick. 400ms matches the cadence
+# bilibili / stockmarket use after their action+screenshot pairs.
 
 app pc_resource
 
@@ -14,6 +22,7 @@ screenshot 01_initial
 assert_no_crash
 
 action UP
+wait_ms 400
 screenshot 02_with_data
 assert_no_crash
 
