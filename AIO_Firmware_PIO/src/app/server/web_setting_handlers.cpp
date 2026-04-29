@@ -22,6 +22,24 @@
 // Module-local state shared between the file ops handlers below.
 boolean sd_present = true;
 
+// Glass UI: after a successful save, redirect back to the originating
+// setting page with ?saved=1 so the GLASS_JS in init_page_footer fires
+// the toast. Replaces the old "<h1>设置成功!</h1>" inline page that
+// stranded the user with no nav back. preserveLang() carries the
+// current ?lang= forward so the redirected page stays in the user's
+// chosen language.
+static void post_save_redirect(const char *settingPath)
+{
+    String dest(settingPath);
+    dest += "?saved=1";
+    if (server.hasArg("lang")) {
+        dest += "&lang=";
+        dest += server.arg("lang");
+    }
+    server.sendHeader("Location", dest);
+    server.send(303);
+}
+
 String file_size(int bytes)
 {
     String fsize = "";
@@ -38,7 +56,6 @@ String file_size(int bytes)
 
 void saveSysConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
 
     app_controller->send_to(SERVER_APP_NAME, "AppCtrl",
                             APP_MESSAGE_SET_PARAM,
@@ -75,11 +92,11 @@ void saveSysConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "AppCtrl", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/sys_setting");
 }
 
 void saveRgbConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
 
     app_controller->send_to(SERVER_APP_NAME, "AppCtrl",
                             APP_MESSAGE_SET_PARAM,
@@ -96,11 +113,11 @@ void saveRgbConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "AppCtrl", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/rgb_setting");
 }
 
 void saveWeatherConf(void)
 {
-    Send_HTML(F("<h1>設置成功! 退出APP或者繼續其他設置.</h1>"));
 
     app_controller->send_to(SERVER_APP_NAME, "Weather",
                             APP_MESSAGE_SET_PARAM,
@@ -125,11 +142,11 @@ void saveWeatherConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "Weather", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/weather_setting");
 }
 
 void saveWeatherOldConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
 
     app_controller->send_to(SERVER_APP_NAME, "Weather Old",
                             APP_MESSAGE_SET_PARAM,
@@ -154,11 +171,11 @@ void saveWeatherOldConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "Weather Old", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/weather_old_setting");
 }
 
 void saveBiliConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
     app_controller->send_to(SERVER_APP_NAME, "Bili",
                             APP_MESSAGE_SET_PARAM,
                             (void *)"bili_uid",
@@ -170,11 +187,11 @@ void saveBiliConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "Bili", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/bili_setting");
 }
 
 void saveStockConf(void)
 {
-    Send_HTML(F("<h1>Configuration saved successfully! Exit APP or continue other settings.</h1>"));
     app_controller->send_to(SERVER_APP_NAME, "Stock",
                             APP_MESSAGE_SET_PARAM,
                             (void *)"stock_symbol",
@@ -190,11 +207,11 @@ void saveStockConf(void)
     // Persist data to flash
     app_controller->send_to(SERVER_APP_NAME, "Stock", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/stock_setting");
 }
 
 void savePictureConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
     app_controller->send_to(SERVER_APP_NAME, "Picture",
                             APP_MESSAGE_SET_PARAM,
                             (void *)"switchInterval",
@@ -202,11 +219,11 @@ void savePictureConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "Picture", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/picture_setting");
 }
 
 void saveMediaConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
     app_controller->send_to(SERVER_APP_NAME, "Media",
                             APP_MESSAGE_SET_PARAM,
                             (void *)"switchFlag",
@@ -218,11 +235,11 @@ void saveMediaConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "Media", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/media_setting");
 }
 
 void saveScreenConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
     app_controller->send_to(SERVER_APP_NAME, "Screen share",
                             APP_MESSAGE_SET_PARAM,
                             (void *)"powerFlag",
@@ -230,11 +247,11 @@ void saveScreenConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "Screen share", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/screen_setting");
 }
 
 void saveHeartbeatConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
     app_controller->send_to(SERVER_APP_NAME, "Heartbeat",
                             APP_MESSAGE_SET_PARAM,
                             (void *)"role",
@@ -262,11 +279,11 @@ void saveHeartbeatConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "Heartbeat", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/heartbeat_setting");
 }
 
 void saveAnniversaryConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
     app_controller->send_to(SERVER_APP_NAME, "Anniversary",
                             APP_MESSAGE_SET_PARAM,
                             (void *)"event_name0",
@@ -286,11 +303,11 @@ void saveAnniversaryConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "Anniversary", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/anniversary_setting");
 }
 
 void savePCResourceConf(void)
 {
-    Send_HTML(F("<h1>设置成功! 退出APP或者继续其他设置.</h1>"));
     app_controller->send_to(SERVER_APP_NAME, "PC Resource",
                             APP_MESSAGE_SET_PARAM,
                             (void *)"pc_ipaddr",
@@ -302,6 +319,7 @@ void savePCResourceConf(void)
     // 持久化数据
     app_controller->send_to(SERVER_APP_NAME, "PC Resource", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);
+    post_save_redirect("/pc_resource_setting");
 }
 
 void File_Delete()
