@@ -28,6 +28,11 @@ typedef bool boolean;
 
 #define F(x) (x)
 #define PROGMEM
+// On ESP32 FPSTR converts a PROGMEM const char* into the
+// __FlashStringHelper* type that String's `+=` overload expects;
+// on the host PROGMEM is a no-op and our stub String::operator+=
+// already accepts plain const char*, so FPSTR is identity here too.
+#define FPSTR(x) (x)
 #define PGM_P const char *
 #define pgm_read_byte(addr) (*(const uint8_t *)(addr))
 #define pgm_read_word(addr) (*(const uint16_t *)(addr))
