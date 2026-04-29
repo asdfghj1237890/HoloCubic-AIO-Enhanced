@@ -558,9 +558,9 @@ const char* getText(const char* key) {
         return "Original";
     }
     if (strcmp(key, "custom") == 0) {
-        if (current_lang == LANG_ZH_CN) return "自定义版本";
-        if (current_lang == LANG_ZH_TW) return "自訂版本";
-        return "Custom";
+        if (current_lang == LANG_ZH_CN) return "加强版";
+        if (current_lang == LANG_ZH_TW) return "加強版";
+        return "Enhanced";
     }
     
     // Navigation menu
@@ -794,7 +794,7 @@ void HomePage()
     webpage += F("<a href=\"https://github.com/ClimbSnail/HoloCubic_AIO\" target=\"_blank\">GitHub · ");
     webpage += getText("original");
     webpage += F("</a>");
-    webpage += F("<a href=\"https://github.com/asdfghj1237890/HoloCubic_AIO\" target=\"_blank\">GitHub · ");
+    webpage += F("<a href=\"https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced\" target=\"_blank\">GitHub · ");
     webpage += getText("custom");
     webpage += F("</a>");
     webpage += F("<a href=\"https://space.bilibili.com/344470052\" target=\"_blank\">Bilibili · ");
