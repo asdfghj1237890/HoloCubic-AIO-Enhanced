@@ -185,6 +185,111 @@ example/
 
 打開 `example.cpp` 對照前面的 callback 表 — 每一個都齊全，5 個函式總共約 130 行。**這就是你下一章複製出來的範本**。
 
+## 9. 把它當 event-driven FSM 看
+
+讀完前面 8 節你會發現一個 pattern — 整個 framework 其實是**三層巢狀的 finite state machine**，每層各自有 state、transition、event。把它畫出來會比一直唸 callback 名字好理解：
+
+### 9.1 三層 FSM
+
+```
+[第一層：硬體 timer]
+    每 ~50ms 戳一次 → isCheckAction = true
+              ↓
+[第二層：AppController outer FSM]
+    States: LAUNCHER_IDLE (app_exit_flag==0) | APP_RUNNING (app_exit_flag==1)
+    Transitions:
+      LAUNCHER_IDLE  --GO_FORWORD-->   呼叫 active app 的 app_init() → APP_RUNNING
+      APP_RUNNING    --(app 主動 sys->app_exit())--> 呼叫 exit_callback() → LAUNCHER_IDLE
+      LAUNCHER_IDLE  --TURN_LEFT/RIGHT--> 切 cur_app_index（換 launcher icon）
+              ↓
+[第三層：每個 app 的 internal FSM]
+    States 存在 run_data 結構裡（page index、bitmask 旗標、上次 update 時間）
+    Transitions 由三類事件觸發：
+      a. IMU action (act_info->active 是 RETURN/TURN_LEFT/...)
+      b. 時間經過 (millis() - last > interval)
+      c. 異步訊息回來 (message_handle 收到 send_to 的 event)
+```
+
+### 9.2 weather 是教科書範例
+
+[`weather.cpp`](../../AIO_Firmware_PIO/src/app/weather/weather.cpp) 的 state 全在 `WeatherAppRunData` 裡：
+
+```cpp
+struct WeatherAppRunData {
+    int  clock_page;                 // ← 0 = 主頁、1 = 7日預報，這是 state
+    unsigned int coactusUpdateFlag;  // ← 1 = 強制更新中
+    unsigned int update_type;        // ← bitmask: WEATHER | TIME | DAILY
+    unsigned long preWeatherMillis;  // ← 上次刷新時間（time-based transition 用）
+    unsigned long preTimeMillis;
+    Weather wea;                     // ← payload data，不是 state
+};
+```
+
+State diagram：
+
+```
+        ┌─── TURN_LEFT/RIGHT ────────┐
+        ↓                              ↑
+[clock_page=0 主頁]  ←──────────→  [clock_page=1 預報]
+        │                              │
+        ├── 每 weatherUpdataInterval ms 觸發 send_to(CTRL, WIFI_CONN, UPDATE_NOW)
+        ├── 每 timeUpdataInterval ms   觸發 send_to(CTRL, WIFI_CONN, UPDATE_NTP)
+        ├── GO_FORWORD → coactusUpdateFlag = 1 (強制刷新)
+        └── RETURN → sys->app_exit() → outer FSM 跳回 LAUNCHER_IDLE
+```
+
+注意 transition 不只來自 IMU — **時間經過**跟**異步訊息回來**也是 transition trigger。這是純 event-driven model，沒有 polling loop 在裡面打轉。
+
+### 9.3 兩個 entry point 進你的 app
+
+```
+   main loop tick (每 ~50ms)
+        │
+        ├──→ app_main_process(act_info)     ← IMU + time-based transitions
+        │
+        └──→ (異步, 由 req_event_deal 排隊處理)
+             app_message_handle(...)         ← send_to 來的事件
+                                                例：WIFI_CONN 連上了、SET_PARAM 要存設定
+```
+
+兩條 path 都會 mutate 同一份 `run_data`。**兩個都跑在 main thread**（`message_handle` 由 timer-driven 的 `req_event_deal()` dispatch），所以**不需要 mutex**。
+
+但是！必須是 **cooperative**：
+
+> ⚠️ 任何一個 callback 裡 `delay()` 就卡死整個 device。LVGL 不會 render、IMU 讀不到、其他 app 的 background_task 也不會跑。這是 PR-1.8 整個 audit 過 40+ 個 `delay()` 的原因。**用 `if (millis() - last < N) return;` 早退**，不要 `delay()`。
+
+### 9.4 顯式 vs 隱式 state
+
+兩種寫法都常見：
+
+**隱式**（weather 風格）— state 是 page index + boolean 旗標：
+```cpp
+if (run_data->clock_page == 0) {
+    display_weather(...);   // 主頁的事
+} else if (run_data->clock_page == 1) {
+    display_curve(...);     // 預報頁的事
+}
+```
+
+**顯式**（FtpServer 風格，state 寫成 0/1/2/3 數字）— [`ESP32FtpServer.cpp` `handleFTP()`](../../AIO_Firmware_PIO/src/app/file_manager/ESP32FtpServer.cpp)：
+
+```cpp
+0 → disconnect any leftover client; goto 1
+1 → reset state; iniVariables(); goto 2
+2 → wait for client connect; if connected: clientConnected() (送 220 banner); goto 3
+3 → wait for USER command; if userIdentity() OK: goto 4 else goto 0
+4 → wait for PASS command; if userPassword() OK: goto 5 else goto 0
+5 → main command loop: processCommand() dispatches RETR/STOR/LIST/...
+```
+
+寫測試（PR-3.0a #68）的時候踩過一個雷：我以為「push 一個 client 進去然後 `handleFTP()` 就會跑 welcome」，結果第一個 tick 在 cmdStatus 0 把我的 client `disconnectClient()` 掉了 — 因為 0 的 job 就是清掉殘留 client。要先 pump 兩次推進到 cmdStatus 2，才能 push client。**這就是顯式 state 的好處：你看著 0/1/2 數字直接 reason 順序**；隱式 boolean flag 那種就比較容易不小心搞錯前置條件。
+
+新 app 寫小一點（< 3 個 state）用隱式 OK；如果開始覺得 if/else 一堆 boolean 讀不懂，**該換成顯式 state enum**。
+
+### 9.5 跟 LVGL event 的關係
+
+LVGL 自己也是 event-driven framework — 你 `lv_obj_add_event_cb()` 註冊的 callback 也跑在 main thread（透過 `lv_task_handler()`）。意思是如果你 LVGL event handler 裡碰 `run_data`，跟 `main_process` / `message_handle` 是 race-free 的，不需要鎖。**前提還是不能 `delay()`**。
+
 ## 下一步
 
 [03 — 寫你的第一個 App](./03-firmware-write-your-first-app.md) — 從 example 複製出來，加進主 loop，跑起來。
