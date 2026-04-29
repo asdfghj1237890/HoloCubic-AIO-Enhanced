@@ -374,11 +374,11 @@ class DownloadDebug:
         """
 
         def clean_func() -> None:
-            self.m_clean_flash_botton["text"] = "清空中"
-            self.m_connect_button["state"] = tk.DISABLED
-            self.m_reboot_button["state"] = tk.DISABLED
-            # self.m_clean_flash_botton["state"] = tk.DISABLED
-            self.m_download_botton["state"] = tk.DISABLED
+            self.m_clean_flash_botton.configure(text="清空中")
+            self.m_connect_button.configure(state=tk.DISABLED)
+            self.m_reboot_button.configure(state=tk.DISABLED)
+            # self.m_clean_flash_botton.configure(state=tk.DISABLED)
+            self.m_download_botton.configure(state=tk.DISABLED)
             self.print_log("清空芯片中.....")
             self.__father.update()
 
@@ -402,14 +402,20 @@ class DownloadDebug:
                 self.print_log(f"清空芯片失敗: {err}")
             finally:
                 # 更新按钮状态
-                self.m_clean_flash_botton["text"] = "清空芯片"
-                self.m_connect_button["state"] = tk.NORMAL
-                self.m_reboot_button["state"] = tk.NORMAL
-                # self.m_clean_flash_botton["state"] = tk.NORMAL
-                self.m_download_botton["state"] = tk.NORMAL
+                self.m_clean_flash_botton.configure(text="清空芯片")
+                self.m_connect_button.configure(state=tk.NORMAL)
+                self.m_reboot_button.configure(state=tk.NORMAL)
+                # self.m_clean_flash_botton.configure(state=tk.NORMAL)
+                self.m_download_botton.configure(state=tk.NORMAL)
                 self.__father.update()
 
-        if self.m_clean_flash_botton["text"] == "清空芯片":
+        # CTkButton: dict-style READ (`widget["text"]`) bypasses the
+        # cget() override and goes straight to Tk, which doesn't know
+        # `-text` on a Frame and raises TclError. Use .cget("text")
+        # explicitly to hit the override. Writes via `widget["text"] =`
+        # are fine — __setitem__ routes through configure(), which IS
+        # overridden.
+        if self.m_clean_flash_botton.cget("text") == "清空芯片":
             self.clean_flash_thread = threading.Thread(
                 target=clean_func,
             )
@@ -418,11 +424,11 @@ class DownloadDebug:
             # 杀线程
             common._async_raise(self.clean_flash_thread)
             self.clean_flash_thread = None
-            self.m_clean_flash_botton["text"] = "清空芯片"
-            self.m_connect_button["state"] = tk.NORMAL
-            self.m_reboot_button["state"] = tk.NORMAL
-            # self.m_clean_flash_botton["state"] = tk.NORMAL
-            self.m_download_botton["state"] = tk.NORMAL
+            self.m_clean_flash_botton.configure(text="清空芯片")
+            self.m_connect_button.configure(state=tk.NORMAL)
+            self.m_reboot_button.configure(state=tk.NORMAL)
+            # self.m_clean_flash_botton.configure(state=tk.NORMAL)
+            self.m_download_botton.configure(state=tk.NORMAL)
             self.__father.update()
 
     def down_and_canle(self) -> None:
@@ -435,14 +441,17 @@ class DownloadDebug:
         in Tk's default callback handler.
         """
         try:
-            if self.m_download_botton["text"] == self.i18n.t("flash_firmware"):
+            # See cget vs ["text"] note in clean_flash above — same
+            # CTkButton dict-access trap.
+            current_text = self.m_download_botton.cget("text")
+            if current_text == self.i18n.t("flash_firmware"):
                 self.download_firmware()
-            elif self.m_download_botton["text"] == self.i18n.t("cancel_flash"):
+            elif current_text == self.i18n.t("cancel_flash"):
                 self.canle_download_firmware()
             else:
                 # Defensive: button text matches neither expected i18n
                 # value. Surfaces the language-drift class of bug.
-                btn_text = self.m_download_botton["text"]
+                btn_text = current_text
                 self.print_log(
                     f"flash button text mismatch: got '{btn_text}', "
                     f"expected '{self.i18n.t('flash_firmware')}' or "
@@ -466,11 +475,11 @@ class DownloadDebug:
             finally:
                 self.download_thread = None
 
-        self.m_download_botton["text"] = self.i18n.t("flash_firmware")
-        self.m_connect_button["state"] = tk.NORMAL
-        self.m_reboot_button["state"] = tk.NORMAL
-        self.m_clean_flash_botton["state"] = tk.NORMAL
-        self.m_download_botton["state"] = tk.NORMAL
+        self.m_download_botton.configure(text=self.i18n.t("flash_firmware"))
+        self.m_connect_button.configure(state=tk.NORMAL)
+        self.m_reboot_button.configure(state=tk.NORMAL)
+        self.m_clean_flash_botton.configure(state=tk.NORMAL)
+        self.m_download_botton.configure(state=tk.NORMAL)
 
         if self.progress_bar_thread is not None:
             self._stop_progress_thread()
@@ -482,11 +491,11 @@ class DownloadDebug:
         """
         下载固件
         """
-        self.m_download_botton["text"] = self.i18n.t("cancel_flash")
-        self.m_connect_button["state"] = tk.DISABLED
-        self.m_reboot_button["state"] = tk.DISABLED
-        self.m_clean_flash_botton["state"] = tk.DISABLED
-        self.m_download_botton["state"] = tk.NORMAL
+        self.m_download_botton.configure(text=self.i18n.t("cancel_flash"))
+        self.m_connect_button.configure(state=tk.DISABLED)
+        self.m_reboot_button.configure(state=tk.DISABLED)
+        self.m_clean_flash_botton.configure(state=tk.DISABLED)
+        self.m_download_botton.configure(state=tk.NORMAL)
         self.print_log(self.i18n.t("flashing"))
         down_flag, param = self.get_download_param()
         if down_flag == "disable":
@@ -553,11 +562,11 @@ class DownloadDebug:
             logger.error("flash failed: %s", err)
             self.print_log(err)
         finally:
-            self.m_download_botton["text"] = self.i18n.t("flash_firmware")
-            self.m_connect_button["state"] = tk.NORMAL
-            self.m_reboot_button["state"] = tk.NORMAL
-            self.m_clean_flash_botton["state"] = tk.NORMAL
-            self.m_download_botton["state"] = tk.NORMAL
+            self.m_download_botton.configure(text=self.i18n.t("flash_firmware"))
+            self.m_connect_button.configure(state=tk.NORMAL)
+            self.m_reboot_button.configure(state=tk.NORMAL)
+            self.m_clean_flash_botton.configure(state=tk.NORMAL)
+            self.m_download_botton.configure(state=tk.NORMAL)
 
             if self.progress_bar_thread is not None:
                 self._stop_progress_thread()
@@ -793,13 +802,15 @@ class DownloadDebug:
         # language was switched after creation (the buttons aren't
         # re-translated live). Without this branch the click is a
         # silent no-op.
-        btn_text = self.m_connect_button["text"]
+        # See cget vs ["text"] note in clean_flash for why we use
+        # .cget() instead of dict-style read on a CTkButton.
+        btn_text = self.m_connect_button.cget("text")
         open_label = self.i18n.t("open_serial")
         close_label = self.i18n.t("close_serial")
         if btn_text != open_label and btn_text != close_label:
             self.print_log(f"serial button text mismatch: got '{btn_text}', expected '{open_label}' or '{close_label}'")
             # Recover: assume user wants to open and reset the label.
-            self.m_connect_button["text"] = open_label
+            self.m_connect_button.configure(text=open_label)
             btn_text = open_label
 
         if btn_text == open_label:
@@ -831,25 +842,25 @@ class DownloadDebug:
                 )
                 self.receive_thread.start()
 
-                self.m_connect_button["text"] = self.i18n.t("close_serial")
+                self.m_connect_button.configure(text=self.i18n.t("close_serial"))
                 self.m_com_select["state"] = tk.DISABLED
                 self.m_baud_select["state"] = tk.DISABLED
                 self.m_data_bit_select["state"] = tk.DISABLED
                 self.m_check_bit_select["state"] = tk.DISABLED
                 self.m_stop_bit_select["state"] = tk.DISABLED
-                self.m_reboot_button["state"] = tk.DISABLED
-                self.m_clean_flash_botton["state"] = tk.DISABLED
-                self.m_download_botton["state"] = tk.DISABLED
+                self.m_reboot_button.configure(state=tk.DISABLED)
+                self.m_clean_flash_botton.configure(state=tk.DISABLED)
+                self.m_download_botton.configure(state=tk.DISABLED)
         else:
-            self.m_connect_button["text"] = self.i18n.t("open_serial")
+            self.m_connect_button.configure(text=self.i18n.t("open_serial"))
             self.m_com_select["state"] = tk.NORMAL
             self.m_baud_select["state"] = tk.NORMAL
             self.m_data_bit_select["state"] = tk.NORMAL
             self.m_check_bit_select["state"] = tk.NORMAL
             self.m_stop_bit_select["state"] = tk.NORMAL
-            self.m_reboot_button["state"] = tk.NORMAL
-            self.m_clean_flash_botton["state"] = tk.NORMAL
-            self.m_download_botton["state"] = tk.NORMAL
+            self.m_reboot_button.configure(state=tk.NORMAL)
+            self.m_clean_flash_botton.configure(state=tk.NORMAL)
+            self.m_download_botton.configure(state=tk.NORMAL)
 
             if self.ser is not None:
                 self.ser.close()  # 关闭串口
@@ -906,10 +917,10 @@ class DownloadDebug:
         """
         重启芯片
         """
-        self.m_connect_button["state"] = tk.DISABLED
-        self.m_reboot_button["state"] = tk.DISABLED
-        self.m_clean_flash_botton["state"] = tk.DISABLED
-        self.m_download_botton["state"] = tk.DISABLED
+        self.m_connect_button.configure(state=tk.DISABLED)
+        self.m_reboot_button.configure(state=tk.DISABLED)
+        self.m_clean_flash_botton.configure(state=tk.DISABLED)
+        self.m_download_botton.configure(state=tk.DISABLED)
         down_flag, param = self.get_download_param()
         self.__father.update()
 
@@ -932,10 +943,10 @@ class DownloadDebug:
             logger.error("esp reset failed: %s", err)
             self.print_log(f"{self.i18n.t('reboot')} failed: {err}")
         finally:
-            self.m_connect_button["state"] = tk.NORMAL
-            self.m_reboot_button["state"] = tk.NORMAL
-            self.m_clean_flash_botton["state"] = tk.NORMAL
-            self.m_download_botton["state"] = tk.NORMAL
+            self.m_connect_button.configure(state=tk.NORMAL)
+            self.m_reboot_button.configure(state=tk.NORMAL)
+            self.m_clean_flash_botton.configure(state=tk.NORMAL)
+            self.m_download_botton.configure(state=tk.NORMAL)
 
     def __del__(self) -> None:
         """資源釋放：通知 receive_thread 停止；esptool download_thread 仍以 _async_raise 中斷。"""

@@ -229,9 +229,34 @@ def get_version() -> str:
         return "[无法获取到最新版本]"
 
 
+def _ensure_std_streams() -> None:
+    """Replace ``sys.stdout`` / ``sys.stderr`` with devnull writers if
+    they're ``None``.
+
+    PyInstaller's ``--noconsole`` build (we're built with ``console=False``
+    in CubicAIO_Tool.spec) sets ``sys.stdout`` and ``sys.stderr`` to
+    ``None`` because there's no attached console. Any third-party code
+    that calls ``print(...)`` followed by ``sys.stdout.flush()`` then
+    crashes with ``AttributeError: 'NoneType' object has no attribute
+    'flush'``. esptool is the most-affected case here — its progress
+    output kills the flash thread mid-operation.
+
+    The fix doesn't try to surface esptool's output (the operation log
+    already shows what we care about: command line + start/finish);
+    just keep the streams non-None so .write() / .flush() don't crash.
+    """
+    import sys
+
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
+
 if __name__ == "__main__":
     import threading
 
+    _ensure_std_streams()
     setup_logging()
     logger = get_logger(__name__)
 
