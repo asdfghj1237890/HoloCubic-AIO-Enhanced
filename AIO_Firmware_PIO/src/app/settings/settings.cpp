@@ -65,8 +65,8 @@ int exec_order(int len, const uint8_t *data)
             case VALUE_TYPE_INT:
             {
                 int value = 0; // prefs.getInt(msg.m_key);
-                msg.m_value[0] = value >> 8;
-                msg.m_value[1] = value | 0x00FF;
+                msg.m_value[0] = (value >> 8) & 0x00FF;
+                msg.m_value[1] = value & 0x00FF;
                 Serial.print(" getInt-->");
             }
             break;

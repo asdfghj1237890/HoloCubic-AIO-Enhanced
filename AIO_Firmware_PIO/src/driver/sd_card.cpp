@@ -17,22 +17,26 @@ static fs::FS *tf_vfs = NULL;
 
 void release_file_info(File_Info *info)
 {
-    File_Info *cur_node = NULL; // 记录当前节点
     if (NULL == info)
     {
         return;
     }
-    for (cur_node = info->next_node; NULL != cur_node;)
+
+    File_Info *first_node = info->next_node;
+    File_Info *cur_node = first_node; // 记录当前节点
+    while (NULL != cur_node)
     {
+        File_Info *next_node = cur_node->next_node;
+        free(cur_node->file_name);
+        free(cur_node);
         // 判断是不是循环一圈回来了
-        if (info->next_node == cur_node)
+        if (next_node == first_node)
         {
             break;
         }
-        File_Info *tmp = cur_node; // 保存准备删除的节点
-        cur_node = cur_node->next_node;
-        free(tmp);
+        cur_node = next_node;
     }
+    free(info->file_name);
     free(info);
 }
 
@@ -184,6 +188,10 @@ File_Info *SdCard::listDir(const char *dirname)
 {
     TF_VFS_IS_NULL(NULL)
 
+    if (NULL == dirname)
+    {
+        return NULL;
+    }
     Serial.printf("Listing directory: %s\n", dirname);
 
     File root = tf_vfs->open(dirname);
@@ -202,11 +210,21 @@ File_Info *SdCard::listDir(const char *dirname)
 
     // 头节点的创建（头节点用来记录此文件夹）
     File_Info *head_file = (File_Info *)malloc(sizeof(File_Info));
+    if (NULL == head_file)
+    {
+        Serial.println("Out of memory.");
+        return NULL;
+    }
     head_file->file_type = FILE_TYPE_FOLDER;
     head_file->file_name = (char *)malloc(dir_len);
+    if (NULL == head_file->file_name)
+    {
+        Serial.println("Out of memory.");
+        free(head_file);
+        return NULL;
+    }
     // 将文件夹名赋值给头节点（当作这个节点的文件名）
-    strncpy(head_file->file_name, dirname, dir_len - 1);
-    head_file->file_name[dir_len - 1] = 0;
+    snprintf(head_file->file_name, dir_len, "%s", dirname);
     head_file->front_node = NULL;
     head_file->next_node = NULL;
 
@@ -222,29 +240,43 @@ File_Info *SdCard::listDir(const char *dirname)
         const char *fn = get_file_basename(file.name());
         // 字符数组长度为实际字符串长度+1
         int filename_len = strlen(fn);
-        if (filename_len > FILENAME_MAX_LEN - 10)
+
+        char tmp_file_name[FILENAME_MAX_LEN] = {0};
+        const bool dirname_has_slash = (dir_len > 1 && dirname[dir_len - 2] == '/');
+        const char *path_fn = (*fn == '/') ? fn + 1 : fn;
+        int path_len = snprintf(tmp_file_name, sizeof(tmp_file_name), "%s%s%s",
+                                dirname, dirname_has_slash ? "" : "/", path_fn);
+        if (path_len < 0 || path_len >= (int)sizeof(tmp_file_name))
         {
-            Serial.println("Filename is too long.");
+            Serial.println("Path is too long.");
+            file = root.openNextFile();
+            continue;
         }
 
         // 创建新节点
-        file_node->next_node = (File_Info *)malloc(sizeof(File_Info));
+        File_Info *next_file_node = (File_Info *)malloc(sizeof(File_Info));
+        if (NULL == next_file_node)
+        {
+            Serial.println("Out of memory.");
+            file = root.openNextFile();
+            continue;
+        }
+        next_file_node->file_name = (char *)malloc(filename_len + 1);
+        if (NULL == next_file_node->file_name)
+        {
+            Serial.println("Out of memory.");
+            free(next_file_node);
+            file = root.openNextFile();
+            continue;
+        }
+        snprintf(next_file_node->file_name, filename_len + 1, "%s", fn);
         // 让下一个节点指向当前节点
         // （此时第一个节点的front_next会指向head节点，等遍历结束再调一下）
-        file_node->next_node->front_node = file_node;
+        next_file_node->front_node = file_node;
+        next_file_node->next_node = NULL;
+        file_node->next_node = next_file_node;
         // file_node指针移向节点
-        file_node = file_node->next_node;
-
-        // 船家创建新节点的文件名
-        file_node->file_name = (char *)malloc(filename_len);
-        strncpy(file_node->file_name, fn, filename_len); //
-        file_node->file_name[filename_len] = 0;          //
-        // 下一个节点赋空
-        file_node->next_node = NULL;
-
-        char tmp_file_name[FILENAME_MAX_LEN] = {0};
-        // sprintf(tmp_file_name, "%s/%s", dirname, file_node->file_name);
-        join_path(tmp_file_name, dirname, file_node->file_name);
+        file_node = next_file_node;
         if (file.isDirectory())
         {
             file_node->file_type = FILE_TYPE_FOLDER;

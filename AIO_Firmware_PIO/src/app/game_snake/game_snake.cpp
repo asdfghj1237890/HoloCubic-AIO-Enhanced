@@ -13,6 +13,7 @@ struct SnakeAppRunData
 {
     unsigned int score;
     int gameStatus;
+    unsigned long lastMoveMillis;
     BaseType_t xReturned_task_run = pdFALSE;
     TaskHandle_t xHandle_task_run = NULL;
 };
@@ -41,6 +42,7 @@ static int game_snake_init(AppController *sys)
     run_data = (SnakeAppRunData *)calloc(1, sizeof(SnakeAppRunData));
     run_data->score = 0;
     run_data->gameStatus = 0;
+    run_data->lastMoveMillis = GET_SYS_MILLIS() - SNAKE_SPEED;
     run_data->xReturned_task_run = xTaskCreate(
         taskRun,                      /*任务函数*/
         "taskRun",                    /*任务名称*/
@@ -84,13 +86,17 @@ static void game_snake_process(AppController *sys, const ImuAction *act_info)
         update_driection(DIR_DOWN);
     }
 
+    unsigned long now = GET_SYS_MILLIS();
+    if (now - run_data->lastMoveMillis < SNAKE_SPEED)
+    {
+        return;
+    }
+    run_data->lastMoveMillis = now;
+
     if (run_data->gameStatus == 0 && run_data->xReturned_task_run == pdPASS)
     {
         AIO_LVGL_OPERATE_LOCK(display_snake(run_data->gameStatus, LV_SCR_LOAD_ANIM_NONE););
     }
-
-    // 速度控制
-    delay(SNAKE_SPEED);
 }
 
 static void game_snake_background_task(AppController *sys,
