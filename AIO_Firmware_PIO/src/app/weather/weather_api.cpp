@@ -404,8 +404,8 @@ void get_daliyWeather(short maxT[], short minT[])
                 for (int i = 0; i < numDays; i++)
                 {
                     JsonObject day = forecasts[i];
-                    maxT[i] = day["Temperature"]["Maximum"]["Value"].as<int>();
-                    minT[i] = day["Temperature"]["Minimum"]["Value"].as<int>();
+                    maxT[i] = day["Temperature"]["Maximum"]["Value"] | 0;
+                    minT[i] = day["Temperature"]["Minimum"]["Value"] | 0;
                 }
 
                 Serial.println("Get AccuWeather forecast OK\n");
