@@ -69,25 +69,30 @@ static void game_snake_process(AppController *sys, const ImuAction *act_info)
     }
 
     // 操作触发
+    bool forceMove = false;
     if (TURN_RIGHT == act_info->active)
     {
         update_driection(DIR_RIGHT);
+        forceMove = true;
     }
     else if (TURN_LEFT == act_info->active)
     {
         update_driection(DIR_LEFT);
+        forceMove = true;
     }
     else if (UP == act_info->active)
     {
         update_driection(DIR_UP);
+        forceMove = true;
     }
     else if (DOWN == act_info->active)
     {
         update_driection(DIR_DOWN);
+        forceMove = true;
     }
 
     unsigned long now = GET_SYS_MILLIS();
-    if (now - run_data->lastMoveMillis < SNAKE_SPEED)
+    if (!forceMove && now - run_data->lastMoveMillis < SNAKE_SPEED)
     {
         return;
     }
