@@ -66,7 +66,10 @@ impl SettingMsg {
             ("value", &self.value),
         ] {
             if let Some(offset) = s.as_bytes().iter().position(|&b| b == 0) {
-                return Err(EncodeError::EmbeddedNull { field: name, offset });
+                return Err(EncodeError::EmbeddedNull {
+                    field: name,
+                    offset,
+                });
             }
         }
         Ok(())
@@ -76,11 +79,14 @@ impl SettingMsg {
     pub fn to_wire(&self) -> Result<Vec<u8>, EncodeError> {
         self.check_no_embedded_nulls()?;
         // payload = prefs_name \0 key \0 type \0 value \r\n
-        let payload_len =
-            self.prefs_name.len() + 1
-            + self.key.len() + 1
-            + self.value_type_str.len() + 1
-            + self.value.len() + 2;
+        let payload_len = self.prefs_name.len()
+            + 1
+            + self.key.len()
+            + 1
+            + self.value_type_str.len()
+            + 1
+            + self.value.len()
+            + 2;
         let total = HEADER_SIZE + payload_len;
 
         let mut buf = Vec::with_capacity(total);
@@ -113,9 +119,15 @@ impl SettingMsg {
 
         // Split on \0 — expect 4 fields.
         let mut parts = payload.split(|b| *b == 0);
-        let prefs_name = parts.next().ok_or(DecodeError::MissingNullTerminator("prefs_name"))?;
-        let key = parts.next().ok_or(DecodeError::MissingNullTerminator("key"))?;
-        let value_type_str = parts.next().ok_or(DecodeError::MissingNullTerminator("value_type_str"))?;
+        let prefs_name = parts
+            .next()
+            .ok_or(DecodeError::MissingNullTerminator("prefs_name"))?;
+        let key = parts
+            .next()
+            .ok_or(DecodeError::MissingNullTerminator("key"))?;
+        let value_type_str = parts
+            .next()
+            .ok_or(DecodeError::MissingNullTerminator("value_type_str"))?;
         let value = parts.next().unwrap_or(&[]);
 
         Ok((
@@ -157,12 +169,12 @@ mod tests {
             bytes,
             [
                 0x23, 0x23, 0x13, 0x00, 0x04, 0x03, 0x0d, // header
-                b's', b'y', b's', 0x00,                   // prefs_name + sep
-                b's', b's', b'i', b'd', 0x00,             // key + sep
+                b's', b'y', b's', 0x00, // prefs_name + sep
+                b's', b's', b'i', b'd', 0x00, // key + sep
                 // value_type_str is empty; only its trailing \0 separator follows
-                0x00,                                     // sep after empty type
+                0x00, // sep after empty type
                 // value is empty; no bytes
-                b'\r', b'\n',                             // terminator
+                b'\r', b'\n', // terminator
             ]
         );
     }
@@ -174,7 +186,10 @@ mod tests {
         let err = msg.to_wire().unwrap_err();
         assert_eq!(
             err,
-            EncodeError::EmbeddedNull { field: "key", offset: 4 }
+            EncodeError::EmbeddedNull {
+                field: "key",
+                offset: 4
+            }
         );
     }
 

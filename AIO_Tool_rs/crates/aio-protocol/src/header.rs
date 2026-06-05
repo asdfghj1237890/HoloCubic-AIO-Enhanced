@@ -94,7 +94,16 @@ impl WireDecode for MsgHead {
         let from = ModuleType::from_wire(buf[4])?;
         let to = ModuleType::from_wire(buf[5])?;
         let action = ActionType::from_wire(buf[6])?;
-        Ok((Self { header_mark, msg_len, from, to, action }, HEADER_SIZE))
+        Ok((
+            Self {
+                header_mark,
+                msg_len,
+                from,
+                to,
+                action,
+            },
+            HEADER_SIZE,
+        ))
     }
 }
 

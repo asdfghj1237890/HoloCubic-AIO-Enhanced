@@ -1,0 +1,48 @@
+name: tool-rust
+
+on:
+  pull_request:
+    paths:
+      - 'AIO_Tool_rs/**'
+      - '.github/workflows/tool-rust.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'AIO_Tool_rs/**'
+      - '.github/workflows/tool-rust.yml'
+
+defaults:
+  run:
+    working-directory: AIO_Tool_rs
+
+jobs:
+  fmt:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: AIO_Tool_rs
+      - run: cargo clippy --all-targets --workspace -- -D warnings
+
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: AIO_Tool_rs
+      - run: cargo test --workspace

@@ -1,8 +1,8 @@
 //! Wire-format goldens for dir / file messages.
 
 use aio_protocol::file::{
-    DirCreate, DirList, DirRemove, DirRename,
-    FileCreate, FileGetInfo, FileRead, FileRemove, FileRename, FileWrite,
+    DirCreate, DirList, DirRemove, DirRename, FileCreate, FileGetInfo, FileRead, FileRemove,
+    FileRename, FileWrite,
 };
 
 fn assert_hex(actual: &[u8], golden: &str) {

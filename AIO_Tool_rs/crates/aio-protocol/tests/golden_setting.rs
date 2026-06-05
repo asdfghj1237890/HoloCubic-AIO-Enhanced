@@ -20,5 +20,8 @@ fn setting_set_zhixin_cityname() {
     msg.header.to = ModuleType::CubicSettings;
     msg.header.action = ActionType::SettingSet;
     let bytes = msg.to_wire().unwrap();
-    assert_hex(&bytes, include_str!("golden/setting_set_zhixin_cityname.hex"));
+    assert_hex(
+        &bytes,
+        include_str!("golden/setting_set_zhixin_cityname.hex"),
+    );
 }

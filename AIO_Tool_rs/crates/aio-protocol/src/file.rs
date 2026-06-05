@@ -69,7 +69,10 @@ pub struct DirCreate {
 impl DirCreate {
     /// Build a new `DirCreate` message.
     pub fn new(dir_path: &str) -> Self {
-        Self { header: file_header(ActionType::DirCreate), dir_path: dir_path.to_owned() }
+        Self {
+            header: file_header(ActionType::DirCreate),
+            dir_path: dir_path.to_owned(),
+        }
     }
 
     /// Encode to wire bytes.
@@ -93,7 +96,10 @@ pub struct DirRemove {
 impl DirRemove {
     /// Build a new `DirRemove` message.
     pub fn new(dir_path: &str) -> Self {
-        Self { header: file_header(ActionType::DirRemove), dir_path: dir_path.to_owned() }
+        Self {
+            header: file_header(ActionType::DirRemove),
+            dir_path: dir_path.to_owned(),
+        }
     }
 
     /// Encode to wire bytes.
@@ -180,7 +186,14 @@ impl DirList {
         }
         let dir_path = read_fixed(&buf[after_hdr..after_hdr + PATH_WIDTH]);
         let dir_info = buf[after_hdr + PATH_WIDTH..].to_vec();
-        Ok((Self { header, dir_path, dir_info }, buf.len()))
+        Ok((
+            Self {
+                header,
+                dir_path,
+                dir_info,
+            },
+            buf.len(),
+        ))
     }
 }
 
@@ -280,9 +293,18 @@ impl FileRead {
         let (header, hdr_used) = MsgHead::decode(buf)?;
         let after_hdr = hdr_used + 1;
         if buf.len() < after_hdr {
-            return Err(DecodeError::TooShort { needed: after_hdr, got: buf.len() });
+            return Err(DecodeError::TooShort {
+                needed: after_hdr,
+                got: buf.len(),
+            });
         }
-        Ok((Self { header, data: buf[after_hdr..].to_vec() }, buf.len()))
+        Ok((
+            Self {
+                header,
+                data: buf[after_hdr..].to_vec(),
+            },
+            buf.len(),
+        ))
     }
 }
 
@@ -298,7 +320,10 @@ pub struct FileRemove {
 impl FileRemove {
     /// Build a new `FileRemove`.
     pub fn new(file_name: &str) -> Self {
-        Self { header: file_header(ActionType::FileRemove), file_name: file_name.to_owned() }
+        Self {
+            header: file_header(ActionType::FileRemove),
+            file_name: file_name.to_owned(),
+        }
     }
 
     /// Encode.
@@ -503,8 +528,16 @@ mod tests {
         // Bug: action_type = DirRename (4), both name fields = input
         let msg = FileRename::new("/sd/foo.txt");
         let wire = msg.to_wire().unwrap();
-        assert_eq!(wire[6], ActionType::DirRename as u8, "B1: should still be DirRename");
-        assert_eq!(wire[7], ActionType::DirRename as u8, "B1: duplicate also DirRename");
+        assert_eq!(
+            wire[6],
+            ActionType::DirRename as u8,
+            "B1: should still be DirRename"
+        );
+        assert_eq!(
+            wire[7],
+            ActionType::DirRename as u8,
+            "B1: duplicate also DirRename"
+        );
         // Both name fields contain the same path
         let first = &wire[8..(8 + PATH_WIDTH)];
         let second = &wire[(8 + PATH_WIDTH)..(8 + 2 * PATH_WIDTH)];
@@ -517,7 +550,11 @@ mod tests {
         // Bug: action_type = DirList (5), not FileGetInfo (11)
         let msg = FileGetInfo::request("/sd/foo.txt");
         let wire = msg.to_wire().unwrap();
-        assert_eq!(wire[6], ActionType::DirList as u8, "B2: should still be DirList");
+        assert_eq!(
+            wire[6],
+            ActionType::DirList as u8,
+            "B2: should still be DirList"
+        );
         assert_eq!(wire[7], ActionType::DirList as u8);
     }
 }

@@ -171,7 +171,10 @@ mod tests {
 
     #[test]
     fn action_type_rejects_unknown() {
-        assert!(matches!(ActionType::from_wire(14), Err(DecodeError::UnknownAction(14))));
+        assert!(matches!(
+            ActionType::from_wire(14),
+            Err(DecodeError::UnknownAction(14))
+        ));
     }
 
     #[test]

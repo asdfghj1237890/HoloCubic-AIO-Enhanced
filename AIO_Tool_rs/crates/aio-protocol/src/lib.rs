@@ -7,11 +7,11 @@
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
 
-pub mod types;
 pub mod error;
+pub mod file;
 pub mod header;
 pub mod setting;
-pub mod file;
+pub mod types;
 
 // TODO(group-B/C): restore re-exports as modules gain real content:
 pub use error::{DecodeError, EncodeError};
