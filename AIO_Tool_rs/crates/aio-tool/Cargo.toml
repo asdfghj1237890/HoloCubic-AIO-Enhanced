@@ -23,3 +23,7 @@ aio-i18n      = { path = "../aio-i18n" }
 aio-device    = { path = "../aio-device" }
 aio-flasher   = { path = "../aio-flasher" }
 aio-converter = { path = "../aio-converter" }
+
+[dev-dependencies]
+regex      = "1"
+serde_json = { workspace = true }

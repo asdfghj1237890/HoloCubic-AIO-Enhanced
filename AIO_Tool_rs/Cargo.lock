@@ -105,7 +105,9 @@ dependencies = [
  "aio-protocol",
  "eframe",
  "egui",
+ "regex",
  "rfd",
+ "serde_json",
  "serialport",
 ]
 

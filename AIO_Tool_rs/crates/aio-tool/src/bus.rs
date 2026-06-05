@@ -9,6 +9,7 @@
 //! The variant set will grow as Tasks 4-8 (Plan 6) and later plans add
 //! features. Anything that crosses thread boundaries goes through here.
 
+use aio_converter::ConvertEvent;
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 /// One discrete update from a background worker to the GUI.
@@ -18,19 +19,14 @@ pub enum AppEvent {
     /// `aio_flasher::FlashEvent` keeps the rich event shape
     /// (PartitionStart / Progress / PartitionDone …) intact across the bus.
     Flash(aio_flasher::FlashEvent),
-    /// Image / video conversion progress update (0.0..=1.0).
-    Convert {
-        /// Fraction complete.
-        fraction: f32,
-        /// Human-readable status line.
-        message: String,
-    },
     /// Flash worker finished. `Ok(())` on success; `Err` carries the rendered
     /// error message ready for display.
     FlashFinished(Result<(), String>),
-    /// Convert worker finished. `Ok` carries a brief summary; `Err` carries
-    /// the rendered error message ready for display.
-    ConvertFinished(Result<String, String>),
+    /// Event from an Image / Video Converter background op.
+    Convert(ConvertEvent),
+    /// Converter background op finished. `Ok` carries the encoded byte
+    /// payload; `Err` carries the rendered error message ready for display.
+    ConvertFinished(Result<Vec<u8>, String>),
 }
 
 /// Sender half of the bus. Workers hold cloned copies.

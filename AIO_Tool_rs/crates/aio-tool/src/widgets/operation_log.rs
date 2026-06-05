@@ -30,6 +30,11 @@ impl OperationLog {
         self.lines.is_empty()
     }
 
+    /// Last pushed line (test convenience). Returns `""` if empty.
+    pub fn tail(&self) -> &str {
+        self.lines.last().map(String::as_str).unwrap_or("")
+    }
+
     /// Render in a scrollable area; sticks to bottom so latest line is visible.
     pub fn show(&self, ui: &mut Ui) {
         ScrollArea::vertical()
