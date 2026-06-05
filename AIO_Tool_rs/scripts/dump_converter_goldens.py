@@ -106,8 +106,13 @@ def dump_goldens() -> None:
         if not src.exists():
             print(f"SKIP {fixture} (not found)")
             continue
+        # NOTE: Converter.__init__ ALREADY calls self.convert(self.cf, alpha)
+        # internally (convertor_core.py:127). Re-calling .convert() here would
+        # replay over dirty r_earr/g_earr/b_earr state and produce different
+        # bytes than the GUI tool. The GUI path (page/images_converter.py:340)
+        # never calls .convert() again — it goes straight to get_bin_file.
+        # Mirror that.
         conv = Converter(str(src), dith=dither, cf=cf)
-        conv.convert(cf=cf)
         stem = fixture.rsplit(".", 1)[0]
         out_name = f"{stem}.{suffix}.bin"
         out = OUT_DIR / out_name
