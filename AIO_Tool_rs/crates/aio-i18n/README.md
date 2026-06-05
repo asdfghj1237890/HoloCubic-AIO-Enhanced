@@ -49,7 +49,12 @@ Three layers:
 
 1. Edit all three `i18n/<locale>.json` files. **Add the key to all three at
    once** — `cargo build` will reject anything else.
-2. Optionally add a golden snapshot test for the new key if it has
+2. **Values must be strings.** `build.rs` checks key sets only, not value
+   types. A non-string value (number, null, object) compiles fine but the
+   runtime parse falls back to an empty translation table for that locale
+   (D5), so every key returns its key name instead of a translation —
+   silent on Windows, very visible on the screen. Don't ship `"key": null`.
+3. Optionally add a golden snapshot test for the new key if it has
    structurally interesting shape (multi-line, format characters, etc.).
 
 ## Stability

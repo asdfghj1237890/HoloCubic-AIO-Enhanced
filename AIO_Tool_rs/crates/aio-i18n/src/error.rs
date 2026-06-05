@@ -15,10 +15,6 @@ pub enum LoadError {
     #[error("config file is not a JSON object")]
     NotAnObject,
 
-    /// The `language` field was present but wasn't a known locale code (Plan 2 D3).
-    #[error("unknown language code in config: {0}")]
-    UnknownLang(String),
-
     /// JSON syntax error.
     #[error("json parse error: {0}")]
     Json(#[from] serde_json::Error),

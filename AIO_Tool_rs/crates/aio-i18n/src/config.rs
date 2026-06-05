@@ -72,8 +72,17 @@ fn load_language_from(path: &Path) -> Result<Lang, LoadError> {
         return Ok(Lang::DEFAULT);
     }
     let contents = fs::read_to_string(path)?;
-    let doc: ConfigDoc = serde_json::from_str(&contents)?;
+    // Parse to Value first so non-object JSON (array, scalar) surfaces as
+    // `NotAnObject` rather than a generic `serde_json::Error`. Matches
+    // Python's `_load_translation` non-object guard (D5).
+    let value: serde_json::Value = serde_json::from_str(&contents)?;
+    if !value.is_object() {
+        return Err(LoadError::NotAnObject);
+    }
+    let doc: ConfigDoc = serde_json::from_value(value)?;
     match doc.language.as_deref() {
+        // Unknown lang code silently falls back to default (D3); we deliberately
+        // do not propagate this as an error variant.
         Some(code) => Ok(code.parse().unwrap_or(Lang::DEFAULT)),
         None => Ok(Lang::DEFAULT),
     }
@@ -176,5 +185,32 @@ mod tests {
             "unknown lang code must fall back to default"
         );
         let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn load_non_object_json_surfaces_not_an_object() {
+        // Array at top level — should produce `NotAnObject`, not a generic JSON error.
+        let path = fresh_tmp_config("array");
+        fs::write(&path, r#"["not", "a", "config"]"#).unwrap();
+
+        match load_language_from(&path) {
+            Err(LoadError::NotAnObject) => {}
+            other => panic!("expected LoadError::NotAnObject, got {other:?}"),
+        }
+        let _ = fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn save_creates_missing_parent_dir() {
+        // Use a path whose parent's parent doesn't exist yet — save should mkdir -p.
+        let base = fresh_tmp_config("nested_parent");
+        let nested = base.parent().unwrap().join("a/b/c/config.json");
+        // Verify the nested dirs really don't exist before the save.
+        assert!(!nested.parent().unwrap().exists());
+
+        save_language_to(&nested, Lang::EnUs).expect("save should mkdir -p");
+        let loaded = load_language_from(&nested).expect("load should succeed");
+        assert_eq!(loaded, Lang::EnUs);
+        let _ = fs::remove_dir_all(base.parent().unwrap());
     }
 }
