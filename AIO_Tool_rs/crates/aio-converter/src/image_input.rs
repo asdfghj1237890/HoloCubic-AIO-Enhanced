@@ -69,4 +69,22 @@ mod tests {
         let err = decode_image(b"not a png").unwrap_err();
         assert!(matches!(err, ConvertError::Decode(_)));
     }
+
+    #[test]
+    fn decode_corrupted_png_header_returns_decode_error() {
+        // Valid PNG signature followed by garbage — the image crate parses
+        // the signature, then errors on the malformed chunk. Verifies we
+        // map all decode failure paths (not just "obviously not an image")
+        // to ConvertError::Decode.
+        let mut bad_png = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]; // PNG sig
+        bad_png.extend_from_slice(b"corrupted chunk data, not a valid IHDR");
+        let err = decode_image(&bad_png).unwrap_err();
+        assert!(matches!(err, ConvertError::Decode(_)));
+    }
+
+    #[test]
+    fn decode_empty_input_returns_decode_error() {
+        let err = decode_image(&[]).unwrap_err();
+        assert!(matches!(err, ConvertError::Decode(_)));
+    }
 }

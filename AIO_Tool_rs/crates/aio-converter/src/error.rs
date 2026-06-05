@@ -20,7 +20,13 @@ pub enum ConvertError {
         max: u32,
     },
 
-    /// IO failure writing output bin / C file (when the converter writes to disk).
+    /// IO failure writing output bin / C file.
+    ///
+    /// **Currently dormant**: `encode_bin` returns `Vec<u8>` and
+    /// `encode_c_array` returns `String` — no disk I/O in this crate today.
+    /// The variant is reserved for a future `encode_bin_to_path` convenience
+    /// that Plan 9's Image Converter tab may want here rather than
+    /// re-implementing path / UTF-8 normalization in the GUI crate.
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
 

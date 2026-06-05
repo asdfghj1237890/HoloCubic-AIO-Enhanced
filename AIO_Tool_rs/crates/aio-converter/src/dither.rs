@@ -219,6 +219,23 @@ mod tests {
     }
 
     #[test]
+    fn dither_overshoot_capped_by_caller_max_rgb() {
+        // Feed solid bright pixels at 5-bit R precision (tmp=8, ceil rounds
+        // UP). r=255 → ceil(255/8)*8 = 256, classify_pixel clamps to 255
+        // before the caller-side cap. With max_rgb=0xF8 (RGB565), the cap
+        // brings it back to 0xF8. This pins the chain that prevents
+        // accumulated error overflow from producing a u8 > LVGL's mask.
+        let mut d = Dither::new(8, 5, 6, 5);
+        let max_rgb = (0xF8u8, 0xFCu8, 0xF8u8);
+        for x in 0..8 {
+            let (r, g, b) = d.next(255, 255, 255, x, max_rgb);
+            assert!(r <= 0xF8, "R={r:#x} exceeded cap 0xF8 at x={x}");
+            assert!(g <= 0xFC, "G={g:#x} exceeded cap 0xFC at x={x}");
+            assert!(b <= 0xF8, "B={b:#x} exceeded cap 0xF8 at x={x}");
+        }
+    }
+
+    #[test]
     fn round_div16_banker_ties_to_even() {
         // 8/16 = 0.5 → ties to even (0). 24/16 = 1.5 → ties to even (2).
         assert_eq!(round_div16(8), 0);

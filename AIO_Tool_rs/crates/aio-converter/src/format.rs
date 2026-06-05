@@ -9,7 +9,9 @@ pub enum ColorFormat {
     Rgb565,
     /// 16-bit RGB565 with byte-swapped pixel data (big-endian per pixel).
     Rgb565Swap,
-    /// 24-bit RGB888 — 3 bytes per pixel.
+    /// RGB888 — 4 bytes per pixel on the wire (B, G, R, A). Nominally a
+    /// 24-bit format, but the legacy Python tool unconditionally appends
+    /// alpha (`convertor_core.py:431`), so the actual output is 32 bits/px.
     Rgb888,
     /// 1-bit indexed — 2-entry palette + packed bits.
     Indexed1,
@@ -48,12 +50,19 @@ impl ColorFormat {
         }
     }
 
-    /// Bits per pixel for the pixel-data section.
+    /// Bits per pixel **as actually emitted by `encode_bin`**.
+    ///
+    /// Callers (Plan 9 GUI buffer pre-allocation) should use this to size
+    /// output buffers. For `Rgb888` this returns **32** (not the nominal 24)
+    /// because the encoder unconditionally appends alpha — matches Python
+    /// `convertor_core.py:431`. Indexed formats return the per-pixel index
+    /// width; the palette itself is a fixed-size prefix that callers compute
+    /// separately as `2^bits_per_pixel × 4` bytes.
     pub fn bits_per_pixel(self) -> u32 {
         match self {
             Self::Rgb332 => 8,
             Self::Rgb565 | Self::Rgb565Swap => 16,
-            Self::Rgb888 => 24,
+            Self::Rgb888 => 32, // B + G + R + A — see encoder at encoders/rgb.rs:128-137
             Self::Indexed1 | Self::Alpha1 => 1,
             Self::Indexed2 | Self::Alpha2 => 2,
             Self::Indexed4 | Self::Alpha4 => 4,
@@ -80,10 +89,14 @@ mod tests {
     }
 
     #[test]
-    fn bits_per_pixel_correct() {
+    fn bits_per_pixel_matches_encoder_output() {
+        // Asserts the function returns what the encoder actually writes —
+        // important for downstream buffer pre-sizing. RGB888 must be 32
+        // (B+G+R+A) not the nominal 24; this pin catches regressions if a
+        // refactor accidentally reverts to nominal-bits.
         assert_eq!(ColorFormat::Rgb332.bits_per_pixel(), 8);
         assert_eq!(ColorFormat::Rgb565.bits_per_pixel(), 16);
-        assert_eq!(ColorFormat::Rgb888.bits_per_pixel(), 24);
+        assert_eq!(ColorFormat::Rgb888.bits_per_pixel(), 32);
         assert_eq!(ColorFormat::Indexed1.bits_per_pixel(), 1);
         assert_eq!(ColorFormat::Alpha8.bits_per_pixel(), 8);
     }
