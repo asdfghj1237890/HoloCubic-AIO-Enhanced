@@ -122,7 +122,15 @@ pub fn show(ui: &mut Ui, state: &mut FlasherState) {
                     ui.monospace(format!("0x{:08x}", PARTITION_ADDRESSES[i]));
                     ui.text_edit_singleline(&mut part.path);
                     if ui.button(t(PARTITION_BUTTON_KEYS[i], None)).clicked() {
-                        // File picker wired in Task 6.
+                        if let Some(path) = rfd::FileDialog::new()
+                            .add_filter("Binary", &["bin"])
+                            .pick_file()
+                        {
+                            if let Some(s) = path.to_str() {
+                                part.path = s.to_owned();
+                                part.enabled = true;
+                            }
+                        }
                     }
                     ui.end_row();
                 }
