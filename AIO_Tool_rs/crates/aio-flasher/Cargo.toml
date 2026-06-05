@@ -8,5 +8,6 @@ repository.workspace = true
 description = "HoloCubic AIO firmware flasher — wraps espflash for partition writes with real progress + cooperative cancellation"
 
 [dependencies]
-espflash  = { workspace = true }
-thiserror = { workspace = true }
+espflash   = { workspace = true }
+serialport = { workspace = true }
+thiserror  = { workspace = true }

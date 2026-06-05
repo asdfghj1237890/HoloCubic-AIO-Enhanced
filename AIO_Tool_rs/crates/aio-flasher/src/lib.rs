@@ -19,9 +19,8 @@ pub mod flasher;
 pub mod partition;
 pub mod progress;
 
-// TODO(plan-4): restore re-exports as modules gain real content:
 pub use error::FlashError;
-// pub use flasher::Flasher;
+pub use flasher::Flasher;
 pub use partition::{
     Partition, PARTITION_BOOTAPP0, PARTITION_BOOTLOADER, PARTITION_FIRMWARE, PARTITION_PARTITIONS,
 };

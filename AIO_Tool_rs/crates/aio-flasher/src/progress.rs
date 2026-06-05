@@ -47,29 +47,18 @@ pub enum FlashEvent {
 
 /// Bridge between espflash's `ProgressCallbacks` trait and our `mpsc::Sender`.
 ///
-/// Constructed inside `Flasher::write_partitions` and passed to espflash.
-/// Holds a reference to the cancel flag — if the flag is set while espflash
-/// is mid-write, the next `update` callback returns an error that espflash
-/// propagates as `EspflashError::Aborted` or similar (the exact mechanism
-/// depends on espflash version, verified at Task 4 implementation).
-//
-// `dead_code` silenced — Flasher (Task 4) is the real caller; tests exercise
-// the bridge methods directly. Strip the allow when Task 4 lands.
-#[allow(dead_code)]
+/// Used by `Flasher::erase` for the EraseStart / EraseDone bookend (espflash
+/// 3.3.0's `erase_flash` does not surface per-block progress, so there's no
+/// `ProgressCallbacks` hookup there). `Flasher::write_partitions` uses a
+/// dedicated `CallbackAdapter` instead — see `flasher.rs`.
 pub(crate) struct ProgressBridge {
     pub(crate) tx: Sender<FlashEvent>,
     pub(crate) cancel: Arc<AtomicBool>,
-    pub(crate) current_index: usize,
 }
 
-#[allow(dead_code)]
 impl ProgressBridge {
     pub(crate) fn new(tx: Sender<FlashEvent>, cancel: Arc<AtomicBool>) -> Self {
-        Self {
-            tx,
-            cancel,
-            current_index: 0,
-        }
+        Self { tx, cancel }
     }
 
     pub(crate) fn is_cancelled(&self) -> bool {

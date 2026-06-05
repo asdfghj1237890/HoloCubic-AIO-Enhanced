@@ -31,6 +31,7 @@ name = "aio-flasher"
 version = "3.0.0-dev"
 dependencies = [
  "espflash",
+ "serialport",
  "thiserror 1.0.69",
 ]
 
