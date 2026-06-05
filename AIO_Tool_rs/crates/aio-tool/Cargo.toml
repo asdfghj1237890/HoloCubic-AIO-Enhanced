@@ -17,6 +17,7 @@ eframe       = { workspace = true }
 egui         = { workspace = true }
 rfd          = { workspace = true }
 serialport   = { workspace = true, features = ["libudev"] }
+serde_json   = { workspace = true, features = ["preserve_order"] }
 
 aio-protocol  = { path = "../aio-protocol" }
 aio-i18n      = { path = "../aio-i18n" }
@@ -25,5 +26,4 @@ aio-flasher   = { path = "../aio-flasher" }
 aio-converter = { path = "../aio-converter" }
 
 [dev-dependencies]
-regex      = "1"
-serde_json = { workspace = true }
+regex = "1"

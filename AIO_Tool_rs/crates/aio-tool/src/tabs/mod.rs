@@ -10,6 +10,7 @@ pub mod flasher;
 pub mod help;
 pub mod image_converter;
 pub mod settings;
+pub mod settings_schema;
 pub mod tool_settings;
 pub mod video_converter;
 
