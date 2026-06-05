@@ -74,6 +74,38 @@ impl Default for FlasherState {
     }
 }
 
+/// Spawn a transient thread that opens the serial port, writes the 2-byte
+/// remote-control command, and closes. On error, route through the bus
+/// as a FlashFinished(Err) so the user sees the failure in the log.
+fn spawn_remote_send(state: &mut FlasherState, bus_tx: &crate::bus::AppEventTx, cmd: &[u8]) {
+    let port = state.port.clone();
+    let baud: u32 = state.baud.parse().unwrap_or(115_200);
+    let bus_tx = bus_tx.clone();
+    let cmd_bytes: Vec<u8> = cmd.to_vec();
+    // Log immediately on the egui thread so the user sees instant feedback.
+    state
+        .log
+        .push(format!("→ {}", String::from_utf8_lossy(&cmd_bytes)));
+    std::thread::spawn(move || {
+        use aio_device::Transport;
+        let result: Result<(), String> = (|| {
+            let mut transport = aio_device::serial::SerialTransport::open(&port, baud)
+                .map_err(|e| format!("open: {e}"))?;
+            transport
+                .write_all(&cmd_bytes)
+                .map_err(|e| format!("write: {e}"))?;
+            transport.close();
+            Ok(())
+        })();
+        if let Err(msg) = result {
+            let _ = bus_tx.send(crate::bus::AppEvent::FlashFinished(Err(format!(
+                "remote {}: {msg}",
+                String::from_utf8_lossy(&cmd_bytes),
+            ))));
+        }
+    });
+}
+
 /// Render the Flasher tab. Action wiring lands in Tasks 5-8.
 pub fn show(ui: &mut Ui, state: &mut FlasherState, bus_tx: &crate::bus::AppEventTx) {
     // Lazy first-time port enumeration so the dropdown isn't empty before
@@ -264,6 +296,30 @@ pub fn show(ui: &mut Ui, state: &mut FlasherState, bus_tx: &crate::bus::AppEvent
                     .cancel
                     .store(true, std::sync::atomic::Ordering::Relaxed);
                 state.log.push("Cancellation requested...");
+            }
+        });
+
+        ui.separator();
+
+        // Remote control row: 5 buttons (Up / Left / Right / OK / Home)
+        // send a 2-byte command via a short-lived serial connection.
+        ui.horizontal(|ui| {
+            ui.label(t("remote_control", None));
+            ui.add_space(10.0);
+            let enabled = !state.busy && !state.port.is_empty();
+            for (label_key, cmd) in [
+                ("btn_up", b"~U" as &[u8]),
+                ("btn_left", b"~L"),
+                ("btn_right", b"~R"),
+                ("btn_ok", b"~F"),
+                ("btn_home", b"~H"),
+            ] {
+                if ui
+                    .add_enabled(enabled, egui::Button::new(t(label_key, None)))
+                    .clicked()
+                {
+                    spawn_remote_send(state, bus_tx, cmd);
+                }
             }
         });
 
