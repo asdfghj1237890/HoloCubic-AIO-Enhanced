@@ -4,8 +4,16 @@
 
 use aio_i18n::t;
 use egui::{ComboBox, Grid, Ui};
+use serialport::available_ports;
 
 use crate::widgets::operation_log::OperationLog;
+
+/// Refresh `state.available_ports` from the OS port enumeration.
+pub fn refresh_ports(state: &mut FlasherState) {
+    state.available_ports = available_ports()
+        .map(|ports| ports.into_iter().map(|p| p.port_name).collect())
+        .unwrap_or_default();
+}
 
 /// Standard ESP32 flash addresses for the 4 partitions.
 pub const PARTITION_ADDRESSES: [u32; 4] = [
@@ -52,6 +60,15 @@ impl Default for FlasherState {
 
 /// Render the Flasher tab. Action wiring lands in Tasks 5-8.
 pub fn show(ui: &mut Ui, state: &mut FlasherState) {
+    // Lazy first-time port enumeration so the dropdown isn't empty before
+    // the user clicks ⟳.
+    if state.available_ports.is_empty() && state.port.is_empty() {
+        refresh_ports(state);
+        if let Some(first) = state.available_ports.first() {
+            state.port = first.clone();
+        }
+    }
+
     ui.vertical(|ui| {
         // Top section: serial config row.
         ui.horizontal(|ui| {
@@ -68,7 +85,7 @@ pub fn show(ui: &mut Ui, state: &mut FlasherState) {
                     }
                 });
             if ui.button("⟳").clicked() {
-                // Refresh action wired in Task 5.
+                refresh_ports(state);
             }
             ui.add_space(20.0);
             ui.label(t("baud_rate", None));
