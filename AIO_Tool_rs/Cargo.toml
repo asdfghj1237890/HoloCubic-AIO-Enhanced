@@ -25,6 +25,11 @@ espflash    = { version = "=3.3.0", default-features = false, features = ["seria
 # pinned to 1.82. Documents intent; actual enforcement is via Cargo.lock.
 # Any `cargo update -p indexmap` needs review before merge.
 indexmap    = "=2.7.1"
+# image 0.25.10 requires Rust 1.88 (edition2024 via moxcms transitive);
+# 0.25.0..=0.25.6 have rust-version = 1.70 which fits our 1.82 pin. PIN to
+# 0.25.6 exactly so `cargo update -p image` doesn't accidentally pull a
+# version we can't build. Any bump past 0.25.6 needs review.
+image       = { version = "=0.25.6", default-features = false, features = ["png", "jpeg", "bmp"] }
 
 [profile.release]
 lto       = "thin"
