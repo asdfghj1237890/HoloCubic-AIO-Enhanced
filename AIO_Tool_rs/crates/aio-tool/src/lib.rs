@@ -1,1 +1,9 @@
-//! placeholder — implemented in Plan 6 Task 2
+//! aio-tool library entry — re-exports for `bin/main.rs` and tests.
+#![deny(missing_docs)]
+#![deny(unsafe_code)]
+
+pub mod app;
+pub mod bus;
+pub mod tabs;
+pub mod theme;
+pub mod widgets;
