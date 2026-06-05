@@ -115,6 +115,34 @@ pub fn show(ui: &mut Ui, state: &mut SettingsState, bus_tx: &crate::bus::AppEven
 
         ui.separator();
 
+        // Read All / Write Changes action row (Group D).
+        ui.horizontal(|ui| {
+            let connected = matches!(state.state, DeviceState::Connected);
+
+            if ui
+                .add_enabled(connected, egui::Button::new(t("read_settings", None)))
+                .clicked()
+            {
+                if let Some(tx) = &state.cmd_tx {
+                    let mut sent = 0usize;
+                    for key in schema() {
+                        if tx
+                            .send(SettingsCmd::Get {
+                                prefs_name: key.namespace.clone(),
+                                key: key.key.clone(),
+                            })
+                            .is_ok()
+                        {
+                            sent += 1;
+                        }
+                    }
+                    state.log.push(format!("Sent {sent} Get commands."));
+                }
+            }
+        });
+
+        ui.separator();
+
         // Per-namespace form. Group D wires read/write actions.
         ScrollArea::vertical().show(ui, |ui| {
             let mut current_ns: Option<String> = None;
