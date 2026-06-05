@@ -1,0 +1,17 @@
+[package]
+name = "aio-protocol"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HoloCubic AIO wire protocol — encode/decode for MsgHead and sub-messages"
+
+[dependencies]
+bytes     = { workspace = true }
+byteorder = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+hex      = { workspace = true }
