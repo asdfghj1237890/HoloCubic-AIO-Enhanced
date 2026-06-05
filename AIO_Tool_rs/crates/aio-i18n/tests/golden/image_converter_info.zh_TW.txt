@@ -1,0 +1,13 @@
+
+        本功能為 LVGL 圖片轉換工具，可輸入任意解析度的圖片，轉換成您指定的解析度。
+        可以同時選擇多張圖片進行批次轉換。轉換完成的圖片會儲存在本軟體同級目錄的 OutFile 資料夾下。
+        注意：OutFile/Cache 為快取目錄，可自行刪除。
+
+        若要轉換為記憶卡中的 jpg 圖片，請勾選：「JPG 格式輸出」
+
+        若要轉換為記憶卡中的 bin 圖片，請取消勾選「JPG 格式輸出」，並選擇：
+            ColorFormat：CF_TRUE_COLOR_ALPHA    OutputFormat：Binary_565
+
+        若要轉換為 Flash 韌體中的陣列程式碼，請取消勾選「JPG 格式輸出」，並選擇：
+            ColorFormat：CF_INDEXED_4_BIT    OutputFormat：C_array
+        

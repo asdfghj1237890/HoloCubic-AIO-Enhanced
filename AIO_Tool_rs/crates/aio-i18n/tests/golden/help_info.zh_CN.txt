@@ -1,0 +1,16 @@
+
+        本上位机专门针对HoloCubic AIO固件开发，其中固件烧录功能兼容其他第三方固件。
+
+        【最新版本固件 / 本工具增强版】
+            https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced
+
+        观看演示链接：
+            https://www.bilibili.com/video/BV1wS4y1R7YF?p=1
+
+        了解Holocubic AIO固件
+            原始版本 https://github.com/ClimbSnail/HoloCubic_AIO
+            或者     https://gitee.com/ClimbSnailQ/HoloCubic_AIO
+
+        了解Holocubic硬件开源方案
+            请访问 https://github.com/peng-zhihui/HoloCubic
+        
