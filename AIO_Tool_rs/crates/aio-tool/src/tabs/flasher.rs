@@ -23,6 +23,16 @@ pub const PARTITION_ADDRESSES: [u32; 4] = [
     aio_flasher::PARTITION_FIRMWARE,
 ];
 
+/// i18n keys for the per-partition "Select bin file" button labels. Matches
+/// the legacy tool's `download_debug.py:85-97` placeholder strings so users
+/// see "Select Bootloader bin file" instead of a generic "Choose File".
+pub const PARTITION_BUTTON_KEYS: [&str; 4] = [
+    "choose_bootloader",
+    "choose_partitions",
+    "choose_boot_app0",
+    "choose_firmware",
+];
+
 /// Per-partition path + enabled flag.
 #[derive(Default, Clone)]
 pub struct PartitionEntry {
@@ -111,7 +121,7 @@ pub fn show(ui: &mut Ui, state: &mut FlasherState) {
                     ui.checkbox(&mut part.enabled, "");
                     ui.monospace(format!("0x{:08x}", PARTITION_ADDRESSES[i]));
                     ui.text_edit_singleline(&mut part.path);
-                    if ui.button(t("choose_file", None)).clicked() {
+                    if ui.button(t(PARTITION_BUTTON_KEYS[i], None)).clicked() {
                         // File picker wired in Task 6.
                     }
                     ui.end_row();
@@ -122,7 +132,7 @@ pub fn show(ui: &mut Ui, state: &mut FlasherState) {
 
         // Action buttons row.
         ui.horizontal(|ui| {
-            if ui.button(t("erase_flash", None)).clicked() {
+            if ui.button(t("clear_flash", None)).clicked() {
                 // Wired in Task 7.
             }
             if ui.button(t("flash_firmware", None)).clicked() {
