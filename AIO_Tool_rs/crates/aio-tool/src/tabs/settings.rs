@@ -139,6 +139,69 @@ pub fn show(ui: &mut Ui, state: &mut SettingsState, bus_tx: &crate::bus::AppEven
                     state.log.push(format!("Sent {sent} Get commands."));
                 }
             }
+
+            // Compute the set of keys whose current value differs from baseline.
+            // (Read on the egui thread; the worker can't observe state.values directly.)
+            let changes: Vec<(String, String)> = schema()
+                .iter()
+                .filter_map(|k| {
+                    let current = state.values.get(&k.key)?;
+                    let baseline = state.baseline.get(&k.key);
+                    if Some(current) == baseline {
+                        None
+                    } else {
+                        Some((k.key.clone(), current.clone()))
+                    }
+                })
+                .collect();
+
+            let can_write = connected && !changes.is_empty();
+            if ui
+                .add_enabled(
+                    can_write,
+                    egui::Button::new(format!("{} ({})", t("write_changes", None), changes.len())),
+                )
+                .clicked()
+            {
+                if let Some(tx) = &state.cmd_tx {
+                    // Build a key → SettingKey def lookup so we can dispatch the
+                    // right ValueType per key.
+                    let key_to_def: std::collections::HashMap<
+                        &str,
+                        &crate::tabs::settings_schema::SettingKey,
+                    > = schema().iter().map(|k| (k.key.as_str(), k)).collect();
+
+                    let mut sent = 0usize;
+                    for (key, value) in &changes {
+                        let def = match key_to_def.get(key.as_str()) {
+                            Some(d) => *d,
+                            None => continue,
+                        };
+                        let value_type = match def.value_type.as_str() {
+                            "String" => aio_protocol::ValueType::String,
+                            "UChar" => aio_protocol::ValueType::Uchar,
+                            _ => aio_protocol::ValueType::Unknown,
+                        };
+                        if tx
+                            .send(SettingsCmd::Set {
+                                prefs_name: def.namespace.clone(),
+                                key: key.clone(),
+                                value_type,
+                                value: value.clone(),
+                            })
+                            .is_ok()
+                        {
+                            sent += 1;
+                        }
+                    }
+                    state.log.push(format!("Sent {sent} Set commands."));
+
+                    // Update baseline so subsequent Write Changes only sends NEW diffs.
+                    for (key, value) in changes {
+                        state.baseline.insert(key, value);
+                    }
+                }
+            }
         });
 
         ui.separator();
