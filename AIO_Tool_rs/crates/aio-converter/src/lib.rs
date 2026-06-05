@@ -19,8 +19,7 @@ pub mod header;
 pub mod image_input;
 pub mod progress;
 
-// TODO(plan-5): restore re-exports as modules gain real content
+pub use converter::Converter;
 pub use error::ConvertError;
 pub use format::ColorFormat;
-// pub use converter::Converter;    // restored in Task 6
 pub use progress::ConvertEvent;
