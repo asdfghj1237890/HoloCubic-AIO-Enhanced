@@ -70,7 +70,7 @@ pub fn encode(
     let bytes_per_pixel: u32 = match fmt {
         ColorFormat::Rgb332 => 1,
         ColorFormat::Rgb565 | ColorFormat::Rgb565Swap => 2,
-        ColorFormat::Rgb888 => 3,
+        ColorFormat::Rgb888 => 4, // B, G, R, A — Python emits 4 bytes unconditionally (convertor_core.py:431)
         _ => unreachable!(),
     };
     let mut out = Vec::with_capacity((w * h * bytes_per_pixel) as usize);
@@ -126,10 +126,14 @@ pub fn encode(
                     out.push((c16 & 0xFF) as u8);
                 }
                 ColorFormat::Rgb888 => {
-                    // B, G, R per convertor_core.py:428-430.
+                    // B, G, R, A per convertor_core.py:428-431. Alpha is
+                    // unconditional for RGB888 (unlike 332/565/565_swap
+                    // which gate alpha on self.alpha).
+                    let a = img.get_pixel(x, y)[3];
                     out.push(b_act);
                     out.push(g_act);
                     out.push(r_act);
+                    out.push(a);
                 }
                 _ => unreachable!(),
             }
@@ -182,11 +186,12 @@ mod tests {
     }
 
     #[test]
-    fn rgb888_solid_color_emits_bgr_order() {
-        // R=10, G=20, B=30. 8-bit classify is no-op; output is B, G, R.
+    fn rgb888_solid_color_emits_bgra_order() {
+        // R=10, G=20, B=30. 8-bit classify is no-op; output is B, G, R, A.
+        // `solid` constructs Rgba8Image with alpha=255 (the 4th arg below).
         let img = solid(1, 1, 10, 20, 30);
         let out = encode(&img, ColorFormat::Rgb888, false, None, None).unwrap();
-        assert_eq!(out, vec![30, 20, 10]);
+        assert_eq!(out, vec![30, 20, 10, 255]);
     }
 
     #[test]
