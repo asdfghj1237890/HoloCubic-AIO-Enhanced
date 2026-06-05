@@ -4,6 +4,7 @@
 
 pub mod app;
 pub mod bus;
+pub mod settings_worker;
 pub mod tabs;
 pub mod theme;
 pub mod widgets;

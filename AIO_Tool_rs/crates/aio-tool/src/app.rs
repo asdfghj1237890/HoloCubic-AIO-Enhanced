@@ -82,6 +82,27 @@ impl App {
                 crate::bus::AppEvent::Convert(_) | crate::bus::AppEvent::ConvertFinished(_) => {
                     // Plan 9 handler.
                 }
+                crate::bus::AppEvent::SettingsConnected => {
+                    // Placeholder log; the settings tab's UI handler is in Group C.
+                    // For now just log to the FLASHER log so we can see it during dev.
+                    // Group C wires this to settings.log instead.
+                    self.flasher.log.push("Settings worker connected.");
+                }
+                crate::bus::AppEvent::SettingsReceived(bytes) => {
+                    // Group C decodes via aio_protocol::SettingMsg::from_wire and routes
+                    // to per-key state. For Plan 7 Group B (no Settings UI yet), just
+                    // log the byte count.
+                    self.flasher
+                        .log
+                        .push(format!("Settings <- {} bytes", bytes.len()));
+                }
+                crate::bus::AppEvent::SettingsFinished(result) => {
+                    let line = match result {
+                        Ok(()) => "Settings disconnected.".to_owned(),
+                        Err(msg) => format!("Settings worker error: {msg}"),
+                    };
+                    self.flasher.log.push(line);
+                }
             }
         }
     }

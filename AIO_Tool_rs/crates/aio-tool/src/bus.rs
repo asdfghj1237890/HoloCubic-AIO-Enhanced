@@ -27,6 +27,12 @@ pub enum AppEvent {
     /// Converter background op finished. `Ok` carries the encoded byte
     /// payload; `Err` carries the rendered error message ready for display.
     ConvertFinished(Result<Vec<u8>, String>),
+    /// Settings worker connected the SerialTransport successfully.
+    SettingsConnected,
+    /// Raw bytes the Settings worker received from the device.
+    SettingsReceived(Vec<u8>),
+    /// Settings worker terminated (Ok = normal disconnect, Err = error).
+    SettingsFinished(Result<(), String>),
 }
 
 /// Sender half of the bus. Workers hold cloned copies.
