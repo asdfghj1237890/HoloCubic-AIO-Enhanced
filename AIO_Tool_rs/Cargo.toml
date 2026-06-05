@@ -30,6 +30,17 @@ indexmap    = "=2.7.1"
 # 0.25.6 exactly so `cargo update -p image` doesn't accidentally pull a
 # version we can't build. Any bump past 0.25.6 needs review.
 image       = { version = "=0.25.6", default-features = false, features = ["png", "jpeg", "bmp"] }
+# eframe / egui pinned to =0.29.1 — verified rust-version = 1.76 (fits 1.82
+# toolchain pin). Latest 0.34.x needs newer MSRV. `default-features = false`
+# drops accesskit + persistence; we keep `default_fonts` + `glow` (default GL
+# renderer) + Linux backends `wayland` + `x11`. Any bump past 0.29.x needs
+# review.
+eframe = { version = "=0.29.1", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
+egui   = { version = "=0.29.1" }
+# rfd pinned to =0.15.0; rust-version unknown but transitives (ashpd 0.12.3
+# at 1.75) fit 1.82. `xdg-portal` is the Linux native-dialog backend that
+# avoids pulling GTK; Windows / macOS use OS APIs by default.
+rfd    = { version = "=0.15.0", default-features = false, features = ["xdg-portal"] }
 
 [profile.release]
 lto       = "thin"
