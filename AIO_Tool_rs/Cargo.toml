@@ -38,9 +38,12 @@ image       = { version = "=0.25.6", default-features = false, features = ["png"
 eframe = { version = "=0.29.1", default-features = false, features = ["default_fonts", "glow", "wayland", "x11"] }
 egui   = { version = "=0.29.1" }
 # rfd pinned to =0.15.0; rust-version unknown but transitives (ashpd 0.12.3
-# at 1.75) fit 1.82. `xdg-portal` is the Linux native-dialog backend that
-# avoids pulling GTK; Windows / macOS use OS APIs by default.
-rfd    = { version = "=0.15.0", default-features = false, features = ["xdg-portal"] }
+# at 1.75) fit 1.82. Defaults are `xdg-portal + async-std` — exactly what we
+# want: xdg-portal avoids GTK on Linux, async-std provides ashpd's required
+# async runtime (alternative is `tokio` which the design spec forbids).
+# Earlier `default-features = false, features = ["xdg-portal"]` broke CI
+# because it disabled async-std, triggering ashpd's compile_error!.
+rfd    = { version = "=0.15.0" }
 
 [profile.release]
 lto       = "thin"
