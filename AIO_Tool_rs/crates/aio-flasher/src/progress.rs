@@ -10,11 +10,23 @@
 //! ```
 //!
 //! `Erase` operations emit `EraseStart` then `EraseDone` (no granular
-//! progress — espflash doesn't surface chip-erase progress).
-
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::Sender;
-use std::sync::Arc;
+//! progress — espflash 3.3.0's `erase_flash` does not surface per-block
+//! progress).
+//!
+//! ## Cancellation semantics
+//!
+//! Cancellation is checked at partition boundaries inside
+//! `Flasher::write_partitions` and just before the start of `Flasher::erase`.
+//! Once espflash is mid-`erase_flash` or mid-`write_bin_to_flash`, cancel
+//! can NOT interrupt the in-flight op (espflash 3.3.0's `ProgressCallbacks`
+//! methods return `()`, not `Result`). Plan 7 UI implications:
+//!
+//! - On `Cancel` during chip-erase (~10 s on 4 MB ESP32): set a
+//!   "Cancelling…" UI state and **ignore the trailing `EraseDone`**.
+//!   The next user-initiated op (e.g. `write_partitions`) WILL see the
+//!   cancel flag and return `FlashError::Cancelled` early.
+//! - On `Cancel` mid-partition-write: the current partition finishes;
+//!   the outer loop returns `FlashError::Cancelled` before the next one.
 
 /// One event emitted from a flash operation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,94 +55,4 @@ pub enum FlashEvent {
         /// Zero-based partition index.
         index: usize,
     },
-}
-
-/// Bridge between espflash's `ProgressCallbacks` trait and our `mpsc::Sender`.
-///
-/// Used by `Flasher::erase` for the EraseStart / EraseDone bookend (espflash
-/// 3.3.0's `erase_flash` does not surface per-block progress, so there's no
-/// `ProgressCallbacks` hookup there). `Flasher::write_partitions` uses a
-/// dedicated `CallbackAdapter` instead — see `flasher.rs`.
-pub(crate) struct ProgressBridge {
-    pub(crate) tx: Sender<FlashEvent>,
-    pub(crate) cancel: Arc<AtomicBool>,
-}
-
-impl ProgressBridge {
-    pub(crate) fn new(tx: Sender<FlashEvent>, cancel: Arc<AtomicBool>) -> Self {
-        Self { tx, cancel }
-    }
-
-    pub(crate) fn is_cancelled(&self) -> bool {
-        self.cancel.load(Ordering::Relaxed)
-    }
-
-    pub(crate) fn send(&self, evt: FlashEvent) {
-        // If the UI dropped its receiver, swallow the SendError — the user
-        // closed the window mid-flash and we're about to be dropped anyway.
-        let _ = self.tx.send(evt);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::atomic::AtomicBool;
-    use std::sync::mpsc::channel;
-    use std::sync::Arc;
-
-    #[test]
-    fn bridge_starts_uncancelled() {
-        let (tx, _rx) = channel();
-        let cancel = Arc::new(AtomicBool::new(false));
-        let b = ProgressBridge::new(tx, cancel);
-        assert!(!b.is_cancelled());
-    }
-
-    #[test]
-    fn bridge_observes_cancel_flag() {
-        let (tx, _rx) = channel();
-        let cancel = Arc::new(AtomicBool::new(false));
-        let b = ProgressBridge::new(tx, cancel.clone());
-        cancel.store(true, Ordering::Relaxed);
-        assert!(b.is_cancelled());
-    }
-
-    #[test]
-    fn bridge_send_to_dropped_receiver_does_not_panic() {
-        let (tx, rx) = channel();
-        let cancel = Arc::new(AtomicBool::new(false));
-        let b = ProgressBridge::new(tx, cancel);
-        drop(rx);
-        b.send(FlashEvent::EraseStart); // must not panic
-    }
-
-    #[test]
-    fn events_forwarded_in_order() {
-        let (tx, rx) = channel();
-        let cancel = Arc::new(AtomicBool::new(false));
-        let b = ProgressBridge::new(tx, cancel);
-        b.send(FlashEvent::EraseStart);
-        b.send(FlashEvent::PartitionStart {
-            index: 0,
-            total_bytes: 1024,
-        });
-        b.send(FlashEvent::Progress {
-            index: 0,
-            bytes_written: 512,
-        });
-        b.send(FlashEvent::PartitionDone { index: 0 });
-        b.send(FlashEvent::EraseDone);
-
-        let collected: Vec<FlashEvent> = rx.try_iter().collect();
-        assert_eq!(collected.len(), 5);
-        assert_eq!(collected[0], FlashEvent::EraseStart);
-        assert!(matches!(
-            collected[1],
-            FlashEvent::PartitionStart {
-                index: 0,
-                total_bytes: 1024
-            }
-        ));
-    }
 }

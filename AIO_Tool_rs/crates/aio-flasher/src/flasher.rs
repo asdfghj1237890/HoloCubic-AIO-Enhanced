@@ -29,7 +29,7 @@ use serialport::{FlowControl, UsbPortInfo};
 
 use crate::error::FlashError;
 use crate::partition::{self, Partition};
-use crate::progress::{FlashEvent, ProgressBridge};
+use crate::progress::FlashEvent;
 
 /// HoloCubic flasher. Holds the open serial connection to the ROM bootloader.
 pub struct Flasher {
@@ -91,16 +91,26 @@ impl Flasher {
     }
 
     /// Erase the entire flash.
+    ///
+    /// **Cancellation note:** the cancel flag is checked once before
+    /// espflash's `erase_flash` is invoked. Once erase is in flight
+    /// (~10 s on a 4 MB ESP32), it can NOT be interrupted — espflash
+    /// 3.3.0's `erase_flash` doesn't accept progress callbacks.
+    /// `EraseDone` will fire even if the user clicked Cancel mid-erase.
+    /// Plan 7 UI should show "Cancelling…" and ignore the trailing
+    /// `EraseDone`. See module doc on [`crate::progress`] for the full
+    /// cancellation contract.
     pub fn erase(
         &mut self,
         progress_tx: Sender<FlashEvent>,
         cancel: Arc<AtomicBool>,
     ) -> Result<(), FlashError> {
-        let bridge = ProgressBridge::new(progress_tx, cancel);
-        if bridge.is_cancelled() {
+        if cancel.load(Ordering::Relaxed) {
             return Err(FlashError::Cancelled);
         }
-        bridge.send(FlashEvent::EraseStart);
+        // Swallow SendError — receiver dropped means UI is gone; we still
+        // need to finish the erase op cleanly.
+        let _ = progress_tx.send(FlashEvent::EraseStart);
 
         let f = self
             .inner
@@ -109,7 +119,7 @@ impl Flasher {
 
         f.erase_flash().map_err(FlashError::Erase)?;
 
-        bridge.send(FlashEvent::EraseDone);
+        let _ = progress_tx.send(FlashEvent::EraseDone);
         Ok(())
     }
 
@@ -221,11 +231,6 @@ impl ProgressCallbacks for CallbackAdapter {
     }
 }
 
-// `ProgressBridge` lives on in `progress.rs` for direct use in `erase()`
-// (single-segment, no per-block callbacks from espflash). The
-// `CallbackAdapter` above is the per-partition shim used during
-// `write_partitions`.
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -257,5 +262,77 @@ mod tests {
         let cancel = Arc::new(AtomicBool::new(false));
         let err = flasher.write_partitions(parts, tx, cancel).unwrap_err();
         assert!(matches!(err, FlashError::OverlappingPartitions { .. }));
+    }
+
+    // --- CallbackAdapter tests ---
+    //
+    // These verify the adapter emits the right FlashEvent in response to each
+    // ProgressCallbacks method and silences itself when the cancel flag is
+    // tripped. The bridge between espflash and our mpsc channel is the most
+    // failure-prone bit of glue in the crate; one test per method + one for
+    // cancel-silencing is the minimum useful coverage.
+
+    fn make_adapter(
+        idx: usize,
+    ) -> (
+        CallbackAdapter,
+        std::sync::mpsc::Receiver<FlashEvent>,
+        Arc<AtomicBool>,
+    ) {
+        let (tx, rx) = channel();
+        let cancel = Arc::new(AtomicBool::new(false));
+        let adapter = CallbackAdapter {
+            tx,
+            cancel: cancel.clone(),
+            partition_index: idx,
+        };
+        (adapter, rx, cancel)
+    }
+
+    #[test]
+    fn callback_init_emits_partition_start() {
+        let (mut adapter, rx, _cancel) = make_adapter(2);
+        adapter.init(0x1000, 4096);
+        let evt = rx.try_recv().unwrap();
+        assert_eq!(
+            evt,
+            FlashEvent::PartitionStart {
+                index: 2,
+                total_bytes: 4096
+            }
+        );
+    }
+
+    #[test]
+    fn callback_update_emits_progress() {
+        let (mut adapter, rx, _cancel) = make_adapter(0);
+        adapter.update(512);
+        let evt = rx.try_recv().unwrap();
+        assert_eq!(
+            evt,
+            FlashEvent::Progress {
+                index: 0,
+                bytes_written: 512
+            }
+        );
+    }
+
+    #[test]
+    fn callback_finish_emits_partition_done() {
+        let (mut adapter, rx, _cancel) = make_adapter(7);
+        adapter.finish();
+        let evt = rx.try_recv().unwrap();
+        assert_eq!(evt, FlashEvent::PartitionDone { index: 7 });
+    }
+
+    #[test]
+    fn callback_silenced_after_cancel_flag_set() {
+        let (mut adapter, rx, cancel) = make_adapter(0);
+        cancel.store(true, Ordering::Relaxed);
+        adapter.init(0x1000, 4096);
+        adapter.update(2048);
+        adapter.finish();
+        // Receiver got nothing — adapter swallowed all three events.
+        assert!(rx.try_recv().is_err());
     }
 }

@@ -20,6 +20,11 @@ serde_json  = "1.0"
 directories = "5.0"
 serialport  = { version = "4.6", default-features = false }
 espflash    = { version = "=3.3.0", default-features = false, features = ["serialport"] }  # PIN exactly — Plan 4 D5
+# Transitive pin: espflash → esp-idf-part → indexmap. indexmap 2.8+ pulls
+# hashbrown 0.17 which requires edition2024 (Rust 1.85+); our toolchain is
+# pinned to 1.82. Documents intent; actual enforcement is via Cargo.lock.
+# Any `cargo update -p indexmap` needs review before merge.
+indexmap    = "=2.7.1"
 
 [profile.release]
 lto       = "thin"
