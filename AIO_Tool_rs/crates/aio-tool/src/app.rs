@@ -26,6 +26,9 @@ pub struct App {
 
     /// Flasher tab state (Plan 6 Task 4).
     flasher: crate::tabs::flasher::FlasherState,
+
+    /// Settings tab state (Plan 7 Task 4 — Group C).
+    pub(crate) settings: crate::tabs::settings::SettingsState,
 }
 
 impl App {
@@ -37,6 +40,7 @@ impl App {
             bus_tx,
             bus_rx,
             flasher: crate::tabs::flasher::FlasherState::default(),
+            settings: crate::tabs::settings::SettingsState::default(),
         }
     }
 
@@ -83,25 +87,39 @@ impl App {
                     // Plan 9 handler.
                 }
                 crate::bus::AppEvent::SettingsConnected => {
-                    // Placeholder log; the settings tab's UI handler is in Group C.
-                    // For now just log to the FLASHER log so we can see it during dev.
-                    // Group C wires this to settings.log instead.
-                    self.flasher.log.push("Settings worker connected.");
+                    self.settings.state = crate::tabs::settings::DeviceState::Connected;
+                    self.settings.log.push("Connected.");
                 }
                 crate::bus::AppEvent::SettingsReceived(bytes) => {
-                    // Group C decodes via aio_protocol::SettingMsg::from_wire and routes
-                    // to per-key state. For Plan 7 Group B (no Settings UI yet), just
-                    // log the byte count.
-                    self.flasher
-                        .log
-                        .push(format!("Settings <- {} bytes", bytes.len()));
+                    // Plan 1 D4 caveat: firmware response format may not match
+                    // SettingMsg::from_wire's expectation; graceful failure logs hex.
+                    match aio_protocol::SettingMsg::from_wire(&bytes) {
+                        Ok((msg, _)) => {
+                            self.settings
+                                .values
+                                .insert(msg.key.clone(), msg.value.clone());
+                            self.settings
+                                .baseline
+                                .insert(msg.key.clone(), msg.value.clone());
+                            self.settings
+                                .log
+                                .push(format!("← {}/{} = {}", msg.prefs_name, msg.key, msg.value));
+                        }
+                        Err(_) => {
+                            self.settings
+                                .log
+                                .push(format!("← (undecodable {} bytes)", bytes.len()));
+                        }
+                    }
                 }
                 crate::bus::AppEvent::SettingsFinished(result) => {
-                    let line = match result {
-                        Ok(()) => "Settings disconnected.".to_owned(),
-                        Err(msg) => format!("Settings worker error: {msg}"),
+                    self.settings.state = match result {
+                        Ok(()) => crate::tabs::settings::DeviceState::Disconnected,
+                        Err(msg) => {
+                            self.settings.log.push(format!("✗ {msg}"));
+                            crate::tabs::settings::DeviceState::Error(msg)
+                        }
                     };
-                    self.flasher.log.push(line);
                 }
             }
         }
@@ -120,6 +138,7 @@ impl App {
         Self {
             active_tab: crate::tabs::Tab::Flasher,
             flasher: crate::tabs::flasher::FlasherState::default(),
+            settings: crate::tabs::settings::SettingsState::default(),
             bus_tx,
             bus_rx,
         }
@@ -166,7 +185,7 @@ impl eframe::App for App {
 
         CentralPanel::default().show(ctx, |ui| match self.active_tab {
             Tab::Flasher => tabs::flasher::show(ui, &mut self.flasher, &self.bus_tx),
-            Tab::Settings => tabs::settings::show(ui),
+            Tab::Settings => tabs::settings::show(ui, &mut self.settings, &self.bus_tx),
             Tab::FileManager => tabs::file_manager::show(ui),
             Tab::ImageConverter => tabs::image_converter::show(ui),
             Tab::VideoConverter => tabs::video_converter::show(ui),
