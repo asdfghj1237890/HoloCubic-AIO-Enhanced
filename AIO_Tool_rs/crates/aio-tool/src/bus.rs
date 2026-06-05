@@ -14,13 +14,10 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 /// One discrete update from a background worker to the GUI.
 #[derive(Debug, Clone)]
 pub enum AppEvent {
-    /// Flash progress update (0.0..=1.0).
-    Flash {
-        /// Fraction complete.
-        fraction: f32,
-        /// Human-readable status line (e.g. "Writing bootloader…").
-        message: String,
-    },
+    /// One progress event from the flasher worker. Re-wrapping
+    /// `aio_flasher::FlashEvent` keeps the rich event shape
+    /// (PartitionStart / Progress / PartitionDone …) intact across the bus.
+    Flash(aio_flasher::FlashEvent),
     /// Image / video conversion progress update (0.0..=1.0).
     Convert {
         /// Fraction complete.
@@ -28,10 +25,11 @@ pub enum AppEvent {
         /// Human-readable status line.
         message: String,
     },
-    /// Flash worker finished. `Ok` carries a brief summary; `Err` carries the
-    /// rendered error message ready for display.
-    FlashFinished(Result<String, String>),
-    /// Convert worker finished. Same shape as `FlashFinished`.
+    /// Flash worker finished. `Ok(())` on success; `Err` carries the rendered
+    /// error message ready for display.
+    FlashFinished(Result<(), String>),
+    /// Convert worker finished. `Ok` carries a brief summary; `Err` carries
+    /// the rendered error message ready for display.
     ConvertFinished(Result<String, String>),
 }
 
@@ -52,16 +50,19 @@ mod tests {
     #[test]
     fn channel_pair_round_trips_events() {
         let (tx, rx) = channel_pair();
-        tx.send(AppEvent::Flash {
-            fraction: 0.5,
-            message: "halfway".into(),
-        })
+        tx.send(AppEvent::Flash(aio_flasher::FlashEvent::Progress {
+            index: 1,
+            bytes_written: 2048,
+        }))
         .expect("send");
 
         match rx.try_recv().expect("recv") {
-            AppEvent::Flash { fraction, message } => {
-                assert!((fraction - 0.5).abs() < f32::EPSILON);
-                assert_eq!(message, "halfway");
+            AppEvent::Flash(aio_flasher::FlashEvent::Progress {
+                index,
+                bytes_written,
+            }) => {
+                assert_eq!(index, 1);
+                assert_eq!(bytes_written, 2048);
             }
             other => panic!("wrong variant: {other:?}"),
         }
@@ -77,11 +78,11 @@ mod tests {
     fn sender_is_clonable_for_multi_producer() {
         let (tx, rx) = channel_pair();
         let tx2 = tx.clone();
-        tx.send(AppEvent::FlashFinished(Ok("a".into()))).unwrap();
+        tx.send(AppEvent::FlashFinished(Ok(()))).unwrap();
         tx2.send(AppEvent::FlashFinished(Err("b".into()))).unwrap();
         assert!(matches!(
             rx.try_recv().unwrap(),
-            AppEvent::FlashFinished(Ok(_))
+            AppEvent::FlashFinished(Ok(()))
         ));
         assert!(matches!(
             rx.try_recv().unwrap(),

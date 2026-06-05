@@ -52,9 +52,39 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         // Drain any events the background workers produced since the last
-        // frame. Tabs will consume their own variants in Tasks 4-8;
-        // for now we just discard so the channel doesn't grow unbounded.
-        while let Ok(_evt) = self.bus_rx.try_recv() {}
+        // frame and surface them in the relevant tab's operation log.
+        while let Ok(evt) = self.bus_rx.try_recv() {
+            match evt {
+                crate::bus::AppEvent::Flash(fe) => {
+                    let line = match fe {
+                        aio_flasher::FlashEvent::EraseStart => "Erasing chip...".to_owned(),
+                        aio_flasher::FlashEvent::EraseDone => "Chip erase done.".to_owned(),
+                        aio_flasher::FlashEvent::PartitionStart { index, total_bytes } => {
+                            format!("Writing partition {index} ({total_bytes} bytes)...")
+                        }
+                        aio_flasher::FlashEvent::Progress {
+                            index,
+                            bytes_written,
+                        } => format!("  partition {index}: {bytes_written} bytes"),
+                        aio_flasher::FlashEvent::PartitionDone { index } => {
+                            format!("Partition {index} done.")
+                        }
+                    };
+                    self.flasher.log.push(line);
+                }
+                crate::bus::AppEvent::FlashFinished(result) => {
+                    self.flasher.busy = false;
+                    let line = match result {
+                        Ok(()) => "Operation complete.".to_owned(),
+                        Err(msg) => format!("Error: {msg}"),
+                    };
+                    self.flasher.log.push(line);
+                }
+                crate::bus::AppEvent::Convert { .. } | crate::bus::AppEvent::ConvertFinished(_) => {
+                    // Plan 9 handler — drop silently for now.
+                }
+            }
+        }
 
         // Ensure background events don't wait for user input to surface.
         ctx.request_repaint_after(IDLE_REPAINT);
@@ -71,7 +101,7 @@ impl eframe::App for App {
         });
 
         CentralPanel::default().show(ctx, |ui| match self.active_tab {
-            Tab::Flasher => tabs::flasher::show(ui, &mut self.flasher),
+            Tab::Flasher => tabs::flasher::show(ui, &mut self.flasher, &self.bus_tx),
             Tab::Settings => tabs::settings::show(ui),
             Tab::Remote => tabs::remote::show(ui),
             Tab::FileManager => tabs::file_manager::show(ui),

@@ -54,6 +54,10 @@ pub struct FlasherState {
     pub partitions: [PartitionEntry; 4],
     /// Scrollback for operation messages.
     pub log: OperationLog,
+    /// Set while erase or flash is running; suppresses re-clicks.
+    pub busy: bool,
+    /// Cancel handle shared with the background thread.
+    pub cancel: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Default for FlasherState {
@@ -64,12 +68,14 @@ impl Default for FlasherState {
             baud: "115200".to_owned(),
             partitions: Default::default(),
             log: OperationLog::default(),
+            busy: false,
+            cancel: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
     }
 }
 
 /// Render the Flasher tab. Action wiring lands in Tasks 5-8.
-pub fn show(ui: &mut Ui, state: &mut FlasherState) {
+pub fn show(ui: &mut Ui, state: &mut FlasherState, bus_tx: &crate::bus::AppEventTx) {
     // Lazy first-time port enumeration so the dropdown isn't empty before
     // the user clicks ⟳.
     if state.available_ports.is_empty() && state.port.is_empty() {
@@ -140,15 +146,49 @@ pub fn show(ui: &mut Ui, state: &mut FlasherState) {
 
         // Action buttons row.
         ui.horizontal(|ui| {
-            if ui.button(t("clear_flash", None)).clicked() {
-                // Wired in Task 7.
+            // --- Erase (Task 7) -----------------------------------------
+            if ui
+                .add_enabled(!state.busy, egui::Button::new(t("clear_flash", None)))
+                .clicked()
+            {
+                state.busy = true;
+                state
+                    .cancel
+                    .store(false, std::sync::atomic::Ordering::Relaxed);
+                let port = state.port.clone();
+                let baud: u32 = state.baud.parse().unwrap_or(115_200);
+                let bus_tx_outer = bus_tx.clone();
+                let cancel = state.cancel.clone();
+                state
+                    .log
+                    .push(format!("Starting chip erase on {port} @ {baud} baud..."));
+                std::thread::spawn(move || {
+                    let bus_tx = bus_tx_outer;
+                    let result: Result<(), String> = (|| {
+                        let mut flasher = aio_flasher::Flasher::new(&port, baud)
+                            .map_err(|e| format!("open/connect: {e}"))?;
+                        let (op_tx, op_rx) = std::sync::mpsc::channel::<aio_flasher::FlashEvent>();
+                        // Forwarder thread re-wraps FlashEvent into AppEvent::Flash.
+                        {
+                            let bus_tx_fwd = bus_tx.clone();
+                            std::thread::spawn(move || {
+                                while let Ok(evt) = op_rx.recv() {
+                                    let _ = bus_tx_fwd.send(crate::bus::AppEvent::Flash(evt));
+                                }
+                            });
+                        }
+                        flasher
+                            .erase(op_tx, cancel)
+                            .map_err(|e| format!("erase: {e}"))?;
+                        Ok(())
+                    })();
+                    let _ = bus_tx.send(crate::bus::AppEvent::FlashFinished(result));
+                });
             }
-            if ui.button(t("flash_firmware", None)).clicked() {
-                // Wired in Task 8.
-            }
-            if ui.button(t("cancel_flash", None)).clicked() {
-                // Wired in Task 8.
-            }
+
+            // Flash Firmware + Cancel — wired in Task 8.
+            let _ = ui.button(t("flash_firmware", None));
+            let _ = ui.button(t("cancel_flash", None));
         });
 
         ui.separator();
