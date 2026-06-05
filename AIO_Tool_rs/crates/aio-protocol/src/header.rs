@@ -160,4 +160,24 @@ mod tests {
             Err(DecodeError::BadHeaderMark(0xFFFF))
         );
     }
+
+    #[test]
+    fn decode_rejects_unknown_module() {
+        // Valid header_mark, valid msg_len, but `from_who` byte 0x77 is outside ModuleType.
+        let wire = [0x23, 0x23, 0x00, 0x07, 0x77, 0x03, 0x0d];
+        assert_eq!(
+            MsgHead::decode(&wire),
+            Err(DecodeError::UnknownModule(0x77))
+        );
+    }
+
+    #[test]
+    fn decode_rejects_unknown_action() {
+        // Valid module bytes, but action byte 0xFE is outside ActionType.
+        let wire = [0x23, 0x23, 0x00, 0x07, 0x04, 0x03, 0xFE];
+        assert_eq!(
+            MsgHead::decode(&wire),
+            Err(DecodeError::UnknownAction(0xFE))
+        );
+    }
 }

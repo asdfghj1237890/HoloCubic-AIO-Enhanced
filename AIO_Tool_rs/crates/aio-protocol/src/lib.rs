@@ -13,7 +13,6 @@ pub mod header;
 pub mod setting;
 pub mod types;
 
-// TODO(group-B/C): restore re-exports as modules gain real content:
 pub use error::{DecodeError, EncodeError};
 pub use header::{MsgHead, WireDecode, WireEncode, HEADER_MARK, HEADER_SIZE};
 pub use setting::SettingMsg;

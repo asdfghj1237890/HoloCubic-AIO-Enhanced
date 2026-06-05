@@ -15,11 +15,11 @@ pub const PATH_WIDTH: usize = 99;
 
 /// Construct the common dir/file header (FROM=CFileManager, TO=CubicFileManager) for `action`.
 ///
-/// PRESERVED-BUG-FROM-V2: Python's `FileSystem.encode` never sets `msg_len`, so the
-/// wire bytes always carry `msg_len = 0` for dir/file messages. Mirror that here to
-/// keep byte-exact wire compatibility (verified by the golden tests). Firmware
-/// ignores `msg_len` anyway (see `header.rs`), so this is purely a wire-format
-/// fidelity concern.
+/// PRESERVED-BUG-FROM-V2 (B5): Python's `FileSystem.encode` never sets `msg_len`,
+/// so the wire bytes always carry `msg_len = 0` for dir/file messages. Mirror that
+/// here to keep byte-exact wire compatibility (verified by the golden tests).
+/// Firmware ignores `msg_len` anyway (see `header.rs`), so this is purely a
+/// wire-format fidelity concern.
 fn file_header(action: ActionType) -> MsgHead {
     let mut head = MsgHead::new(
         ModuleType::CFileManager,
@@ -485,6 +485,22 @@ mod tests {
         let wire = msg.to_wire().unwrap();
         assert_eq!(wire.len(), 7 + 1 + PATH_WIDTH); // empty dir_info
         assert_eq!(&wire[8..11], b"/sd");
+    }
+
+    #[test]
+    fn dir_list_from_wire_rejects_short_buffer() {
+        // 7-byte MsgHead + 1-byte dup action = 8 bytes; need PATH_WIDTH=99 more for a valid frame.
+        // Supply only header + dup action; decode should see `after_hdr + PATH_WIDTH = 107` needed.
+        let mut wire = vec![0x23, 0x23, 0x00, 0x00, 0x02, 0x01, 0x05]; // header (DirList)
+        wire.push(ActionType::DirList as u8); // dup action
+                                              // No path bytes — frame is 1 + HEADER_SIZE = 8 bytes total.
+        assert_eq!(
+            DirList::from_wire(&wire),
+            Err(DecodeError::TooShort {
+                needed: 8 + PATH_WIDTH,
+                got: 8
+            })
+        );
     }
 
     // --- file messages ---
