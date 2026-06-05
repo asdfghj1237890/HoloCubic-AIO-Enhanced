@@ -1,0 +1,12 @@
+[package]
+name = "aio-flasher"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HoloCubic AIO firmware flasher — wraps espflash for partition writes with real progress + cooperative cancellation"
+
+[dependencies]
+espflash  = { workspace = true }
+thiserror = { workspace = true }
