@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "3.0.0-dev"
+edition = "2021"
+rust-version = "1.82"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced"
+
+[workspace.dependencies]
+bytes      = "1.7"
+byteorder  = "1.5"
+thiserror  = "1.0"
+proptest   = "1.5"
+hex        = "0.4"
+
+[profile.release]
+lto       = "thin"
+codegen-units = 1
+strip     = true
