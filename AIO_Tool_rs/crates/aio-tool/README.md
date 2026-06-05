@@ -28,34 +28,52 @@ sudo dnf install systemd-devel # Fedora
 
 PR #92's CI workflow will install this in the Ubuntu runner.
 
-## What works in Plan 6
+## What works in Plan 7
 
-- 1200×720 dark egui window with 8 tabs across the top
-- Tab order matches the legacy `CubicAIO_Tool.py:88-114` minus the
-  dropped Screen Share placeholder
+- 1200×720 dark egui window with **7 tabs** across the top (Remote Control
+  removed; folded into the Flasher tab)
+- Tab order matches the legacy `CubicAIO_Tool.py:88-114` minus the dropped
+  Screen Share placeholder and the folded-in Remote Control tab
 - **Flasher tab** fully functional:
   - COM port dropdown + ⟳ refresh button (lazy auto-init)
   - Baud rate dropdown (9 standard rates, default 115200)
-  - 4-partition list:
-    - Per-row enabled checkbox
-    - Per-row address (read-only, `0x1000`/`0x8000`/`0xe000`/`0x10000`)
-    - Per-row path field (editable + populated by file picker)
-    - Per-row "Select bin file" button → native file dialog (rfd)
+  - 4-partition list: enabled checkbox + read-only address + editable path +
+    native file picker (rfd) per row
   - Action buttons (greyed out when busy):
     - Clear Flash — `aio_flasher::Flasher::erase` on background thread
-    - Flash Firmware — `aio_flasher::Flasher::write_partitions` on
-      background thread, reading .bin files preflight on egui thread
-    - Cancel Flash — sets the shared `Arc<AtomicBool>` flag
+    - Flash Firmware — `aio_flasher::Flasher::write_partitions`
+    - Cancel Flash — sets shared `Arc<AtomicBool>`; the cancel-during-erase
+      UX (Plan 7 Task 1) logs "Operation cancelled (chip erase already
+      completed)." when cancel happened mid-erase
+  - **Remote Control panel** (Plan 7 fold-in): 5 buttons (↑ ← → ✓ 🏠)
+    between action row and log. Each click spawns a transient thread that
+    opens the serial port, writes the 2-byte `~X` command, and closes.
   - Scrollable operation log (sticks to bottom, monospace)
+- **Settings tab** functional (send-side):
+  - Independent port + baud selection
+  - **Connect / Disconnect** buttons drive a long-lived worker thread that
+    owns a `SerialTransport` (see `settings_worker.rs`)
+  - `DeviceState` enum (Disconnected / Connecting / Connected / Error)
+    drives button enable/disable and red-colored error banner
+  - 15 settings rendered as text fields, grouped by namespace (sys /
+    zhixin / tianqi / other) from the embedded `cubictool.json` schema
+  - **Read All** sends a Get for every key (15 commands)
+  - **Write Changes** computes the diff vs the baseline (last Read All)
+    and sends Set only for fields whose value differs; button label shows
+    the live count ("Write Changes (3)")
+  - **Caveat (BUGS.md B15)**: Plan 1 Discovery D4 documents that the
+    legacy Python tool's `SettingMsg` payload format doesn't match the
+    firmware's `SettingsMsg::decode` expectation. Until the firmware is
+    updated, Read All replies will arrive but log as "(undecodable N
+    bytes)". Write Changes is fire-and-forget on the device side. The
+    firmware-side fix is tracked separately from this Rust rewrite.
 
 ## What's a stub
 
-7 tabs render "Coming in Plan N":
+5 tabs render "Coming in Plan N":
 
 | Tab | Plan |
 |-----|------|
-| Device Settings | Plan 7 |
-| Remote Control | Plan 7 (will fold into Flasher tab) |
 | File Manager | Plan 8 |
 | Image Converter | Plan 9 |
 | Video Converter | Plan 9 |
