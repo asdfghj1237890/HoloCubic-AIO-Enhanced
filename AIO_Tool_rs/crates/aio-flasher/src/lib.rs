@@ -25,4 +25,4 @@ pub use error::FlashError;
 pub use partition::{
     Partition, PARTITION_BOOTAPP0, PARTITION_BOOTLOADER, PARTITION_FIRMWARE, PARTITION_PARTITIONS,
 };
-// pub use progress::FlashEvent;
+pub use progress::FlashEvent;
