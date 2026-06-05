@@ -186,9 +186,85 @@ pub fn show(ui: &mut Ui, state: &mut FlasherState, bus_tx: &crate::bus::AppEvent
                 });
             }
 
-            // Flash Firmware + Cancel — wired in Task 8.
-            let _ = ui.button(t("flash_firmware", None));
-            let _ = ui.button(t("cancel_flash", None));
+            // --- Flash Firmware (Task 8) -------------------------------
+            if ui
+                .add_enabled(!state.busy, egui::Button::new(t("flash_firmware", None)))
+                .clicked()
+            {
+                // Preflight: collect enabled, valid partitions and read their
+                // .bin files. Done on the egui thread so file IO errors land
+                // in the log immediately. Errors are buffered into a Vec
+                // first to avoid simultaneous borrows of state.partitions
+                // (read) and state.log (mutate).
+                let mut parts: Vec<aio_flasher::Partition> = Vec::new();
+                let mut io_errors: Vec<String> = Vec::new();
+                for (i, p) in state.partitions.iter().enumerate() {
+                    if !p.enabled || p.path.is_empty() {
+                        continue;
+                    }
+                    match std::fs::read(&p.path) {
+                        Ok(data) => parts.push(aio_flasher::Partition {
+                            address: PARTITION_ADDRESSES[i],
+                            data,
+                        }),
+                        Err(e) => {
+                            io_errors.push(format!("Skipping partition {i} ({}): {e}", p.path))
+                        }
+                    }
+                }
+                for line in io_errors {
+                    state.log.push(line);
+                }
+                if parts.is_empty() {
+                    state.log.push("No partitions selected with valid paths.");
+                } else {
+                    state.busy = true;
+                    state
+                        .cancel
+                        .store(false, std::sync::atomic::Ordering::Relaxed);
+                    let port = state.port.clone();
+                    let baud: u32 = state.baud.parse().unwrap_or(115_200);
+                    let bus_tx_outer = bus_tx.clone();
+                    let cancel = state.cancel.clone();
+                    let n = parts.len();
+                    state.log.push(format!(
+                        "Flashing {n} partition(s) on {port} @ {baud} baud..."
+                    ));
+                    std::thread::spawn(move || {
+                        let bus_tx = bus_tx_outer;
+                        let result: Result<(), String> = (|| {
+                            let mut flasher = aio_flasher::Flasher::new(&port, baud)
+                                .map_err(|e| format!("open/connect: {e}"))?;
+                            let (op_tx, op_rx) =
+                                std::sync::mpsc::channel::<aio_flasher::FlashEvent>();
+                            {
+                                let bus_tx_fwd = bus_tx.clone();
+                                std::thread::spawn(move || {
+                                    while let Ok(evt) = op_rx.recv() {
+                                        let _ = bus_tx_fwd.send(crate::bus::AppEvent::Flash(evt));
+                                    }
+                                });
+                            }
+                            flasher
+                                .write_partitions(parts, op_tx, cancel)
+                                .map_err(|e| format!("flash: {e}"))?;
+                            Ok(())
+                        })();
+                        let _ = bus_tx.send(crate::bus::AppEvent::FlashFinished(result));
+                    });
+                }
+            }
+
+            // --- Cancel (Task 8) ---------------------------------------
+            if ui
+                .add_enabled(state.busy, egui::Button::new(t("cancel_flash", None)))
+                .clicked()
+            {
+                state
+                    .cancel
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+                state.log.push("Cancellation requested...");
+            }
         });
 
         ui.separator();
