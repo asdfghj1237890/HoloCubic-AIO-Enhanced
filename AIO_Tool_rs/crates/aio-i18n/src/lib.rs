@@ -12,5 +12,5 @@ pub mod i18n;
 pub mod lang;
 
 pub use error::{LoadError, SaveError};
+pub use i18n::{get_i18n, t, I18n};
 pub use lang::Lang;
-// pub use i18n::{I18n, get_i18n, t};  // restored in Group C
