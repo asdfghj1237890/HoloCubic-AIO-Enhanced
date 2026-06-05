@@ -23,4 +23,4 @@ pub mod progress;
 pub use error::ConvertError;
 pub use format::ColorFormat;
 // pub use converter::Converter;    // restored in Task 6
-// pub use progress::ConvertEvent;  // restored in Task 3 part 2
+pub use progress::ConvertEvent;
