@@ -14,12 +14,20 @@ use crate::types::{ActionType, ModuleType};
 pub const PATH_WIDTH: usize = 99;
 
 /// Construct the common dir/file header (FROM=CFileManager, TO=CubicFileManager) for `action`.
+///
+/// PRESERVED-BUG-FROM-V2: Python's `FileSystem.encode` never sets `msg_len`, so the
+/// wire bytes always carry `msg_len = 0` for dir/file messages. Mirror that here to
+/// keep byte-exact wire compatibility (verified by the golden tests). Firmware
+/// ignores `msg_len` anyway (see `header.rs`), so this is purely a wire-format
+/// fidelity concern.
 fn file_header(action: ActionType) -> MsgHead {
-    MsgHead::new(
+    let mut head = MsgHead::new(
         ModuleType::CFileManager,
         ModuleType::CubicFileManager,
         action,
-    )
+    );
+    head.msg_len = 0;
+    head
 }
 
 /// Encode header + duplicate action_type byte (the 8-byte "FileSystem" prefix).
