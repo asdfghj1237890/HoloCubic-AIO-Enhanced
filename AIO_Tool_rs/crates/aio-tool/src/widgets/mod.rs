@@ -1,1 +1,3 @@
-//! Reusable widgets shared across tabs. Real content lands in Plan 6 Task 4.
+//! Shared widgets used by multiple tabs.
+
+pub mod operation_log;

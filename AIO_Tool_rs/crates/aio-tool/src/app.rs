@@ -23,7 +23,9 @@ pub struct App {
     /// from `bus_rx` (drained at the top of every frame).
     bus_tx: AppEventTx,
     bus_rx: AppEventRx,
-    // Tab states will be added in later tasks. Flasher state lands in Task 4.
+
+    /// Flasher tab state (Plan 6 Task 4).
+    flasher: crate::tabs::flasher::FlasherState,
 }
 
 impl App {
@@ -34,6 +36,7 @@ impl App {
             active_tab: Tab::Flasher,
             bus_tx,
             bus_rx,
+            flasher: crate::tabs::flasher::FlasherState::default(),
         }
     }
 
@@ -68,7 +71,7 @@ impl eframe::App for App {
         });
 
         CentralPanel::default().show(ctx, |ui| match self.active_tab {
-            Tab::Flasher => tabs::flasher::show(ui),
+            Tab::Flasher => tabs::flasher::show(ui, &mut self.flasher),
             Tab::Settings => tabs::settings::show(ui),
             Tab::Remote => tabs::remote::show(ui),
             Tab::FileManager => tabs::file_manager::show(ui),
