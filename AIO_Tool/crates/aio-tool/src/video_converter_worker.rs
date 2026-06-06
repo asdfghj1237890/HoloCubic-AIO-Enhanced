@@ -6,7 +6,11 @@
 //! SIGINT on Windows anyway).
 //!
 //! Plan 7 polish carry-overs:
-//! - No internal sleep — `BufReader::read_line` paces the loop.
+//! - `BufReader::read_line` paces the stdout pump; a separate watcher
+//!   thread polls the cancel flag every 200ms and calls `child.kill()`
+//!   when it flips (ffmpeg writes progress to stderr, so stdout stays
+//!   quiet — checking cancel inline before each `read_line` would let
+//!   Cancel hang until ffmpeg exited naturally).
 //! - Cancel flag is **supplied by the caller** (matches the Image Converter
 //!   post-fix shape, commit dcdfe66) so one Cancel button can cancel every
 //!   in-flight job; the worker only reads it.
@@ -16,7 +20,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use crate::bus::{AppEvent, AppEventTx};
@@ -219,9 +223,40 @@ fn run_step<F: Fn(String) -> bool>(
         }
     };
 
+    // Take the pipes BEFORE moving the child into the shared mutex; we need
+    // them on this thread (stdout) and the forwarder thread (stderr).
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let child = Arc::new(Mutex::new(child));
+
+    // Cancel watcher: kills the child when the flag flips. Polls every 200ms
+    // so cancel latency is bounded by the poll interval. Without this, the
+    // stdout read_line below would block until ffmpeg writes to stdout (rare
+    // — ffmpeg writes progress to stderr) or exits naturally, making Cancel
+    // a silent no-op on long encodes. The watcher also self-exits via
+    // try_wait so it doesn't leak when the child completes normally.
+    let cancel_watcher = {
+        let cancel = Arc::clone(cancel);
+        let child = Arc::clone(&child);
+        thread::spawn(move || loop {
+            if cancel.load(Ordering::Relaxed) {
+                if let Ok(mut c) = child.lock() {
+                    let _ = c.kill();
+                }
+                break;
+            }
+            // Detect natural exit so we don't keep polling forever.
+            if let Ok(mut c) = child.lock() {
+                if matches!(c.try_wait(), Ok(Some(_))) {
+                    break;
+                }
+            }
+            thread::sleep(std::time::Duration::from_millis(200));
+        })
+    };
+
     // Pump stderr (ffmpeg writes progress here) on a forwarder thread; we
     // own stdout pumping on this thread.
-    let stderr = child.stderr.take();
     let stderr_thread = stderr.map(|err| {
         // We can't borrow send_log across threads; use a channel instead.
         let (tx, rx) = std::sync::mpsc::channel::<String>();
@@ -243,20 +278,20 @@ fn run_step<F: Fn(String) -> bool>(
         (t, rx)
     });
 
-    if let Some(stdout) = child.stdout.take() {
+    if let Some(stdout) = stdout {
         let mut reader = BufReader::new(stdout);
         let mut buf = String::new();
         loop {
-            if cancel.load(Ordering::Relaxed) {
-                let _ = child.kill();
-                break;
-            }
             buf.clear();
             match reader.read_line(&mut buf) {
                 Ok(0) => break,
                 Ok(_) => {
                     if !send_log(buf.trim_end().to_owned()) {
-                        let _ = child.kill();
+                        // Bus dropped — kill the child so we don't leak it.
+                        if let Ok(mut c) = child.lock() {
+                            let _ = c.kill();
+                        }
+                        let _ = cancel_watcher.join();
                         return false;
                     }
                 }
@@ -273,7 +308,20 @@ fn run_step<F: Fn(String) -> bool>(
         let _ = t.join();
     }
 
-    match child.wait() {
+    // Join the watcher before waiting — once we exit either it has already
+    // killed the child (cancel path) or try_wait will catch the natural exit
+    // shortly. Either way it terminates quickly.
+    let _ = cancel_watcher.join();
+
+    let exit_status = match child.lock() {
+        Ok(mut c) => c.wait(),
+        Err(_) => {
+            // Poisoned mutex — treat as failure.
+            let _ = send_log("\u{2717} child mutex poisoned".to_owned());
+            return false;
+        }
+    };
+    match exit_status {
         Ok(status) if status.success() => true,
         Ok(status) => {
             let _ = send_log(format!("\u{2717} ffmpeg exited {}", status));

@@ -203,8 +203,6 @@ jobs:
             See [dist/README.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/dist/README.md) for esptool CLI usage.
 
             Internal tool version: `${{ needs.build_tool.outputs.version }}` (from `AIO_Tool/Cargo.toml`).
-
-            See [AIO_Tool/CHANGELOG.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/AIO_Tool/CHANGELOG.md) for tool changes.
           files: |
             release/HoloCubic_AIO_firmware_${{ github.ref_name }}.bin
             release/CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows.exe
