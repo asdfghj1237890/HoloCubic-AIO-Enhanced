@@ -5,6 +5,7 @@
 pub mod app;
 pub mod bus;
 pub mod file_manager_worker;
+pub mod image_converter_worker;
 pub mod settings_worker;
 pub mod tabs;
 pub mod theme;
