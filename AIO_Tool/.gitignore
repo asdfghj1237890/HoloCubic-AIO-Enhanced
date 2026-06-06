@@ -1,7 +1,2 @@
-ffmpeg.exe
-*__pycache__*
-OutFile
-build/
-dist/
-.idea/
-__pycache__/
+target/
+**/*.rs.bk

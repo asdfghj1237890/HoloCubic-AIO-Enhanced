@@ -92,13 +92,13 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: AIO_Tool_rs
+          workspaces: AIO_Tool
 
       - name: Extract tool version (Cargo.toml workspace.package.version)
         id: tool_version
         shell: bash
         run: |
-          version=$(grep -E '^version = ' AIO_Tool_rs/Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')
+          version=$(grep -E '^version = ' AIO_Tool/Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')
           if [ -z "$version" ]; then
             echo "workspace.package.version not found" >&2
             exit 1
@@ -106,7 +106,7 @@ jobs:
           echo "value=$version" >> $GITHUB_OUTPUT
 
       - name: cargo build --release --bin aio-tool
-        working-directory: AIO_Tool_rs
+        working-directory: AIO_Tool
         run: cargo build --release --bin aio-tool
 
       - name: Package tool artifact (Windows)
@@ -115,7 +115,7 @@ jobs:
         run: |
           $artifactDir = "release"
           New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
-          $src = "AIO_Tool_rs\target\release\aio-tool.exe"
+          $src = "AIO_Tool\target\release\aio-tool.exe"
           if (-not (Test-Path $src)) { throw "expected $src" }
           Copy-Item -Path $src -Destination (Join-Path $artifactDir "${{ matrix.target.artifact_name }}") -Force
 
@@ -124,7 +124,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p release
-          src=AIO_Tool_rs/target/release/aio-tool
+          src=AIO_Tool/target/release/aio-tool
           if [ ! -x "$src" ]; then
             echo "expected executable at $src" >&2
             exit 1
@@ -202,9 +202,9 @@ jobs:
             For first-time flash, place all four `.bin` files at the addresses above (the Windows tool's Flasher tab can do this in one click).
             See [dist/README.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/dist/README.md) for esptool CLI usage.
 
-            Internal tool version: `${{ needs.build_tool.outputs.version }}` (from `AIO_Tool_rs/Cargo.toml`).
+            Internal tool version: `${{ needs.build_tool.outputs.version }}` (from `AIO_Tool/Cargo.toml`).
 
-            See [AIO_Tool_rs/CHANGELOG.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/AIO_Tool_rs/CHANGELOG.md) for tool changes.
+            See [AIO_Tool/CHANGELOG.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/AIO_Tool/CHANGELOG.md) for tool changes.
           files: |
             release/HoloCubic_AIO_firmware_${{ github.ref_name }}.bin
             release/CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows.exe
