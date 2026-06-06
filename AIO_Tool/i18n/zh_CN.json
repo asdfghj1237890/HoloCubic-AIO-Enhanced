@@ -46,6 +46,7 @@
   "other_settings": "其他设置",
   "read_settings": "读取设置",
   "write_settings": "写入设置",
+  "write_changes": "写入修改",
   "ok": "确定",
   "cancel": "取消",
   "yes": "是",
@@ -138,5 +139,8 @@
   "format": "格式",
   "select_video_title": "选择一个视频文件",
   "common_formats": "常用格式",
+  "ffmpeg_missing": "未在 PATH 中找到 ffmpeg。",
+  "install_ffmpeg": "安装 ffmpeg",
+  "recheck": "重新检测",
   "help_info": "\n        本上位机专门针对HoloCubic AIO固件开发，其中固件烧录功能兼容其他第三方固件。\n\n        【最新版本固件 / 本工具增强版】\n            https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced\n\n        观看演示链接：\n            https://www.bilibili.com/video/BV1wS4y1R7YF?p=1\n\n        了解Holocubic AIO固件\n            原始版本 https://github.com/ClimbSnail/HoloCubic_AIO\n            或者     https://gitee.com/ClimbSnailQ/HoloCubic_AIO\n\n        了解Holocubic硬件开源方案\n            请访问 https://github.com/peng-zhihui/HoloCubic\n        "
 }

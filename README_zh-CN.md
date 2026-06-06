@@ -99,8 +99,8 @@
 
 ### 刷写步骤
 
-1. 将文件1-3与`CubicAIO_Tool.exe`放在同一目录
-2. 运行`CubicAIO_Tool.exe`
+1. 将文件1-3与`CubicAIO_Tool-v3.0.0-x86_64-windows.exe`放在同一目录
+2. 运行`CubicAIO_Tool-v3.0.0-x86_64-windows.exe`
 3. 在软件中选择最新固件`HoloCubic_AIO_XXX.bin`
 4. 刷写固件
 
@@ -450,7 +450,7 @@ with open(out_path, 'wb') as f:
 
 ## 🛠️ 开发与编译
 
-> 📚 **想贡献代码？** 先看 [**开发者教学合集**](./Docs/development/README.md) — 涵盖韧体架构、从零写一个新 app、AIO_Tool Python 程式码、三套测试环境、CI / release 流程。~1800 行，从头读到尾约 3 小时。
+> 📚 **想贡献代码？** 先看 [**开发者教学合集**](./Docs/development/README.md) — 涵盖韧体架构、从零写一个新 app、AIO_Tool Rust workspace（6 个 crate：aio-protocol / aio-i18n / aio-device / aio-flasher / aio-converter / aio-tool）、三套测试环境、CI / release 流程。~1800 行，从头读到尾约 3 小时。
 
 ### 构建环境
 

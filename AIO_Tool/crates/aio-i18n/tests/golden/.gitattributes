@@ -1,0 +1,5 @@
+# Goldens are compared byte-for-byte against the legacy Python tool's
+# I18n.t() output. The JSON source has "\n" line endings; preserve them
+# regardless of host platform or core.autocrlf setting so include_str!
+# returns bytes that match what t() produces at runtime.
+*.txt -text

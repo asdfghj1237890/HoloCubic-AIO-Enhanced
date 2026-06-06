@@ -1,0 +1,17 @@
+[package]
+name = "aio-device"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HoloCubic AIO device transport abstraction — USB serial + WiFi TCP + mock"
+
+[features]
+default = []
+mock = []
+
+[dependencies]
+serialport = { workspace = true }
+thiserror  = { workspace = true }
+bytes      = { workspace = true }

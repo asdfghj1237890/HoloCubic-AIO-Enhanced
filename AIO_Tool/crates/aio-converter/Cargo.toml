@@ -1,0 +1,13 @@
+[package]
+name = "aio-converter"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HoloCubic AIO LVGL image converter — RGB332/565/888 + Alpha + Indexed encoders, Floyd-Steinberg dithering"
+
+[dependencies]
+image     = { workspace = true }
+byteorder = { workspace = true }
+thiserror = { workspace = true }

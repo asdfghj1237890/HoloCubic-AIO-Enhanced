@@ -85,8 +85,8 @@ Download the PC tool from the release page to flash the firmware.
 
 ### Flashing Steps
 
-1. Place files 1-3 and `CubicAIO_Tool.exe` in the same directory
-2. Run `CubicAIO_Tool.exe`
+1. Place files 1-3 and `CubicAIO_Tool-v3.0.0-x86_64-windows.exe` in the same directory
+2. Run `CubicAIO_Tool-v3.0.0-x86_64-windows.exe`
 3. Select the latest firmware `HoloCubic_AIO_XXX.bin`
 4. Flash the firmware
 
@@ -436,7 +436,7 @@ with open(out_path, 'wb') as f:
 
 ## 🛠️ Development & Compilation
 
-> 📚 **Want to contribute code?** Read the [**developer tutorial set**](./Docs/development/README.md) first — covers firmware architecture, writing a new app from scratch, the AIO_Tool Python codebase, all three test environments, and the CI / release pipeline. ~1800 lines, ~3 hour read end-to-end.
+> 📚 **Want to contribute code?** Read the [**developer tutorial set**](./Docs/development/README.md) first — covers firmware architecture, writing a new app from scratch, the AIO_Tool Rust workspace (6 crates: aio-protocol / aio-i18n / aio-device / aio-flasher / aio-converter / aio-tool), all three test environments, and the CI / release pipeline. ~1800 lines, ~3 hour read end-to-end.
 
 ### Build Environment
 

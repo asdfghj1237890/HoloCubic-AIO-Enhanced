@@ -1,0 +1,2 @@
+Language settings have been changed
+Please restart the tool to apply the new language

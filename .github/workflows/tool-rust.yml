@@ -1,0 +1,56 @@
+name: tool-rust
+
+on:
+  pull_request:
+    paths:
+      - 'AIO_Tool/**'
+      - '.github/workflows/tool-rust.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'AIO_Tool/**'
+      - '.github/workflows/tool-rust.yml'
+
+defaults:
+  run:
+    working-directory: AIO_Tool
+
+jobs:
+  fmt:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  check:
+    name: clippy + test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install libudev-dev (Linux only — serialport enumeration)
+        if: matrix.os == 'ubuntu-22.04'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: AIO_Tool
+
+      - name: cargo clippy --all-targets --workspace -- -D warnings
+        run: cargo clippy --all-targets --workspace -- -D warnings
+
+      - name: cargo test --workspace
+        run: cargo test --workspace
