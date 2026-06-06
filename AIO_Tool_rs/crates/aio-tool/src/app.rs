@@ -90,6 +90,10 @@ impl App {
                 crate::bus::AppEvent::Convert(_) | crate::bus::AppEvent::ConvertFinished(_) => {
                     // Plan 9 handler.
                 }
+                crate::bus::AppEvent::VideoConvertLog(_)
+                | crate::bus::AppEvent::VideoConvertFinished(_) => {
+                    // Plan 9 handler.
+                }
                 crate::bus::AppEvent::SettingsConnected => {
                     self.settings.state = crate::tabs::settings::DeviceState::Connected;
                     self.settings.log.push("Connected.");

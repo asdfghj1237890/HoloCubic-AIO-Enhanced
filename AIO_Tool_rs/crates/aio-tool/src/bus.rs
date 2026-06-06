@@ -22,11 +22,17 @@ pub enum AppEvent {
     /// Flash worker finished. `Ok(())` on success; `Err` carries the rendered
     /// error message ready for display.
     FlashFinished(Result<(), String>),
-    /// Event from an Image / Video Converter background op.
+    /// Event from the Image Converter background op (Plan 9 Task 2).
     Convert(ConvertEvent),
-    /// Converter background op finished. `Ok` carries the encoded byte
-    /// payload; `Err` carries the rendered error message ready for display.
+    /// Image Converter background op finished. Ok carries the encoded bytes
+    /// ready to write; Err carries the rendered error.
     ConvertFinished(Result<Vec<u8>, String>),
+    /// One line of stdout/stderr from a running ffmpeg child.
+    VideoConvertLog(String),
+    /// Video Converter background op finished.
+    /// `Ok(out_path)` on success; `Err(msg)` on ffmpeg non-zero exit OR
+    /// spawn / cancel failures.
+    VideoConvertFinished(Result<std::path::PathBuf, String>),
     /// Settings worker connected the SerialTransport successfully.
     SettingsConnected,
     /// Raw bytes the Settings worker received from the device.
