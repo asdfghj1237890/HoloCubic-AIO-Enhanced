@@ -156,4 +156,28 @@ mod tests {
         // boot.txt is gone.
         assert!(r.find_mut("/boot.txt").is_none());
     }
+
+    #[test]
+    fn populate_preserves_order_drops_removed_creates_new_unloaded() {
+        let mut r = FsNode::root();
+        r.populate(&["sd".to_owned(), "boot.txt".to_owned(), "data".to_owned()]);
+        // Mark every initial child loaded so we can tell survivors from fresh ones.
+        for c in &mut r.children {
+            c.loaded = true;
+        }
+        // Re-populate: drop boot.txt, keep sd + data, add a new sibling logs/ between them.
+        r.populate(&["sd".to_owned(), "logs".to_owned(), "data".to_owned()]);
+        // Order matches the firmware-supplied entries[] verbatim.
+        let names: Vec<&str> = r.children.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["sd", "logs", "data"]);
+        // Survivors kept their loaded flag; the new sibling is unloaded.
+        let sd = r.children.iter().find(|c| c.name == "sd").unwrap();
+        let data = r.children.iter().find(|c| c.name == "data").unwrap();
+        let logs = r.children.iter().find(|c| c.name == "logs").unwrap();
+        assert!(sd.loaded, "survivor sd kept its loaded flag");
+        assert!(data.loaded, "survivor data kept its loaded flag");
+        assert!(!logs.loaded, "new sibling logs is unloaded");
+        // Removed entry is gone.
+        assert!(r.find_mut("/boot.txt").is_none());
+    }
 }
