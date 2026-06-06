@@ -52,10 +52,22 @@ impl FsNode {
     }
 
     /// Replace this node's children with the given entries (used on DirList).
+    ///
+    /// Surviving entries (matched by basename) keep their cached subtree and
+    /// `loaded` state so re-populate after a sibling delete doesn't collapse
+    /// every expanded folder.
     pub fn populate(&mut self, entries: &[String]) {
+        let mut old: std::collections::HashMap<String, FsNode> = self
+            .children
+            .drain(..)
+            .map(|c| (c.name.clone(), c))
+            .collect();
         self.children = entries
             .iter()
-            .map(|name| Self::new_child(&self.path, name))
+            .map(|name| {
+                old.remove(name)
+                    .unwrap_or_else(|| Self::new_child(&self.path, name))
+            })
             .collect();
         self.loaded = true;
     }
@@ -125,5 +137,47 @@ mod tests {
         sd.populate(&["foo.txt".to_owned()]);
         assert!(r.find_mut("/sd/foo.txt").is_some());
         assert!(r.find_mut("/nonexistent").is_none());
+    }
+
+    #[test]
+    fn populate_preserves_existing_subtrees_when_repopulating() {
+        let mut r = FsNode::root();
+        r.populate(&["sd".to_owned(), "boot.txt".to_owned()]);
+        // Expand /sd and populate its subtree.
+        let sd = r.find_mut("/sd").expect("find /sd");
+        sd.populate(&["photos".to_owned()]);
+        // Now re-populate root (simulating delete + refresh): boot.txt gone.
+        r.populate(&["sd".to_owned()]);
+        // /sd should still be there AND still have photos as a child.
+        let sd = r.find_mut("/sd").expect("find /sd after re-populate");
+        assert!(sd.loaded, "subtree state preserved");
+        assert_eq!(sd.children.len(), 1);
+        assert_eq!(sd.children[0].name, "photos");
+        // boot.txt is gone.
+        assert!(r.find_mut("/boot.txt").is_none());
+    }
+
+    #[test]
+    fn populate_preserves_order_drops_removed_creates_new_unloaded() {
+        let mut r = FsNode::root();
+        r.populate(&["sd".to_owned(), "boot.txt".to_owned(), "data".to_owned()]);
+        // Mark every initial child loaded so we can tell survivors from fresh ones.
+        for c in &mut r.children {
+            c.loaded = true;
+        }
+        // Re-populate: drop boot.txt, keep sd + data, add a new sibling logs/ between them.
+        r.populate(&["sd".to_owned(), "logs".to_owned(), "data".to_owned()]);
+        // Order matches the firmware-supplied entries[] verbatim.
+        let names: Vec<&str> = r.children.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["sd", "logs", "data"]);
+        // Survivors kept their loaded flag; the new sibling is unloaded.
+        let sd = r.children.iter().find(|c| c.name == "sd").unwrap();
+        let data = r.children.iter().find(|c| c.name == "data").unwrap();
+        let logs = r.children.iter().find(|c| c.name == "logs").unwrap();
+        assert!(sd.loaded, "survivor sd kept its loaded flag");
+        assert!(data.loaded, "survivor data kept its loaded flag");
+        assert!(!logs.loaded, "new sibling logs is unloaded");
+        // Removed entry is gone.
+        assert!(r.find_mut("/boot.txt").is_none());
     }
 }
