@@ -9,4 +9,5 @@ pub mod image_converter_worker;
 pub mod settings_worker;
 pub mod tabs;
 pub mod theme;
+pub mod video_converter_worker;
 pub mod widgets;
