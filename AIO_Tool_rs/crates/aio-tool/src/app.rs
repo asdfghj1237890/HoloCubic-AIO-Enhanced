@@ -38,6 +38,9 @@ pub struct App {
 
     /// Video Converter tab state (Plan 9 Task 5 — Group D).
     pub(crate) video_converter: crate::tabs::video_converter::VideoConverterState,
+
+    /// Tool Settings tab state (Plan 9 Task 7 — Group E).
+    pub(crate) tool_settings: crate::tabs::tool_settings::ToolSettingsState,
 }
 
 impl App {
@@ -53,6 +56,7 @@ impl App {
             file_manager: crate::tabs::file_manager::FileManagerState::default(),
             image_converter: crate::tabs::image_converter::ImageConverterState::default(),
             video_converter: crate::tabs::video_converter::VideoConverterState::default(),
+            tool_settings: crate::tabs::tool_settings::ToolSettingsState::default(),
         }
     }
 
@@ -256,6 +260,7 @@ impl App {
             file_manager: crate::tabs::file_manager::FileManagerState::default(),
             image_converter: crate::tabs::image_converter::ImageConverterState::default(),
             video_converter: crate::tabs::video_converter::VideoConverterState::default(),
+            tool_settings: crate::tabs::tool_settings::ToolSettingsState::default(),
             bus_tx,
             bus_rx,
         }
@@ -310,7 +315,7 @@ impl eframe::App for App {
             Tab::VideoConverter => {
                 tabs::video_converter::show(ui, &mut self.video_converter, &self.bus_tx)
             }
-            Tab::ToolSettings => tabs::tool_settings::show(ui),
+            Tab::ToolSettings => tabs::tool_settings::show(ui, &mut self.tool_settings),
             Tab::Help => tabs::help::show(ui),
         });
     }
