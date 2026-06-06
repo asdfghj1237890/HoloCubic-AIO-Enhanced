@@ -156,7 +156,7 @@ pub fn show(ui: &mut Ui, state: &mut ImageConverterState, bus_tx: &AppEventTx) {
                         dither,
                         output,
                     };
-                    let _ = image_converter_worker::spawn(job, bus_tx.clone());
+                    image_converter_worker::spawn(job, bus_tx.clone(), state.cancel.clone());
                     state.log.push(format!(
                         "\u{2192} converting {} \u{2192} {}",
                         input.display(),

@@ -7,8 +7,9 @@
 //! 4. Sends `AppEvent::Convert(ConvertEvent)` for progress
 //! 5. Sends `AppEvent::ConvertFinished(Ok(bytes) | Err(msg))` once
 //!
-//! No long-lived state; no Cmd enum. Cancel flag is checked by the
-//! encoder at row boundaries (Plan 5 Task 6).
+//! No long-lived state; no Cmd enum. Cancel flag is **supplied by the
+//! caller** so one Cancel button can cancel every in-flight encode of a
+//! batch; the encoder checks it at row boundaries (Plan 5 Task 6).
 
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::channel;
@@ -44,12 +45,11 @@ pub struct Job {
     pub output: Output,
 }
 
-/// Spawn the worker. Returns `cancel_flag`. The UI does NOT keep a
-/// `Sender` — there's no cmd surface; the only control is "cancel".
-pub fn spawn(job: Job, bus_tx: AppEventTx) -> Arc<AtomicBool> {
-    let cancel = Arc::new(AtomicBool::new(false));
-    let cancel_for_thread = cancel.clone();
-
+/// Spawn the worker. The `cancel` flag is owned by the caller and shared
+/// across every job in a batch so a single Cancel button can stop all
+/// in-flight encodes. The UI does NOT keep a `Sender` — there's no cmd
+/// surface; the only control is "cancel".
+pub fn spawn(job: Job, bus_tx: AppEventTx, cancel: Arc<AtomicBool>) {
     thread::spawn(move || {
         let result: Result<Vec<u8>, String> = (|| {
             let bytes = std::fs::read(&job.input_path)
@@ -71,7 +71,7 @@ pub fn spawn(job: Job, bus_tx: AppEventTx) -> Arc<AtomicBool> {
                         }
                     });
                     let out = conv
-                        .encode_bin(Some(tx), Some(cancel_for_thread))
+                        .encode_bin(Some(tx), Some(cancel))
                         .map_err(|e| format!("encode: {e}"))?;
                     // Joining the forwarder is best-effort; drop it.
                     let _ = fwd.join();
@@ -95,8 +95,6 @@ pub fn spawn(job: Job, bus_tx: AppEventTx) -> Arc<AtomicBool> {
 
         let _ = bus_tx.send(AppEvent::ConvertFinished(result));
     });
-
-    cancel
 }
 
 /// Build a sanitized C identifier from a filesystem stem.
