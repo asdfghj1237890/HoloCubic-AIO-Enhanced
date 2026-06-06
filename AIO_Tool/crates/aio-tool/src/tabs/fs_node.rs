@@ -52,10 +52,22 @@ impl FsNode {
     }
 
     /// Replace this node's children with the given entries (used on DirList).
+    ///
+    /// Surviving entries (matched by basename) keep their cached subtree and
+    /// `loaded` state so re-populate after a sibling delete doesn't collapse
+    /// every expanded folder.
     pub fn populate(&mut self, entries: &[String]) {
+        let mut old: std::collections::HashMap<String, FsNode> = self
+            .children
+            .drain(..)
+            .map(|c| (c.name.clone(), c))
+            .collect();
         self.children = entries
             .iter()
-            .map(|name| Self::new_child(&self.path, name))
+            .map(|name| {
+                old.remove(name)
+                    .unwrap_or_else(|| Self::new_child(&self.path, name))
+            })
             .collect();
         self.loaded = true;
     }
@@ -125,5 +137,23 @@ mod tests {
         sd.populate(&["foo.txt".to_owned()]);
         assert!(r.find_mut("/sd/foo.txt").is_some());
         assert!(r.find_mut("/nonexistent").is_none());
+    }
+
+    #[test]
+    fn populate_preserves_existing_subtrees_when_repopulating() {
+        let mut r = FsNode::root();
+        r.populate(&["sd".to_owned(), "boot.txt".to_owned()]);
+        // Expand /sd and populate its subtree.
+        let sd = r.find_mut("/sd").expect("find /sd");
+        sd.populate(&["photos".to_owned()]);
+        // Now re-populate root (simulating delete + refresh): boot.txt gone.
+        r.populate(&["sd".to_owned()]);
+        // /sd should still be there AND still have photos as a child.
+        let sd = r.find_mut("/sd").expect("find /sd after re-populate");
+        assert!(sd.loaded, "subtree state preserved");
+        assert_eq!(sd.children.len(), 1);
+        assert_eq!(sd.children[0].name, "photos");
+        // boot.txt is gone.
+        assert!(r.find_mut("/boot.txt").is_none());
     }
 }
