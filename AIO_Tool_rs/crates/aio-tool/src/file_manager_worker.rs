@@ -240,8 +240,11 @@ fn try_parse_one(
             // Pop the matching pending request. If the front is a
             // GetFileInfo (B2: it went out as DirList on the wire), route
             // the raw payload to Properties. Otherwise treat as a real
-            // DirList. An empty queue is unexpected but tolerated as an
-            // unsolicited dir listing.
+            // DirList. An empty queue is tolerated as an unsolicited
+            // listing — note that on reconnect, a stale response from a
+            // prior session could land here with no pending entry and
+            // mutate the tree; in practice TCP teardown drops it but a
+            // session epoch would harden this if reports surface.
             let event = match pending.pop_front() {
                 Some(RequestKind::GetFileInfo { path }) => {
                     // Per Plan 8 B2: surface the raw bytes after the 8-byte
