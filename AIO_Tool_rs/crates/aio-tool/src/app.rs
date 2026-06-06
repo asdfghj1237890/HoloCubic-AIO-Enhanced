@@ -29,6 +29,9 @@ pub struct App {
 
     /// Settings tab state (Plan 7 Task 4 — Group C).
     pub(crate) settings: crate::tabs::settings::SettingsState,
+
+    /// File Manager tab state (Plan 8 Task 3 — Group C).
+    pub(crate) file_manager: crate::tabs::file_manager::FileManagerState,
 }
 
 impl App {
@@ -41,6 +44,7 @@ impl App {
             bus_rx,
             flasher: crate::tabs::flasher::FlasherState::default(),
             settings: crate::tabs::settings::SettingsState::default(),
+            file_manager: crate::tabs::file_manager::FileManagerState::default(),
         }
     }
 
@@ -121,12 +125,63 @@ impl App {
                         }
                     };
                 }
-                crate::bus::AppEvent::FileManagerConnected
-                | crate::bus::AppEvent::FileManagerDirListed { .. }
-                | crate::bus::AppEvent::FileManagerFileBytes { .. }
-                | crate::bus::AppEvent::FileManagerProperties { .. }
-                | crate::bus::AppEvent::FileManagerFinished(_) => {
-                    // Plan 8 Task 3 handler.
+                crate::bus::AppEvent::FileManagerConnected => {
+                    self.file_manager.state = crate::tabs::settings::DeviceState::Connected;
+                    self.file_manager.log.push("Connected.");
+                }
+                crate::bus::AppEvent::FileManagerDirListed { path, entries } => {
+                    if let Some(node) = self.file_manager.tree.find_mut(&path) {
+                        node.populate(&entries);
+                    }
+                    self.file_manager.log.push(format!(
+                        "\u{2190} DirList {} ({} entries)",
+                        path,
+                        entries.len()
+                    ));
+                }
+                crate::bus::AppEvent::FileManagerFileBytes { bytes, .. } => {
+                    let path = self.file_manager.last_read_path.clone().unwrap_or_default();
+                    let default_name = path.rsplit('/').next().unwrap_or("file.bin").to_owned();
+                    if let Some(save_to) = rfd::FileDialog::new()
+                        .set_file_name(&default_name)
+                        .save_file()
+                    {
+                        match std::fs::write(&save_to, &bytes) {
+                            Ok(()) => self.file_manager.log.push(format!(
+                                "Saved {} bytes to {}",
+                                bytes.len(),
+                                save_to.display()
+                            )),
+                            Err(e) => self.file_manager.log.push(format!("\u{2717} save: {e}")),
+                        }
+                    } else {
+                        self.file_manager.log.push("Save cancelled.");
+                    }
+                }
+                crate::bus::AppEvent::FileManagerProperties { path, raw_bytes } => {
+                    // Group D Task 7 will pretty-print; for Task 3 baseline,
+                    // log hex preview.
+                    let preview = raw_bytes
+                        .iter()
+                        .take(32)
+                        .map(|b| format!("{b:02x}"))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    self.file_manager.log.push(format!(
+                        "\u{2190} Properties {}: {} bytes [{}...]",
+                        path,
+                        raw_bytes.len(),
+                        preview
+                    ));
+                }
+                crate::bus::AppEvent::FileManagerFinished(result) => {
+                    self.file_manager.state = match result {
+                        Ok(()) => crate::tabs::settings::DeviceState::Disconnected,
+                        Err(msg) => {
+                            self.file_manager.log.push(format!("\u{2717} {msg}"));
+                            crate::tabs::settings::DeviceState::Error(msg)
+                        }
+                    };
                 }
             }
         }
@@ -146,6 +201,7 @@ impl App {
             active_tab: crate::tabs::Tab::Flasher,
             flasher: crate::tabs::flasher::FlasherState::default(),
             settings: crate::tabs::settings::SettingsState::default(),
+            file_manager: crate::tabs::file_manager::FileManagerState::default(),
             bus_tx,
             bus_rx,
         }
@@ -193,7 +249,7 @@ impl eframe::App for App {
         CentralPanel::default().show(ctx, |ui| match self.active_tab {
             Tab::Flasher => tabs::flasher::show(ui, &mut self.flasher, &self.bus_tx),
             Tab::Settings => tabs::settings::show(ui, &mut self.settings, &self.bus_tx),
-            Tab::FileManager => tabs::file_manager::show(ui),
+            Tab::FileManager => tabs::file_manager::show(ui, &mut self.file_manager, &self.bus_tx),
             Tab::ImageConverter => tabs::image_converter::show(ui),
             Tab::VideoConverter => tabs::video_converter::show(ui),
             Tab::ToolSettings => tabs::tool_settings::show(ui),
