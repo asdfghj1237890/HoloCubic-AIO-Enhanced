@@ -22,31 +22,35 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: 1.82.0
           components: rustfmt
       - run: cargo fmt --all -- --check
 
-  clippy:
-    runs-on: ubuntu-22.04
+  check:
+    name: clippy + test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install libudev-dev (for serialport enumeration in aio-tool)
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: AIO_Tool_rs
-      - run: cargo clippy --all-targets --workspace -- -D warnings
 
-  test:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install libudev-dev (for serialport enumeration in aio-tool)
+      - name: Install libudev-dev (Linux only — serialport enumeration)
+        if: matrix.os == 'ubuntu-22.04'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
+
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.82.0
+          components: clippy
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: AIO_Tool_rs
-      - run: cargo test --workspace
+
+      - name: cargo clippy --all-targets --workspace -- -D warnings
+        run: cargo clippy --all-targets --workspace -- -D warnings
+
+      - name: cargo test --workspace
+        run: cargo test --workspace
