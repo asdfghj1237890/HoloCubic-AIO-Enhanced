@@ -98,9 +98,8 @@ pub fn show(ui: &mut Ui, state: &mut SettingsState, bus_tx: &crate::bus::AppEven
                         .push(format!("Connecting to {} @ {}...", state.port, baud));
                 }
             } else if ui.button(t("disconnect", None)).clicked() {
-                if let Some(tx) = &state.cmd_tx {
-                    let _ = tx.send(SettingsCmd::Disconnect);
-                }
+                // Cancel flag is the sole shutdown signal — worker checks
+                // it at the top of every loop iteration (Plan 7 reviewer I2).
                 state
                     .cancel
                     .store(true, std::sync::atomic::Ordering::Relaxed);

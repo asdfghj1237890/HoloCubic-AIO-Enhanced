@@ -5,15 +5,20 @@
 //! over the same `SerialTransport`. The worker owns the transport;
 //! the UI thread communicates via a `Sender<SettingsCmd>`.
 //!
-//! Worker loop:
-//! - On each iteration, try_recv a command (non-blocking).
-//! - Sleep 10ms between iterations to avoid spinning.
-//! - On `Disconnect` cmd, transport error, or cancel: drop transport, exit.
+//! Worker loop responsiveness is dominated by [`SerialTransport`]'s 500 ms
+//! read timeout — the loop iterates approximately every ~500 ms when idle.
+//! No explicit sleep needed (the timeout prevents busy-spinning); cancel
+//! and disconnect take effect within one iteration.
+//!
+//! Shutdown signals (in priority order):
+//! 1. `cancel` flag set (UI's Disconnect button) → checked top of loop
+//! 2. `cmd_rx` disconnected (UI dropped the sender — app closed)
+//! 3. `bus_tx.send` fails (App dropped the receiver — app closed)
+//! 4. `transport.read` / `write_all` errors
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
-use std::time::Duration;
 
 use aio_device::serial::SerialTransport;
 use aio_device::{Transport, TransportError};
@@ -22,6 +27,9 @@ use aio_protocol::{SettingMsg, ValueType};
 use crate::bus::{AppEvent, AppEventTx};
 
 /// Commands the UI thread sends to the Settings worker.
+///
+/// Disconnect is intentionally NOT a variant — the cancel flag alone
+/// signals shutdown. See Plan 7 reviewer I2.
 #[derive(Debug)]
 pub enum SettingsCmd {
     /// Send a `SettingGet` for one key.
@@ -42,8 +50,6 @@ pub enum SettingsCmd {
         /// New value.
         value: String,
     },
-    /// Terminate the worker loop cleanly.
-    Disconnect,
 }
 
 /// Spawn the worker. Returns a `(cmd_tx, cancel_flag)` pair the UI keeps.
@@ -74,7 +80,10 @@ fn worker_loop(
     // Connect.
     let mut transport = match SerialTransport::open(&port, baud) {
         Ok(t) => {
-            let _ = bus_tx.send(AppEvent::SettingsConnected);
+            // If the receiver is already gone (App closed mid-connect), bail.
+            if bus_tx.send(AppEvent::SettingsConnected).is_err() {
+                return;
+            }
             t
         }
         Err(e) => {
@@ -115,15 +124,25 @@ fn worker_loop(
                     break;
                 }
             }
-            Ok(SettingsCmd::Disconnect) => break,
             Err(std::sync::mpsc::TryRecvError::Empty) => {}
+            // UI dropped the cmd_tx (app closed) — clean shutdown.
             Err(std::sync::mpsc::TryRecvError::Disconnected) => break,
         }
 
-        // 2. Try to read incoming bytes (non-blocking via TimedOut).
+        // 2. Try to read incoming bytes. `transport.read` blocks up to
+        //    `SerialTransport`'s 500 ms timeout — this is what paces the
+        //    loop (no explicit sleep needed). TimedOut means "no bytes
+        //    arrived in this window"; we just loop.
         match transport.read(&mut read_buf) {
             Ok(n) if n > 0 => {
-                let _ = bus_tx.send(AppEvent::SettingsReceived(read_buf[..n].to_vec()));
+                // If the receiver is gone (App dropped), exit promptly
+                // rather than spinning on dead sends until the next error.
+                if bus_tx
+                    .send(AppEvent::SettingsReceived(read_buf[..n].to_vec()))
+                    .is_err()
+                {
+                    return;
+                }
             }
             Ok(_) => {}
             Err(TransportError::TimedOut) => {}
@@ -132,8 +151,6 @@ fn worker_loop(
                 break;
             }
         }
-
-        std::thread::sleep(Duration::from_millis(10));
     }
 
     transport.close();
