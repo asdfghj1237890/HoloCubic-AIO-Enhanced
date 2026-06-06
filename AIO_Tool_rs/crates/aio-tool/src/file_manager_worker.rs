@@ -10,6 +10,7 @@
 //! - Cancel flag is the sole shutdown signal (no Disconnect cmd variant).
 //! - bus_tx.send() failure breaks the loop (App dropped the receiver).
 
+use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -22,6 +23,20 @@ use aio_protocol::file::{DirList, FileGetInfo, FileRead, FileRemove, FileRename}
 use aio_protocol::{ActionType, MsgHead, WireDecode, HEADER_SIZE};
 
 use crate::bus::{AppEvent, AppEventTx};
+
+/// Tracks commands that expect a response so the parser can disambiguate.
+///
+/// Resolves the Plan 1 B2 bug: `FileGetInfo` requests/responses share
+/// `action_type = DirList` with real `DirList` traffic. Without this FIFO,
+/// a Properties response would silently overwrite a tree node. `RemoveFile`
+/// and `RenameFile` are intentionally absent — the legacy Python tool does
+/// not expect responses for those.
+#[derive(Debug)]
+enum RequestKind {
+    ListDir,
+    ReadFile { path: String },
+    GetFileInfo { path: String },
+}
 
 /// Commands the UI thread sends to the File Manager worker.
 #[derive(Debug)]
@@ -87,6 +102,9 @@ fn worker_loop(
     // partial across reads.
     let mut accum: Vec<u8> = Vec::new();
     let mut read_buf = vec![0u8; 8192];
+    // FIFO of commands awaiting a response. Pushed on successful write of
+    // ListDir/ReadFile/GetFileInfo; popped when a matching response parses.
+    let mut pending: VecDeque<RequestKind> = VecDeque::new();
 
     loop {
         if cancel.load(Ordering::Relaxed) {
@@ -96,7 +114,7 @@ fn worker_loop(
         // 1. Try to process a command (non-blocking).
         match cmd_rx.try_recv() {
             Ok(cmd) => {
-                if let Err(e) = handle_cmd(&mut transport, cmd) {
+                if let Err(e) = handle_cmd(&mut transport, cmd, &mut pending) {
                     let _ = bus_tx.send(AppEvent::FileManagerFinished(Err(e)));
                     break;
                 }
@@ -114,7 +132,7 @@ fn worker_loop(
                 accum.extend_from_slice(&read_buf[..n]);
                 // Drain as many complete messages as we have.
                 loop {
-                    match try_parse_one(&accum, &bus_tx) {
+                    match try_parse_one(&accum, &bus_tx, &mut pending) {
                         ParseStep::Consumed(n) => {
                             accum.drain(..n);
                             continue;
@@ -147,25 +165,49 @@ enum ParseStep {
     BusGone,
 }
 
-fn handle_cmd(transport: &mut TcpTransport, cmd: FmCmd) -> Result<(), String> {
-    let bytes = match cmd {
-        FmCmd::ListDir { path } => DirList::request(&path)
-            .to_wire()
-            .map_err(|e| format!("encode DirList: {e}"))?,
-        FmCmd::ReadFile { path } => FileRead::request(&path)
-            .to_wire()
-            .map_err(|e| format!("encode FileRead: {e}"))?,
-        FmCmd::RemoveFile { name } => FileRemove::new(&name)
-            .to_wire()
-            .map_err(|e| format!("encode FileRemove: {e}"))?,
-        FmCmd::RenameFile { name } => FileRename::new(&name)
-            .to_wire()
-            .map_err(|e| format!("encode FileRename: {e}"))?,
-        FmCmd::GetFileInfo { name } => FileGetInfo::request(&name)
-            .to_wire()
-            .map_err(|e| format!("encode FileGetInfo: {e}"))?,
+fn handle_cmd(
+    transport: &mut TcpTransport,
+    cmd: FmCmd,
+    pending: &mut VecDeque<RequestKind>,
+) -> Result<(), String> {
+    // Encode and capture the request-kind to track *only if* the write
+    // succeeds. Remove/Rename produce no kind (no response expected).
+    let (bytes, kind) = match cmd {
+        FmCmd::ListDir { path } => {
+            let bytes = DirList::request(&path)
+                .to_wire()
+                .map_err(|e| format!("encode DirList: {e}"))?;
+            (bytes, Some(RequestKind::ListDir))
+        }
+        FmCmd::ReadFile { path } => {
+            let bytes = FileRead::request(&path)
+                .to_wire()
+                .map_err(|e| format!("encode FileRead: {e}"))?;
+            (bytes, Some(RequestKind::ReadFile { path }))
+        }
+        FmCmd::RemoveFile { name } => {
+            let bytes = FileRemove::new(&name)
+                .to_wire()
+                .map_err(|e| format!("encode FileRemove: {e}"))?;
+            (bytes, None)
+        }
+        FmCmd::RenameFile { name } => {
+            let bytes = FileRename::new(&name)
+                .to_wire()
+                .map_err(|e| format!("encode FileRename: {e}"))?;
+            (bytes, None)
+        }
+        FmCmd::GetFileInfo { name } => {
+            let bytes = FileGetInfo::request(&name)
+                .to_wire()
+                .map_err(|e| format!("encode FileGetInfo: {e}"))?;
+            (bytes, Some(RequestKind::GetFileInfo { path: name }))
+        }
     };
     transport.write_all(&bytes).map_err(|e| e.to_string())?;
+    if let Some(k) = kind {
+        pending.push_back(k);
+    }
     Ok(())
 }
 
@@ -175,7 +217,15 @@ fn handle_cmd(transport: &mut TcpTransport, cmd: FmCmd) -> Result<(), String> {
 /// - `Consumed(n)` if a complete message was parsed; drain `n` bytes.
 /// - `Incomplete` if we need more bytes.
 /// - `BusGone` if `bus_tx.send` failed (App dropped); caller exits.
-fn try_parse_one(accum: &[u8], bus_tx: &AppEventTx) -> ParseStep {
+///
+/// `pending` is consulted to disambiguate the B2 case: a DirList response
+/// could be the reply to either a real `ListDir` or a `FileGetInfo`. The
+/// FIFO pop decides which event to emit.
+fn try_parse_one(
+    accum: &[u8],
+    bus_tx: &AppEventTx,
+    pending: &mut VecDeque<RequestKind>,
+) -> ParseStep {
     // Need at least the 8-byte file header (7-byte MsgHead + 1-byte
     // duplicate action) before we can decide what message this is.
     if accum.len() < HEADER_SIZE + 1 {
@@ -187,21 +237,41 @@ fn try_parse_one(accum: &[u8], bus_tx: &AppEventTx) -> ParseStep {
     };
     match header.action {
         ActionType::DirList => {
-            // DirList::from_wire reads header + 1 + 99 (path) + remaining
-            // as dir_info. We assume one complete message per network read
-            // arrival (legacy firmware sends complete chunks).
-            let msg = match DirList::from_wire(accum) {
-                Ok((m, _)) => m,
-                Err(_) => return ParseStep::Incomplete,
+            // Pop the matching pending request. If the front is a
+            // GetFileInfo (B2: it went out as DirList on the wire), route
+            // the raw payload to Properties. Otherwise treat as a real
+            // DirList. An empty queue is unexpected but tolerated as an
+            // unsolicited dir listing.
+            let event = match pending.pop_front() {
+                Some(RequestKind::GetFileInfo { path }) => {
+                    // Per Plan 8 B2: surface the raw bytes after the 8-byte
+                    // file header (7-byte MsgHead + 1-byte duplicate action)
+                    // for hex preview — we deliberately do NOT parse as
+                    // DirList since the firmware response format isn't
+                    // reverse-engineered.
+                    let start = HEADER_SIZE + 1;
+                    let raw_bytes = if accum.len() > start {
+                        accum[start..].to_vec()
+                    } else {
+                        Vec::new()
+                    };
+                    AppEvent::FileManagerProperties { path, raw_bytes }
+                }
+                // Real DirList (or unsolicited): parse and emit.
+                _ => {
+                    let msg = match DirList::from_wire(accum) {
+                        Ok((m, _)) => m,
+                        Err(_) => return ParseStep::Incomplete,
+                    };
+                    let entries: Vec<String> =
+                        serde_json::from_slice(&msg.dir_info).unwrap_or_default();
+                    AppEvent::FileManagerDirListed {
+                        path: msg.dir_path,
+                        entries,
+                    }
+                }
             };
-            let entries: Vec<String> = serde_json::from_slice(&msg.dir_info).unwrap_or_default();
-            if bus_tx
-                .send(AppEvent::FileManagerDirListed {
-                    path: msg.dir_path,
-                    entries,
-                })
-                .is_err()
-            {
+            if bus_tx.send(event).is_err() {
                 return ParseStep::BusGone;
             }
             ParseStep::Consumed(accum.len())
@@ -211,11 +281,16 @@ fn try_parse_one(accum: &[u8], bus_tx: &AppEventTx) -> ParseStep {
                 Ok((m, _)) => m,
                 Err(_) => return ParseStep::Incomplete,
             };
+            // Keep the queue in sync: a ReadFile request expects a response.
+            // If the front matches, use its path to label the save dialog;
+            // otherwise fall back to an empty string (unsolicited).
+            let path = match pending.pop_front() {
+                Some(RequestKind::ReadFile { path }) => path,
+                _ => String::new(),
+            };
             if bus_tx
                 .send(AppEvent::FileManagerFileBytes {
-                    // Firmware response has no path echo — Settings UI
-                    // pairs with the last ReadFile request locally.
-                    path: String::new(),
+                    path,
                     bytes: msg.data,
                 })
                 .is_err()
