@@ -33,6 +33,34 @@ pub enum AppEvent {
     SettingsReceived(Vec<u8>),
     /// Settings worker terminated (Ok = normal disconnect, Err = error).
     SettingsFinished(Result<(), String>),
+    /// File Manager worker connected the TcpTransport successfully.
+    FileManagerConnected,
+    /// Directory listing arrived for `path`; entries are basenames the
+    /// UI joins into child node paths.
+    FileManagerDirListed {
+        /// Absolute path of the listed directory.
+        path: String,
+        /// Basenames (no path prefix) of entries.
+        entries: Vec<String>,
+    },
+    /// File bytes downloaded. UI pairs this with the most-recent ReadFile
+    /// request (firmware doesn't echo the path on response).
+    FileManagerFileBytes {
+        /// Path the UI requested (best-effort label for save dialog).
+        path: String,
+        /// Raw file bytes.
+        bytes: Vec<u8>,
+    },
+    /// FileGetInfo response (raw bytes — firmware response format isn't
+    /// reverse-engineered; UI displays as hex preview per Plan 8 B2 caveat).
+    FileManagerProperties {
+        /// Path the UI requested.
+        path: String,
+        /// Raw response bytes after the 8-byte file header.
+        raw_bytes: Vec<u8>,
+    },
+    /// File Manager worker terminated.
+    FileManagerFinished(Result<(), String>),
 }
 
 /// Sender half of the bus. Workers hold cloned copies.

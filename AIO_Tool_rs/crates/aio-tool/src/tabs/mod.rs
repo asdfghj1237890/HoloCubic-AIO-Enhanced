@@ -7,6 +7,7 @@
 
 pub mod file_manager;
 pub mod flasher;
+pub mod fs_node;
 pub mod help;
 pub mod image_converter;
 pub mod settings;

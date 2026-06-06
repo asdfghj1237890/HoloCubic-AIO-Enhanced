@@ -121,6 +121,13 @@ impl App {
                         }
                     };
                 }
+                crate::bus::AppEvent::FileManagerConnected
+                | crate::bus::AppEvent::FileManagerDirListed { .. }
+                | crate::bus::AppEvent::FileManagerFileBytes { .. }
+                | crate::bus::AppEvent::FileManagerProperties { .. }
+                | crate::bus::AppEvent::FileManagerFinished(_) => {
+                    // Plan 8 Task 3 handler.
+                }
             }
         }
     }
