@@ -58,64 +58,87 @@ jobs:
           if-no-files-found: error
 
   build_tool:
-    runs-on: windows-latest
+    name: build_tool (${{ matrix.target.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - os: windows-latest
+            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows.exe
+            staged_relative_path: aio-tool.exe
+            shell: pwsh
+          - os: macos-latest
+            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.tar.gz
+            staged_relative_path: aio-tool
+            shell: bash
+          - os: ubuntu-22.04
+            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.tar.gz
+            staged_relative_path: aio-tool
+            shell: bash
+    runs-on: ${{ matrix.target.os }}
     outputs:
       version: ${{ steps.tool_version.outputs.value }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - name: Install libudev-dev (Linux only)
+        if: matrix.target.os == 'ubuntu-22.04'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev
+
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          version: "0.9.x"
-          enable-cache: true
-          cache-dependency-glob: "AIO_Tool/uv.lock"
+          toolchain: 1.82.0
 
-      - name: Extract tool version
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: AIO_Tool_rs
+
+      - name: Extract tool version (Cargo.toml workspace.package.version)
         id: tool_version
-        shell: pwsh
+        shell: bash
         run: |
-          # Allow optional ': str' type annotation: e.g. TOOL_VERSION: str = "v2.5.0"
-          $match = Select-String -Path "AIO_Tool\util\common.py" -Pattern 'TOOL_VERSION[^=]*=\s*"([^"]+)"' -AllMatches
-          if (-not $match) {
-            Write-Error "TOOL_VERSION not found"
+          version=$(grep -E '^version = ' AIO_Tool_rs/Cargo.toml | head -1 | sed -E 's/version = "([^"]+)"/\1/')
+          if [ -z "$version" ]; then
+            echo "workspace.package.version not found" >&2
             exit 1
-          }
-          $version = $match.Matches[0].Groups[1].Value
-          "value=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          fi
+          echo "value=$version" >> $GITHUB_OUTPUT
 
-      - name: Prepare Python environment
-        working-directory: AIO_Tool
-        shell: pwsh
-        run: uv sync --all-groups --frozen
+      - name: cargo build --release --bin aio-tool
+        working-directory: AIO_Tool_rs
+        run: cargo build --release --bin aio-tool
 
-      - name: Build executable
-        working-directory: AIO_Tool
-        shell: pwsh
-        run: |
-          $spec = Join-Path $PWD "CubicAIO_Tool.spec"
-          if (-not (Test-Path $spec)) {
-            Get-ChildItem
-            throw "Spec file not found at $spec"
-          }
-          uv run pyinstaller $spec
-
-      - name: Package tool artifact
-        # Filename uses the release tag (github.ref_name); the internal
-        # TOOL_VERSION (tool_version output) still feeds into the release body.
+      - name: Package tool artifact (Windows)
+        if: matrix.target.os == 'windows-latest'
         shell: pwsh
         run: |
           $artifactDir = "release"
           New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
-          $tag = "${{ github.ref_name }}"
-          Copy-Item -Path "AIO_Tool\dist\CubicAIO_Tool.exe" -Destination (Join-Path $artifactDir ("HoloCubic_AIO_Tool_$tag.exe")) -Force
+          $src = "AIO_Tool_rs\target\release\aio-tool.exe"
+          if (-not (Test-Path $src)) { throw "expected $src" }
+          Copy-Item -Path $src -Destination (Join-Path $artifactDir "${{ matrix.target.artifact_name }}") -Force
+
+      - name: Package tool artifact (Linux / macOS tar.gz)
+        if: matrix.target.os != 'windows-latest'
+        shell: bash
+        run: |
+          mkdir -p release
+          src=AIO_Tool_rs/target/release/aio-tool
+          if [ ! -x "$src" ]; then
+            echo "expected executable at $src" >&2
+            exit 1
+          fi
+          mkdir -p stage
+          cp "$src" stage/aio-tool
+          chmod +x stage/aio-tool
+          tar -C stage -czf release/${{ matrix.target.artifact_name }} aio-tool
 
       - name: Upload tool artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tool
-          path: release/HoloCubic_AIO_Tool_${{ github.ref_name }}.exe
+          name: tool-${{ matrix.target.os }}
+          path: release/${{ matrix.target.artifact_name }}
           if-no-files-found: error
 
   publish_release:
@@ -135,10 +158,22 @@ jobs:
           name: firmware
           path: release
 
-      - name: Download tool artifact
+      - name: Download Windows tool artifact
         uses: actions/download-artifact@v4
         with:
-          name: tool
+          name: tool-windows-latest
+          path: release
+
+      - name: Download macOS tool artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tool-macos-latest
+          path: release
+
+      - name: Download Linux tool artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tool-ubuntu-22.04
           path: release
 
       - name: Stage boot/partition bins
@@ -157,19 +192,24 @@ jobs:
             | File | Flash address | Notes |
             |---|---|---|
             | `HoloCubic_AIO_firmware_${{ github.ref_name }}.bin` | `0x10000` | Application firmware (internal AIO_VERSION = `${{ needs.build_firmware.outputs.version }}`) |
-            | `HoloCubic_AIO_Tool_${{ github.ref_name }}.exe` | — | Windows GUI flasher (internal TOOL_VERSION = `${{ needs.build_tool.outputs.version }}`) |
+            | `CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows.exe` | — | Windows GUI flasher (Rust, unsigned — SmartScreen warning expected) |
+            | `CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.tar.gz` | — | macOS Apple-Silicon binary inside tar.gz (unsigned — Gatekeeper warning, right-click → Open on first launch) |
+            | `CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.tar.gz` | — | Linux x86_64 binary (requires `libudev` at runtime — install `libudev1` on Debian/Ubuntu, `systemd-libs` on Fedora) |
             | `bootloader_qio_80m.bin` | `0x1000` | ESP32 second-stage bootloader |
             | `partitions.bin` | `0x8000` | Custom partition table (HoloCubic AIO layout) |
             | `boot_app0.bin` | `0xe000` | OTA boot selector |
 
-            For first-time flash, drag all four `.bin` into the AIO Tool's 韌體刷寫 tab at the addresses above.
+            For first-time flash, place all four `.bin` files at the addresses above (the Windows tool's Flasher tab can do this in one click).
             See [dist/README.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/dist/README.md) for esptool CLI usage.
 
-            See [AIO_Tool/CHANGELOG.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/AIO_Tool/CHANGELOG.md) for tool changes.
+            Internal tool version: `${{ needs.build_tool.outputs.version }}` (from `AIO_Tool_rs/Cargo.toml`).
+
+            See [AIO_Tool_rs/CHANGELOG.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/AIO_Tool_rs/CHANGELOG.md) for tool changes.
           files: |
             release/HoloCubic_AIO_firmware_${{ github.ref_name }}.bin
-            release/HoloCubic_AIO_Tool_${{ github.ref_name }}.exe
+            release/CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows.exe
+            release/CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.tar.gz
+            release/CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.tar.gz
             release/bootloader_qio_80m.bin
             release/partitions.bin
             release/boot_app0.bin
-
