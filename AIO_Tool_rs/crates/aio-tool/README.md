@@ -67,14 +67,23 @@ PR #92's CI workflow will install this in the Ubuntu runner.
     updated, Read All replies will arrive but log as "(undecodable N
     bytes)". Write Changes is fire-and-forget on the device side. The
     firmware-side fix is tracked separately from this Rust rewrite.
+- **File Manager tab** functional for browse + 4 right-click ops (Plan 8):
+  - IP + Port connection bar; default `192.168.0.165:6677`
+  - TCP transport via `aio_device::TcpTransport` (inline reconnect, 500 ms timeout paces worker loop)
+  - Tree view via egui `CollapsingHeader` (no new deps); expanding a folder triggers `DirList` over the wire and populates children on response
+  - Right-click context menu on file rows:
+    - **Download** — `FileRead` → `rfd` native save dialog (filename hint from path)
+    - **Delete** — `FileRemove` + auto-refresh of parent dir (no optimistic tree mutation — Plan 7 reviewer S1 carry-over)
+    - **Rename** — `FileRename` **B1 preserved bug**: action_type sent as `DirRename`, both name fields are the input path — no actual rename happens; log line says "B1 preserved bug — no actual rename" so users understand
+    - **Properties** — `FileGetInfo` **B2 preserved bug**: action_type sent as `DirList`; firmware response logged as hex preview. Worker uses a pending-request FIFO to disambiguate `FileGetInfo` responses from real `DirList` responses (both come back with `action_type=DirList` per B2)
+  - 4 folder ops (upload / create subfolder / rename / delete) NOT yet wired — Python tool also leaves them as `pass`; needs firmware-side verification before shipping
 
 ## What's a stub
 
-5 tabs render "Coming in Plan N":
+4 tabs render "Coming in Plan N":
 
 | Tab | Plan |
 |-----|------|
-| File Manager | Plan 8 |
 | Image Converter | Plan 9 |
 | Video Converter | Plan 9 |
 | Tool Settings | Plan 9 |
