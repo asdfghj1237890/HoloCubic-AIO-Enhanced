@@ -99,9 +99,16 @@ pub fn show(ui: &mut Ui, state: &mut FileManagerState, bus_tx: &AppEventTx) {
 
         ui.separator();
 
-        // Tree. Tasks 4-7 wire right-click context menus.
+        // Tree. Right-click a file row for Download / Delete / Rename /
+        // Properties (Plan 8 Tasks 4-7).
         ScrollArea::vertical().show(ui, |ui| {
-            render_node(ui, &mut state.tree, &state.cmd_tx, &mut state.log);
+            render_node(
+                ui,
+                &mut state.tree,
+                &state.cmd_tx,
+                &mut state.last_read_path,
+                &mut state.log,
+            );
         });
 
         ui.separator();
@@ -112,11 +119,14 @@ pub fn show(ui: &mut Ui, state: &mut FileManagerState, bus_tx: &AppEventTx) {
 
 /// Recursively render an `FsNode`. Directories use `CollapsingHeader`;
 /// expanding a not-yet-loaded directory triggers a `ListDir` command.
-/// Files render as a plain monospace label (context menu lands in Group D).
+/// Files render as a monospace label with a right-click context menu that
+/// fires Download / Delete / Rename / Properties on the worker (Plan 8
+/// Tasks 4-7).
 fn render_node(
     ui: &mut Ui,
     node: &mut FsNode,
     cmd_tx: &Option<Sender<FmCmd>>,
+    last_read_path: &mut Option<String>,
     log: &mut OperationLog,
 ) {
     if node.is_dir {
@@ -124,7 +134,7 @@ fn render_node(
             .id_salt(&node.path)
             .show(ui, |ui| {
                 for child in &mut node.children {
-                    render_node(ui, child, cmd_tx, log);
+                    render_node(ui, child, cmd_tx, last_read_path, log);
                 }
             });
         // On first expansion of a directory, send a ListDir over the worker.
@@ -140,7 +150,75 @@ fn render_node(
             }
         }
     } else {
-        // File entry — Group D adds the context menu.
-        ui.monospace(&node.name);
+        // File entry — right-click for the 4 ops.
+        let resp = ui.monospace(&node.name);
+        resp.context_menu(|ui| {
+            // Task 4: Download (FileRead). Stash the path so the save
+            // dialog can label itself when the worker responds.
+            if ui.button(t("download", None)).clicked() {
+                if let Some(tx) = cmd_tx {
+                    *last_read_path = Some(node.path.clone());
+                    let _ = tx.send(FmCmd::ReadFile {
+                        path: node.path.clone(),
+                    });
+                    log.push(format!("\u{2192} ReadFile {}", node.path));
+                }
+                ui.close_menu();
+            }
+            // Task 5: Delete (FileRemove). Per Plan 8 D12 (carry-over of
+            // Plan 7 reviewer S1): do NOT optimistically mutate the tree.
+            // Send FileRemove, then immediately ListDir the parent so the
+            // bus reply re-populates children with the actual on-device
+            // state (firmware may silently reject).
+            if ui.button(t("delete", None)).clicked() {
+                if let Some(tx) = cmd_tx {
+                    let _ = tx.send(FmCmd::RemoveFile {
+                        name: node.path.clone(),
+                    });
+                    log.push(format!("\u{2192} RemoveFile {}", node.path));
+                    let parent_path = match node.path.rsplit_once('/') {
+                        Some(("", _)) => "/".to_owned(),
+                        Some((p, _)) => p.to_owned(),
+                        None => "/".to_owned(),
+                    };
+                    let _ = tx.send(FmCmd::ListDir {
+                        path: parent_path.clone(),
+                    });
+                    log.push(format!(
+                        "\u{2192} ListDir {} (refresh after delete)",
+                        parent_path
+                    ));
+                }
+                ui.close_menu();
+            }
+            // Task 6: Rename (FileRename). Plan 1 B1: `FileRename::new`
+            // copies the input into both name fields, so no actual rename
+            // happens on-device. We fire the wire call and surface the
+            // caveat in the log — best we can do until firmware is fixed.
+            if ui.button(t("rename", None)).clicked() {
+                if let Some(tx) = cmd_tx {
+                    let _ = tx.send(FmCmd::RenameFile {
+                        name: node.path.clone(),
+                    });
+                    log.push(format!(
+                        "\u{2192} RenameFile {} (B1 preserved bug \u{2014} no actual rename)",
+                        node.path
+                    ));
+                }
+                ui.close_menu();
+            }
+            // Task 7: Properties (FileGetInfo). Goes out on the wire as
+            // DirList per Plan 1 B2; the worker's pending-request FIFO
+            // disambiguates the response into FileManagerProperties.
+            if ui.button(t("properties", None)).clicked() {
+                if let Some(tx) = cmd_tx {
+                    let _ = tx.send(FmCmd::GetFileInfo {
+                        name: node.path.clone(),
+                    });
+                    log.push(format!("\u{2192} GetFileInfo {}", node.path));
+                }
+                ui.close_menu();
+            }
+        });
     }
 }
