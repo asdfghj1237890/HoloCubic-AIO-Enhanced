@@ -77,17 +77,30 @@ PR #92's CI workflow will install this in the Ubuntu runner.
     - **Rename** — `FileRename` **B1 preserved bug**: action_type sent as `DirRename`, both name fields are the input path — no actual rename happens; log line says "B1 preserved bug — no actual rename" so users understand
     - **Properties** — `FileGetInfo` **B2 preserved bug**: action_type sent as `DirList`; firmware response logged as hex preview. Worker uses a pending-request FIFO to disambiguate `FileGetInfo` responses from real `DirList` responses (both come back with `action_type=DirList` per B2)
   - 4 folder ops (upload / create subfolder / rename / delete) NOT yet wired — Python tool also leaves them as `pass`; needs firmware-side verification before shipping
-
-## What's a stub
-
-4 tabs render "Coming in Plan N":
-
-| Tab | Plan |
-|-----|------|
-| Image Converter | Plan 9 |
-| Video Converter | Plan 9 |
-| Tool Settings | Plan 9 |
-| Help | Plan 9 |
+- **Image Converter tab** (Plan 9):
+  - Multi-file picker (PNG / JPG / BMP)
+  - 12-entry format dropdown (RGB332 / RGB565 / RGB565_SWAP / RGB888 /
+    Alpha 1-2-4-8-bit / Indexed 1-2-4-8-bit) + C-array checkbox + Dither
+  - Per-file save dialog (rfd) for the encoded output
+  - Wraps aio_converter::Converter; progress events stream through the bus
+  - **Simpler than the legacy Python UI's two-dropdown system** (which
+    only consulted "Color Format" on the C-array path — confusing and
+    misleading). D1 / D4.
+- **Video Converter tab** (Plan 9):
+  - Source / output-dir file pickers
+  - Default / Custom radio (Custom unlocks W / H / FPS / quality / format)
+  - MJPEG and rgb565be output, two-step ffmpeg pipeline matching the
+    legacy Python tool's command shape
+  - **ffmpeg presence detection** (Q4): missing ffmpeg surfaces a red
+    banner with a clickable "Install ffmpeg" hyperlink and a Re-check
+    button, replacing opaque OS errors
+  - Cancel kills the child
+- **Tool Settings tab** (Plan 9):
+  - Three language radios (简体中文 / 繁體中文 / English)
+  - **Live apply** — no restart needed (D7)
+  - Persists to platform config dir via aio_i18n::config::save_language
+- **Help tab** (Plan 9): renders the legacy `help_info` blob with
+  clickable hyperlinks (D13).
 
 ## Background-op pattern
 
