@@ -32,6 +32,9 @@ pub struct App {
 
     /// File Manager tab state (Plan 8 Task 3 — Group C).
     pub(crate) file_manager: crate::tabs::file_manager::FileManagerState,
+
+    /// Image Converter tab state (Plan 9 Task 3 — Group B).
+    pub(crate) image_converter: crate::tabs::image_converter::ImageConverterState,
 }
 
 impl App {
@@ -45,6 +48,7 @@ impl App {
             flasher: crate::tabs::flasher::FlasherState::default(),
             settings: crate::tabs::settings::SettingsState::default(),
             file_manager: crate::tabs::file_manager::FileManagerState::default(),
+            image_converter: crate::tabs::image_converter::ImageConverterState::default(),
         }
     }
 
@@ -87,8 +91,39 @@ impl App {
                     };
                     self.flasher.log.push(line);
                 }
-                crate::bus::AppEvent::Convert(_) | crate::bus::AppEvent::ConvertFinished(_) => {
-                    // Plan 9 handler.
+                crate::bus::AppEvent::Convert(ce) => {
+                    let line = match ce {
+                        aio_converter::ConvertEvent::Start { total_rows } => {
+                            format!("encoding ({total_rows} rows)...")
+                        }
+                        aio_converter::ConvertEvent::Progress { rows_processed } => {
+                            format!("  row {rows_processed}")
+                        }
+                        aio_converter::ConvertEvent::Done => "encode done".to_owned(),
+                    };
+                    self.image_converter.log.push(line);
+                }
+                crate::bus::AppEvent::ConvertFinished(result) => {
+                    self.image_converter.pending = self.image_converter.pending.saturating_sub(1);
+                    let target = self.image_converter.save_targets.pop_front();
+                    match (result, target) {
+                        (Ok(bytes), Some(target)) => match std::fs::write(&target, &bytes) {
+                            Ok(()) => self.image_converter.log.push(format!(
+                                "\u{2713} wrote {} bytes to {}",
+                                bytes.len(),
+                                target.display()
+                            )),
+                            Err(e) => self
+                                .image_converter
+                                .log
+                                .push(format!("\u{2717} write {}: {e}", target.display())),
+                        },
+                        (Ok(bytes), None) => self.image_converter.log.push(format!(
+                            "\u{2713} encoded {} bytes (no save target!)",
+                            bytes.len()
+                        )),
+                        (Err(msg), _) => self.image_converter.log.push(format!("\u{2717} {msg}")),
+                    }
                 }
                 crate::bus::AppEvent::VideoConvertLog(_)
                 | crate::bus::AppEvent::VideoConvertFinished(_) => {
@@ -206,6 +241,7 @@ impl App {
             flasher: crate::tabs::flasher::FlasherState::default(),
             settings: crate::tabs::settings::SettingsState::default(),
             file_manager: crate::tabs::file_manager::FileManagerState::default(),
+            image_converter: crate::tabs::image_converter::ImageConverterState::default(),
             bus_tx,
             bus_rx,
         }
@@ -254,7 +290,9 @@ impl eframe::App for App {
             Tab::Flasher => tabs::flasher::show(ui, &mut self.flasher, &self.bus_tx),
             Tab::Settings => tabs::settings::show(ui, &mut self.settings, &self.bus_tx),
             Tab::FileManager => tabs::file_manager::show(ui, &mut self.file_manager, &self.bus_tx),
-            Tab::ImageConverter => tabs::image_converter::show(ui),
+            Tab::ImageConverter => {
+                tabs::image_converter::show(ui, &mut self.image_converter, &self.bus_tx)
+            }
             Tab::VideoConverter => tabs::video_converter::show(ui),
             Tab::ToolSettings => tabs::tool_settings::show(ui),
             Tab::Help => tabs::help::show(ui),
