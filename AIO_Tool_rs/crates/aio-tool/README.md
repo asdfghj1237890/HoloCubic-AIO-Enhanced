@@ -28,7 +28,7 @@ sudo dnf install systemd-devel # Fedora
 
 PR #92's CI workflow will install this in the Ubuntu runner.
 
-## What works in Plan 7
+## What works (v3.0.0)
 
 - 1200×720 dark egui window with **7 tabs** across the top (Remote Control
   removed; folded into the Flasher tab)

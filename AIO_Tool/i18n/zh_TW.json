@@ -139,5 +139,8 @@
   "format": "格式",
   "select_video_title": "選擇一個影片檔案",
   "common_formats": "常用格式",
+  "ffmpeg_missing": "未在 PATH 中找到 ffmpeg。",
+  "install_ffmpeg": "安裝 ffmpeg",
+  "recheck": "重新偵測",
   "help_info": "\n        本電腦端工具專門針對 HoloCubic AIO 韌體開發，其中韌體燒錄功能相容其他第三方韌體。\n\n        【最新版本韌體 / 本工具增強版】\n            https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced\n\n        觀看示範影片：\n            https://www.bilibili.com/video/BV1wS4y1R7YF?p=1\n\n        了解 Holocubic AIO 韌體\n            原始版本 https://github.com/ClimbSnail/HoloCubic_AIO\n            或者     https://gitee.com/ClimbSnailQ/HoloCubic_AIO\n\n        了解 Holocubic 硬體開源方案\n            請造訪 https://github.com/peng-zhihui/HoloCubic\n        "
 }

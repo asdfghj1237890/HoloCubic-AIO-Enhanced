@@ -43,7 +43,8 @@ pub struct ImageConverterState {
     /// Number of images we've started encoding in this batch; counts down
     /// each `ConvertFinished`. Used to gate the "Start Convert" button.
     pub pending: usize,
-    /// Cancel flag shared with the worker(s).
+    /// Cancel flag shared across all in-flight encodes in a batch — one click
+    /// of the Cancel button stops every worker.
     pub cancel: std::sync::Arc<std::sync::atomic::AtomicBool>,
     /// Scrollable operation log.
     pub log: OperationLog,

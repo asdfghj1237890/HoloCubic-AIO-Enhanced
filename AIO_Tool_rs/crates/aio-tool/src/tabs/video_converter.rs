@@ -79,9 +79,12 @@ pub fn show(ui: &mut Ui, state: &mut VideoConverterState, bus_tx: &AppEventTx) {
         // --- ffmpeg detection banner --------------------------------------
         if state.ffmpeg_available == Some(false) {
             ui.horizontal(|ui| {
-                ui.colored_label(egui::Color32::LIGHT_RED, "ffmpeg not found in PATH.");
-                ui.hyperlink_to("Install ffmpeg", "https://ffmpeg.org/download.html");
-                if ui.button("Re-check").clicked() {
+                ui.colored_label(egui::Color32::LIGHT_RED, t("ffmpeg_missing", None));
+                ui.hyperlink_to(
+                    t("install_ffmpeg", None),
+                    "https://ffmpeg.org/download.html",
+                );
+                if ui.button(t("recheck", None)).clicked() {
                     state.ffmpeg_available = None; // re-probe next frame
                 }
             });
