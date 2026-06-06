@@ -35,6 +35,9 @@ pub struct App {
 
     /// Image Converter tab state (Plan 9 Task 3 — Group B).
     pub(crate) image_converter: crate::tabs::image_converter::ImageConverterState,
+
+    /// Video Converter tab state (Plan 9 Task 5 — Group D).
+    pub(crate) video_converter: crate::tabs::video_converter::VideoConverterState,
 }
 
 impl App {
@@ -49,6 +52,7 @@ impl App {
             settings: crate::tabs::settings::SettingsState::default(),
             file_manager: crate::tabs::file_manager::FileManagerState::default(),
             image_converter: crate::tabs::image_converter::ImageConverterState::default(),
+            video_converter: crate::tabs::video_converter::VideoConverterState::default(),
         }
     }
 
@@ -125,9 +129,18 @@ impl App {
                         (Err(msg), _) => self.image_converter.log.push(format!("\u{2717} {msg}")),
                     }
                 }
-                crate::bus::AppEvent::VideoConvertLog(_)
-                | crate::bus::AppEvent::VideoConvertFinished(_) => {
-                    // Plan 9 handler.
+                crate::bus::AppEvent::VideoConvertLog(line) => {
+                    self.video_converter.log.push(line);
+                }
+                crate::bus::AppEvent::VideoConvertFinished(result) => {
+                    self.video_converter.pending = false;
+                    match result {
+                        Ok(out) => self
+                            .video_converter
+                            .log
+                            .push(format!("\u{2713} wrote {}", out.display())),
+                        Err(msg) => self.video_converter.log.push(format!("\u{2717} {msg}")),
+                    }
                 }
                 crate::bus::AppEvent::SettingsConnected => {
                     self.settings.state = crate::tabs::settings::DeviceState::Connected;
@@ -242,6 +255,7 @@ impl App {
             settings: crate::tabs::settings::SettingsState::default(),
             file_manager: crate::tabs::file_manager::FileManagerState::default(),
             image_converter: crate::tabs::image_converter::ImageConverterState::default(),
+            video_converter: crate::tabs::video_converter::VideoConverterState::default(),
             bus_tx,
             bus_rx,
         }
@@ -293,7 +307,9 @@ impl eframe::App for App {
             Tab::ImageConverter => {
                 tabs::image_converter::show(ui, &mut self.image_converter, &self.bus_tx)
             }
-            Tab::VideoConverter => tabs::video_converter::show(ui),
+            Tab::VideoConverter => {
+                tabs::video_converter::show(ui, &mut self.video_converter, &self.bus_tx)
+            }
             Tab::ToolSettings => tabs::tool_settings::show(ui),
             Tab::Help => tabs::help::show(ui),
         });
