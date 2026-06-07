@@ -8,6 +8,7 @@
     "devUrl": "http://localhost:8765"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "label": "main",
