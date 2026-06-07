@@ -1,4 +1,8 @@
-//! File Manager tab — TCP browse + right-click ops on the remote SD card.
+//! File Manager tab — Studio layout: page header + connection bar + file
+//! tree wrapped in a group card. The remote tree itself is still rendered
+//! with `egui::CollapsingHeader` (Plan 8 baseline); a flat-list +
+//! breadcrumb rewrite to fully mirror `StudioFiles` would be a separate
+//! plan and would change keyboard/click semantics user-facing.
 
 use std::net::SocketAddr;
 use std::sync::atomic::AtomicBool;
@@ -6,13 +10,15 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use aio_i18n::t;
-use egui::{ScrollArea, Ui};
+use egui::{RichText, ScrollArea, Ui};
 
 use crate::bus::AppEventTx;
 use crate::file_manager_worker::{self, FmCmd};
 use crate::tabs::fs_node::FsNode;
 use crate::tabs::settings::DeviceState;
+use crate::theme;
 use crate::widgets::operation_log::OperationLog;
+use crate::widgets::page;
 
 /// File Manager tab state.
 pub struct FileManagerState {
@@ -52,76 +58,127 @@ impl Default for FileManagerState {
 
 /// Render the File Manager tab.
 pub fn show(ui: &mut Ui, state: &mut FileManagerState, bus_tx: &AppEventTx) {
-    ui.vertical(|ui| {
-        // Connection bar.
-        ui.horizontal(|ui| {
-            ui.label(t("ip_address", None));
-            ui.text_edit_singleline(&mut state.ip);
-            ui.label(t("port_number", None));
-            ui.text_edit_singleline(&mut state.port);
+    let connected = matches!(state.state, DeviceState::Connected);
+    let connecting = matches!(state.state, DeviceState::Connecting);
 
-            let connected = matches!(state.state, DeviceState::Connected);
-            let connecting = matches!(state.state, DeviceState::Connecting);
+    page::page_header(
+        ui,
+        &t("files_title", None),
+        &t("files_subtitle", None),
+        |ui| {
+            let addr = if connected {
+                format!("{}:{}", state.ip, state.port)
+            } else {
+                String::new()
+            };
+            page::connection_chip(
+                ui,
+                connected,
+                connecting,
+                if connected { Some(&addr) } else { None },
+            );
+        },
+    );
 
-            if !connected && !connecting {
-                if ui.button(t("connect", None)).clicked() {
-                    match format!("{}:{}", state.ip, state.port).parse::<SocketAddr>() {
-                        Ok(addr) => {
-                            state.state = DeviceState::Connecting;
-                            state
-                                .cancel
-                                .store(false, std::sync::atomic::Ordering::Relaxed);
-                            let (cmd_tx, cancel) = file_manager_worker::spawn(addr, bus_tx.clone());
-                            state.cmd_tx = Some(cmd_tx);
-                            state.cancel = cancel;
-                            state.log.push(format!("Connecting to {addr}..."));
-                        }
-                        Err(_) => {
-                            state
-                                .log
-                                .push(format!("Invalid IP:port {}:{}", state.ip, state.port));
+    // Connection bar — IP + ":" + port + connect/disconnect.
+    egui::Frame::none()
+        .inner_margin(egui::Margin::symmetric(theme::S6, theme::S3))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.ip)
+                        .hint_text("IP")
+                        .desired_width(150.0),
+                );
+                ui.label(RichText::new(":").color(theme::TEXT_MUTE));
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.port)
+                        .hint_text("port")
+                        .desired_width(80.0),
+                );
+                if !connected && !connecting {
+                    if theme::primary_button(ui, t("connect", None)).clicked() {
+                        match format!("{}:{}", state.ip, state.port).parse::<SocketAddr>() {
+                            Ok(addr) => {
+                                state.state = DeviceState::Connecting;
+                                state
+                                    .cancel
+                                    .store(false, std::sync::atomic::Ordering::Relaxed);
+                                let (cmd_tx, cancel) =
+                                    file_manager_worker::spawn(addr, bus_tx.clone());
+                                state.cmd_tx = Some(cmd_tx);
+                                state.cancel = cancel;
+                                state.log.push(format!("Connecting to {addr}..."));
+                            }
+                            Err(_) => {
+                                state
+                                    .log
+                                    .push(format!("Invalid IP:port {}:{}", state.ip, state.port));
+                            }
                         }
                     }
+                } else if theme::ghost_button(ui, t("disconnect", None)).clicked() {
+                    state
+                        .cancel
+                        .store(true, std::sync::atomic::Ordering::Relaxed);
+                    state.log.push("Disconnect requested.");
                 }
-            } else if ui.button(t("disconnect", None)).clicked() {
-                // Cancel flag is the sole shutdown signal (Plan 7 reviewer I2).
-                state
-                    .cancel
-                    .store(true, std::sync::atomic::Ordering::Relaxed);
-                state.log.push("Disconnect requested.");
-            }
+            });
         });
 
-        // Surfaced error.
-        if let DeviceState::Error(msg) = &state.state {
-            ui.colored_label(egui::Color32::LIGHT_RED, format!("Error: {msg}"));
-        }
+    if let DeviceState::Error(msg) = &state.state {
+        ui.label(
+            RichText::new(format!("Error: {msg}"))
+                .color(theme::ERR)
+                .size(12.5),
+        );
+    }
 
-        ui.separator();
+    crate::widgets::studio::section_divider(ui);
 
-        // Tree. Right-click a file row for Download / Delete / Rename /
-        // Properties (Plan 8 Tasks 4-7).
-        ScrollArea::vertical().show(ui, |ui| {
-            render_node(
-                ui,
-                &mut state.tree,
-                &state.cmd_tx,
-                &mut state.last_read_path,
-                &mut state.log,
-            );
+    // Body — tree wrapped in a group card, plus the operation log below.
+    ScrollArea::vertical()
+        .auto_shrink([false; 2])
+        .show(ui, |ui| {
+            page::body_frame(ui, |ui| {
+                if !connected {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(theme::S6);
+                        ui.label(
+                            RichText::new(t("files_not_connected_hint", None))
+                                .size(13.0)
+                                .color(theme::TEXT_MUTE),
+                        );
+                    });
+                } else {
+                    page::section_label(ui, t("files_tree_label", None));
+                    ui.add_space(theme::S2);
+                    page::group_card(ui, |ui| {
+                        render_node(
+                            ui,
+                            &mut state.tree,
+                            &state.cmd_tx,
+                            &mut state.last_read_path,
+                            &mut state.log,
+                        );
+                    });
+                }
+
+                ui.add_space(theme::S5);
+                page::section_label(ui, t("operation_log", None));
+                ui.add_space(theme::S2);
+                page::group_card(ui, |ui| {
+                    let remaining = ui.available_height().max(120.0);
+                    ui.allocate_ui(egui::Vec2::new(ui.available_width(), remaining), |ui| {
+                        state.log.show(ui);
+                    });
+                });
+            });
         });
-
-        ui.separator();
-        ui.heading(t("operation_log", None));
-        state.log.show(ui);
-    });
 }
 
-/// Recursively render an `FsNode`. Directories use `CollapsingHeader`;
-/// expanding a not-yet-loaded directory triggers a `ListDir` command.
-/// Files render as a monospace label with a right-click context menu that
-/// fires Download / Delete / Rename / Properties on the worker (Plan 8
-/// Tasks 4-7).
+/// Recursively render an `FsNode` — same logic as Plan 8 baseline; only
+/// the surrounding chrome moved.
 fn render_node(
     ui: &mut Ui,
     node: &mut FsNode,
@@ -137,24 +194,18 @@ fn render_node(
                     render_node(ui, child, cmd_tx, last_read_path, log);
                 }
             });
-        // On first expansion of a directory, send a ListDir over the worker.
-        // CollapsingHeader's openness ranges 0.0..=1.0; >0.5 means "opening
-        // or open". `node.loaded` prevents re-firing every frame.
         if response.openness > 0.5 && !node.loaded {
             if let Some(tx) = cmd_tx {
                 let _ = tx.send(FmCmd::ListDir {
                     path: node.path.clone(),
                 });
                 log.push(format!("\u{2192} ListDir {}", node.path));
-                node.loaded = true; // optimistic; reply will populate children
+                node.loaded = true;
             }
         }
     } else {
-        // File entry — right-click for the 4 ops.
         let resp = ui.monospace(&node.name);
         resp.context_menu(|ui| {
-            // Task 4: Download (FileRead). Stash the path so the save
-            // dialog can label itself when the worker responds.
             if ui.button(t("download", None)).clicked() {
                 if let Some(tx) = cmd_tx {
                     *last_read_path = Some(node.path.clone());
@@ -165,11 +216,6 @@ fn render_node(
                 }
                 ui.close_menu();
             }
-            // Task 5: Delete (FileRemove). Per Plan 8 D12 (carry-over of
-            // Plan 7 reviewer S1): do NOT optimistically mutate the tree.
-            // Send FileRemove, then immediately ListDir the parent so the
-            // bus reply re-populates children with the actual on-device
-            // state (firmware may silently reject).
             if ui.button(t("delete", None)).clicked() {
                 if let Some(tx) = cmd_tx {
                     let _ = tx.send(FmCmd::RemoveFile {
@@ -191,10 +237,6 @@ fn render_node(
                 }
                 ui.close_menu();
             }
-            // Task 6: Rename (FileRename). Plan 1 B1: `FileRename::new`
-            // copies the input into both name fields, so no actual rename
-            // happens on-device. We fire the wire call and surface the
-            // caveat in the log — best we can do until firmware is fixed.
             if ui.button(t("rename", None)).clicked() {
                 if let Some(tx) = cmd_tx {
                     let _ = tx.send(FmCmd::RenameFile {
@@ -207,9 +249,6 @@ fn render_node(
                 }
                 ui.close_menu();
             }
-            // Task 7: Properties (FileGetInfo). Goes out on the wire as
-            // DirList per Plan 1 B2; the worker's pending-request FIFO
-            // disambiguates the response into FileManagerProperties.
             if ui.button(t("properties", None)).clicked() {
                 if let Some(tx) = cmd_tx {
                     let _ = tx.send(FmCmd::GetFileInfo {

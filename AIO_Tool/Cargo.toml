@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
 members = ["crates/*"]
+# aio-studio (Tauri host of the prototype HTML) lives at
+# `AIO_Tool/studio/` outside this workspace because Tauri's transitive
+# deps require Rust 1.85+ (edition2024) and this workspace is pinned to
+# 1.82 for egui 0.29 compatibility. See `studio/README.md` for build
+# instructions.
+exclude = ["studio"]
 
 [workspace.package]
 version = "3.0.0"

@@ -2,12 +2,12 @@
 
 use std::time::Duration;
 
-use aio_i18n::t;
 use eframe::Frame;
-use egui::{CentralPanel, Context, TopBottomPanel};
+use egui::{CentralPanel, Context, SidePanel};
 
 use crate::bus::{channel_pair, AppEventRx, AppEventTx};
 use crate::tabs::{self, Tab};
+use crate::widgets::rail;
 
 /// How often to force a frame repaint so background events don't wait on
 /// user input to be visible. 100ms ≈ 10 fps "idle" rate is plenty for
@@ -68,7 +68,7 @@ impl App {
         while let Ok(evt) = self.bus_rx.try_recv() {
             match evt {
                 crate::bus::AppEvent::Flash(fe) => {
-                    let line = match fe {
+                    let line = match fe.clone() {
                         aio_flasher::FlashEvent::EraseStart => "Erasing chip...".to_owned(),
                         aio_flasher::FlashEvent::EraseDone => "Chip erase done.".to_owned(),
                         aio_flasher::FlashEvent::PartitionStart { index, total_bytes } => {
@@ -83,6 +83,47 @@ impl App {
                         }
                     };
                     self.flasher.log.push(line);
+                    // Mirror progress into the checklist state used by the
+                    // Studio-style flasher UI. `index` is in the enabled-
+                    // partition list; map back via `flash_slot_map`.
+                    match fe {
+                        aio_flasher::FlashEvent::PartitionStart { index, total_bytes } => {
+                            if index < self.flasher.flash_total_bytes.len() {
+                                self.flasher.flash_total_bytes[index] = total_bytes;
+                            }
+                            self.flasher.active_partition =
+                                self.flasher.flash_slot_map.get(index).copied();
+                        }
+                        aio_flasher::FlashEvent::Progress {
+                            index,
+                            bytes_written,
+                        } => {
+                            let total = self
+                                .flasher
+                                .flash_total_bytes
+                                .get(index)
+                                .copied()
+                                .unwrap_or(0);
+                            if let Some(&slot) = self.flasher.flash_slot_map.get(index) {
+                                let pct = if total == 0 {
+                                    0.0
+                                } else {
+                                    (bytes_written as f32 / total as f32) * 100.0
+                                };
+                                self.flasher.partition_percent[slot] = pct.clamp(0.0, 100.0);
+                                self.flasher.active_partition = Some(slot);
+                            }
+                        }
+                        aio_flasher::FlashEvent::PartitionDone { index } => {
+                            if let Some(&slot) = self.flasher.flash_slot_map.get(index) {
+                                self.flasher.partition_percent[slot] = 100.0;
+                            }
+                            // Advance to next enabled partition (if any).
+                            let next = self.flasher.flash_slot_map.get(index + 1).copied();
+                            self.flasher.active_partition = next;
+                        }
+                        _ => {}
+                    }
                 }
                 crate::bus::AppEvent::FlashFinished(result) => {
                     self.flasher.busy = false;
@@ -90,14 +131,22 @@ impl App {
                         .flasher
                         .cancel
                         .load(std::sync::atomic::Ordering::Relaxed);
-                    let line = match (result, cancelled) {
-                        (Ok(()), true) => {
-                            "Operation cancelled (chip erase already completed).".to_owned()
-                        }
-                        (Ok(()), false) => "✓ Operation complete.".to_owned(),
-                        (Err(msg), _) => format!("✗ {msg}"),
+                    let (line, succeeded) = match (result, cancelled) {
+                        (Ok(()), true) => (
+                            "Operation cancelled (chip erase already completed).".to_owned(),
+                            false,
+                        ),
+                        (Ok(()), false) => ("✓ Operation complete.".to_owned(), true),
+                        (Err(msg), _) => (format!("✗ {msg}"), false),
                     };
                     self.flasher.log.push(line);
+                    if succeeded {
+                        self.flasher.last_flash_succeeded = true;
+                        self.flasher.active_partition = None;
+                    } else {
+                        // Reset the checklist if we cancelled or errored.
+                        self.flasher.active_partition = None;
+                    }
                 }
                 crate::bus::AppEvent::Convert(ce) => {
                     let line = match ce {
@@ -294,16 +343,20 @@ impl eframe::App for App {
         // Ensure background events don't wait for user input to surface.
         ctx.request_repaint_after(IDLE_REPAINT);
 
-        TopBottomPanel::top("tab_bar").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                for &tab in &Tab::ALL {
-                    let label = t(tab.i18n_key(), None);
-                    if ui.selectable_label(self.active_tab == tab, label).clicked() {
-                        self.active_tab = tab;
-                    }
-                }
+        // Studio-style left rail replaces the legacy top tab bar.
+        let rail_response = SidePanel::left("rail")
+            .exact_width(rail::RAIL_WIDTH)
+            .resizable(false)
+            .frame(rail::frame())
+            .show(ctx, |ui| {
+                rail::show(ui, &mut self.active_tab);
             });
-        });
+        // Paint the 1px right-edge border the prototype has — egui's
+        // `Frame::stroke` would draw all four sides, so we draw it here.
+        rail::paint_right_border(
+            &ctx.layer_painter(rail_response.response.layer_id),
+            rail_response.response.rect,
+        );
 
         CentralPanel::default().show(ctx, |ui| match self.active_tab {
             Tab::Flasher => tabs::flasher::show(ui, &mut self.flasher, &self.bus_tx),

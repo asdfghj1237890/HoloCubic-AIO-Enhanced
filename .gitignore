@@ -6,6 +6,15 @@ AIO_Firmware_PIO/platformio.ini
 Docs/*
 !Docs/development/
 !Docs/development/**
+!Docs/design/
+!Docs/design/**
+
+# Claude Design handoff bundle (raw download artifact, not source)
+.design-bundle/
+
+# Local-only Claude Code config (per-developer launch.json etc.)
+.claude/
+CLAUDE.local.md
  SD_Card/movie/Hologram02.mjpeg
  SD_Card/Hologram 3D-minions.mp4
  SD_Card/Hologram 3D.mp4

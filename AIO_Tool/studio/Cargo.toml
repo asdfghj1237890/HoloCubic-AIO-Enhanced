@@ -1,0 +1,30 @@
+[package]
+name = "aio-studio"
+version = "3.0.0"
+edition = "2021"
+rust-version = "1.85"
+description = "HoloCubic AIO Tool — Studio (Tauri 2 + prototype HTML)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced"
+
+[lib]
+name = "aio_studio_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "aio-studio"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# Standalone (Tauri 2) — don't reach into the workspace crates: this
+# package lives outside the workspace specifically to use a newer Rust.
+# Once the prototype is humming on real ports we'll add path deps back
+# in (each `aio-*` crate compiles fine on stable Rust as a sub-dep).
+serialport = { version = "4.6", default-features = false, features = ["serde"] }
