@@ -28,6 +28,9 @@ pub fn run() {
             commands::cancel_op,
             commands::send_remote,
             commands::reboot_device,
+            commands::list_setting_keys,
+            commands::read_all_settings,
+            commands::write_changed_settings,
         ])
         .run(tauri::generate_context!())
         .expect("aio-studio: failed to launch the Tauri runtime");

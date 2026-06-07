@@ -5,6 +5,11 @@
 //! Phase 2: flash / erase / cancel / reboot / remote — full coverage
 //!          of `flash-sim.jsx`'s simulated state machine, with real
 //!          espflash streaming progress events back to the prototype.
+//! Phase 4: device-parameters bridge — list_setting_keys / read_all_settings
+//!          / write_changed_settings, using `aio-device::SerialTransport`
+//!          + `aio-protocol::SettingMsg`. Mirrors the egui
+//!          `settings_worker.rs` semantically but exposes a stateless
+//!          command surface so the JS hook doesn't need a worker handle.
 //!
 //! Background work runs on `std::thread::spawn` and emits Tauri events
 //! (`flash:event`, `flash:finished`) back to the JS side, which the
@@ -14,11 +19,20 @@ use std::io::Write;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use serialport::SerialPortInfo as RawPortInfo;
 use tauri::{AppHandle, Emitter, State};
+
+use aio_device::serial::SerialTransport;
+use aio_device::{Transport, TransportError};
+use aio_protocol::{SettingMsg, ValueType};
+
+/// Embedded settings schema — same `cubictool.json` the egui tool reads.
+/// Path is relative to this source file (`studio/src/commands.rs`); two
+/// parents up reach the AIO_Tool workspace root where `cubictool.json` lives.
+const SETTINGS_SCHEMA_RAW: &str = include_str!("../../cubictool.json");
 
 /// A serial port name surfaced to JS via the `list_ports` command.
 #[derive(Serialize)]
@@ -344,4 +358,237 @@ fn describe(p: &RawPortInfo) -> String {
         serialport::SerialPortType::BluetoothPort => format!("Bluetooth ({})", p.port_name),
         serialport::SerialPortType::Unknown => p.port_name.clone(),
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Phase 4 — Settings (device parameters)
+// ─────────────────────────────────────────────────────────────────────
+
+/// One row of the schema embedded in `cubictool.json`. Mirrors the egui
+/// tool's `SettingKey`; surfaced to JS via `list_setting_keys`.
+#[derive(Serialize, Clone)]
+pub struct SettingKeyDto {
+    /// Raw firmware key, e.g. `"ssid_1"`, `"backLight"`, `"cityname"`.
+    pub key: String,
+    /// Firmware namespace, e.g. `"sys"`, `"zhixin"`.
+    pub namespace: String,
+    /// Wire value type as it appears in `cubictool.json`: `"String"` or
+    /// `"UChar"`. JS uses this to choose between text/number/select UI.
+    pub value_type: String,
+}
+
+/// One key the JS side wants written.
+#[derive(Deserialize)]
+pub struct SettingChange {
+    /// Firmware namespace (e.g. `"sys"`).
+    pub namespace: String,
+    /// Firmware key (e.g. `"ssid_1"`).
+    pub key: String,
+    /// Wire value type — `"String"` or `"UChar"`.
+    pub value_type: String,
+    /// New value, already stringified.
+    pub value: String,
+}
+
+/// Single read-all-result entry passed back to JS.
+#[derive(Serialize, Clone)]
+pub struct SettingValueDto {
+    /// Firmware key — matches `SettingKeyDto::key`.
+    pub key: String,
+    /// Decoded value as a string.
+    pub value: String,
+}
+
+/// Settings log/progress event mirrored to JS via the `settings:event` bus.
+/// `kind = "log"` is a one-line status update; `kind = "warning"` flags
+/// undecodable bytes from the known B15 firmware bug so the UI can hint
+/// at it without aborting.
+#[derive(Serialize, Clone)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum SettingsEventDto {
+    /// One human-readable line for the status chip / log tail.
+    Log {
+        /// Body text.
+        message: String,
+    },
+    /// Undecodable bytes — preserved-by-design from firmware bug B15.
+    Warning {
+        /// Body text.
+        message: String,
+    },
+}
+
+/// Return the embedded settings schema. Pure read; no device I/O.
+#[tauri::command]
+pub fn list_setting_keys() -> Result<Vec<SettingKeyDto>, String> {
+    let parsed: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_str(SETTINGS_SCHEMA_RAW)
+            .map_err(|e| format!("parse cubictool.json: {e}"))?;
+    Ok(parsed
+        .into_iter()
+        .map(|(key, value)| SettingKeyDto {
+            key,
+            namespace: value
+                .get("namespace")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_owned(),
+            value_type: value
+                .get("type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_owned(),
+        })
+        .collect())
+}
+
+/// Read every key in the schema in a single connect → batch GET → drain
+/// → close pass. Returns the successfully-decoded `(key, value)` pairs.
+///
+/// The firmware's response format is known to diverge from
+/// `SettingMsg::from_wire`'s expectation on current main (CLAUDE.md notes
+/// this as bug B15). Undecodable chunks are surfaced as `settings:event`
+/// warnings; decoded ones populate the returned `Vec`.
+#[tauri::command]
+pub fn read_all_settings(
+    port: String,
+    baud: String,
+    app: AppHandle,
+) -> Result<Vec<SettingValueDto>, String> {
+    let baud_u32: u32 = baud
+        .parse()
+        .map_err(|e| format!("invalid baud `{baud}`: {e}"))?;
+    let schema = list_setting_keys()?;
+    let mut transport = SerialTransport::open(&port, baud_u32)
+        .map_err(|e| format!("open {port}@{baud}: {e}"))?;
+
+    // 1. Fire one GET per schema entry.
+    for k in &schema {
+        let msg = SettingMsg::get(&k.namespace, &k.key);
+        let bytes = msg.to_wire().map_err(|e| format!("encode GET {}: {e}", k.key))?;
+        transport
+            .write_all(&bytes)
+            .map_err(|e| format!("write GET {}: {e}", k.key))?;
+    }
+    emit_settings_log(&app, &format!("requested {} keys", schema.len()));
+
+    // 2. Drain responses until idle for ~400 ms or 2 s total elapsed.
+    //    Each chunk is feed-parsed greedily; partial frames bail to the
+    //    next read. (The legacy worker treats each transport.read return
+    //    as a complete frame — keep that behaviour since the firmware
+    //    typically writes one frame per response.)
+    let mut values: Vec<SettingValueDto> = Vec::new();
+    let mut read_buf = vec![0u8; 4096];
+    let deadline = Instant::now() + Duration::from_millis(2_000);
+    let mut last_bytes_at = Instant::now();
+    loop {
+        if Instant::now() > deadline {
+            break;
+        }
+        if Instant::now().duration_since(last_bytes_at) > Duration::from_millis(400)
+            && !values.is_empty()
+        {
+            break;
+        }
+        match transport.read(&mut read_buf) {
+            Ok(n) if n > 0 => {
+                last_bytes_at = Instant::now();
+                let chunk = &read_buf[..n];
+                match SettingMsg::from_wire(chunk) {
+                    Ok((msg, _)) => {
+                        emit_settings_log(
+                            &app,
+                            &format!("\u{2190} {}/{} = {}", msg.prefs_name, msg.key, msg.value),
+                        );
+                        values.push(SettingValueDto {
+                            key: msg.key,
+                            value: msg.value,
+                        });
+                    }
+                    Err(_) => {
+                        emit_settings_warn(
+                            &app,
+                            &format!("(undecodable {} bytes — firmware bug B15)", chunk.len()),
+                        );
+                    }
+                }
+            }
+            Ok(_) => {}
+            Err(TransportError::TimedOut) => {}
+            Err(e) => {
+                transport.close();
+                return Err(format!("read: {e}"));
+            }
+        }
+    }
+    transport.close();
+    emit_settings_log(&app, &format!("decoded {} of {} keys", values.len(), schema.len()));
+    Ok(values)
+}
+
+/// Write a batch of changed settings: open serial, fire one SET per
+/// change, close. Returns the count of frames written for the UI's
+/// "wrote N" status.
+#[tauri::command]
+pub fn write_changed_settings(
+    port: String,
+    baud: String,
+    changes: Vec<SettingChange>,
+    app: AppHandle,
+) -> Result<usize, String> {
+    let baud_u32: u32 = baud
+        .parse()
+        .map_err(|e| format!("invalid baud `{baud}`: {e}"))?;
+    if changes.is_empty() {
+        return Ok(0);
+    }
+    let mut transport = SerialTransport::open(&port, baud_u32)
+        .map_err(|e| format!("open {port}@{baud}: {e}"))?;
+    let mut written = 0usize;
+    for c in &changes {
+        let vt = parse_value_type(&c.value_type)?;
+        let msg = SettingMsg::set(&c.namespace, &c.key, vt, &c.value);
+        let bytes = msg
+            .to_wire()
+            .map_err(|e| format!("encode SET {}/{}: {e}", c.namespace, c.key))?;
+        transport
+            .write_all(&bytes)
+            .map_err(|e| format!("write SET {}/{}: {e}", c.namespace, c.key))?;
+        emit_settings_log(
+            &app,
+            &format!("\u{2192} {}/{} := {}", c.namespace, c.key, c.value),
+        );
+        written += 1;
+    }
+    transport.close();
+    emit_settings_log(&app, &format!("wrote {written} changes"));
+    Ok(written)
+}
+
+fn parse_value_type(raw: &str) -> Result<ValueType, String> {
+    match raw {
+        "String" => Ok(ValueType::String),
+        "UChar" => Ok(ValueType::Uchar),
+        "Int" => Ok(ValueType::Int),
+        "" => Ok(ValueType::Unknown),
+        other => Err(format!("unknown value type `{other}`")),
+    }
+}
+
+fn emit_settings_log(app: &AppHandle, message: &str) {
+    let _ = app.emit(
+        "settings:event",
+        SettingsEventDto::Log {
+            message: message.to_owned(),
+        },
+    );
+}
+
+fn emit_settings_warn(app: &AppHandle, message: &str) {
+    let _ = app.emit(
+        "settings:event",
+        SettingsEventDto::Warning {
+            message: message.to_owned(),
+        },
+    );
 }

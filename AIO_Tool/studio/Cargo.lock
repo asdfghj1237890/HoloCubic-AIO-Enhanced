@@ -18,6 +18,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aio-device"
+version = "3.0.0"
+dependencies = [
+ "bytes",
+ "serialport",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "aio-flasher"
 version = "3.0.0"
 dependencies = [
@@ -27,10 +36,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "aio-protocol"
+version = "3.0.0"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "aio-studio"
 version = "3.0.0"
 dependencies = [
+ "aio-device",
  "aio-flasher",
+ "aio-protocol",
  "serde",
  "serde_json",
  "serialport",

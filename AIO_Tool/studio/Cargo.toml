@@ -30,3 +30,5 @@ serialport = { version = "4.6", default-features = false, features = ["serde"] }
 # stable picks up the same source but the newer toolchain — empirically
 # fine because the existing crates already build clean on 1.82..stable.
 aio-flasher  = { path = "../crates/aio-flasher" }
+aio-device   = { path = "../crates/aio-device" }
+aio-protocol = { path = "../crates/aio-protocol" }

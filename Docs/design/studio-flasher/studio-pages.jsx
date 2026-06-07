@@ -16,6 +16,11 @@ Object.assign(ICON, {
   eye: ["M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
 });
 
+// ── tauri bridge detection ──────────────────────────────────────────────────
+const IS_TAURI_PAGES = typeof window !== "undefined" && !!window.__TAURI__;
+const invokePages = IS_TAURI_PAGES ? window.__TAURI__.core.invoke : null;
+const listenPages = IS_TAURI_PAGES ? window.__TAURI__.event.listen : null;
+
 // ── shared bits ─────────────────────────────────────────────────────────────
 function Switch({ on, onToggle, disabled }) {
   return (
@@ -85,35 +90,174 @@ const DEVICE_VALUES = {
   city: "Taipei", weather_key: "SmiKQ3v9xPq7-Az0", weather_interval: "30",
   server_ip: "192.168.0.165", server_port: "6677", timezone: "8",
 };
-const EMPTY_VALUES = Object.fromEntries(Object.keys(DEVICE_VALUES).map((k) => [k, ""]));
+
+// Friendly metadata for known firmware keys. Anything not listed falls
+// back to a plain text field labelled with the raw key.
+const FIRMWARE_FIELD_META = {
+  ssid:        { label: "SSID（舊版）", type: "text",     ph: "舊版單一 SSID" },
+  ssid_1:      { label: "SSID 1",       type: "text",     ph: "主要 WiFi 名稱" },
+  password_1:  { label: "密碼 1",       type: "password", ph: "WiFi 密碼" },
+  ssid_2:      { label: "SSID 2",       type: "text",     ph: "備用 WiFi 名稱" },
+  password_2:  { label: "密碼 2",       type: "password", ph: "備用 WiFi 密碼" },
+  backLight:   { label: "背光亮度",     type: "slider",   min: 0, max: 255 },
+  rotation:    { label: "螢幕旋轉",     type: "select",
+                 options: [["0","0°"],["1","90°"],["2","180°"],["3","270°"]] },
+  auto_mpu:    { label: "自動 MPU 翻轉", type: "toggle" },
+  cityname:    { label: "城市名稱",     type: "text",     ph: "例如 Taipei" },
+  language:    { label: "語言",         type: "text",     ph: "zh-Hant" },
+  weather_key: { label: "天氣 API 金鑰", type: "password", ph: "心知天氣金鑰" },
+  tianqi_aid:  { label: "天氣 AID",     type: "text" },
+  tianqi_as:   { label: "天氣 AS",      type: "text" },
+  tianqi_addr: { label: "天氣地址",     type: "text" },
+  bili_uid:    { label: "B 站 UID",     type: "text" },
+};
+const NAMESPACE_META = {
+  sys:    { label: "WiFi / 系統設定", icon: "wifi" },
+  zhixin: { label: "心知天氣",         icon: "img" },
+  tianqi: { label: "天氣 API",         icon: "img" },
+  other:  { label: "其他",             icon: "braces" },
+};
+
+// Derive PARAM_GROUPS-shaped object from the firmware schema returned by
+// `list_setting_keys`. Each row carries (namespace, value_type, key) so
+// write_changed_settings can echo them back.
+function deriveGroupsFromSchema(schema) {
+  const byNs = new Map();
+  for (const row of schema) {
+    const meta = FIRMWARE_FIELD_META[row.key] || { label: row.key, type: "text" };
+    const entry = { ...meta, key: row.key, _ns: row.namespace, _vt: row.value_type };
+    if (!byNs.has(row.namespace)) byNs.set(row.namespace, []);
+    byNs.get(row.namespace).push(entry);
+  }
+  const out = [];
+  for (const [ns, fields] of byNs) {
+    const m = NAMESPACE_META[ns] || { label: ns, icon: "braces" };
+    out.push({ label: m.label, icon: m.icon, fields });
+  }
+  return out;
+}
+
+const PARAM_KEYS = (groups) => groups.flatMap((g) => g.fields.map((f) => f.key));
+function emptyValuesFor(groups) {
+  return Object.fromEntries(PARAM_KEYS(groups).map((k) => [k, ""]));
+}
 
 function useSettings() {
-  const { useState } = React;
+  const { useState, useEffect } = React;
   const [conn, setConn] = useState("disconnected");
   const [port, setPort] = useState(FLASH_PORTS[0].name);
   const [baud, setBaud] = useState("115200");
-  const [vals, setVals] = useState(EMPTY_VALUES);
-  const [base, setBase] = useState(EMPTY_VALUES);
+  const [groups, setGroups] = useState(PARAM_GROUPS);
+  const [vals, setVals] = useState(() => emptyValuesFor(PARAM_GROUPS));
+  const [base, setBase] = useState(() => emptyValuesFor(PARAM_GROUPS));
   const [loaded, setLoaded] = useState(false);
   const [status, setStatus] = useState("連接裝置後即可讀取目前設定。");
+  const [ports, setPorts] = useState(FLASH_PORTS);
 
-  const connect = () => {
+  // On mount in Tauri, fetch real ports + the firmware schema.
+  useEffect(() => {
+    if (!IS_TAURI_PAGES) return;
+    (async () => {
+      try {
+        const list = await invokePages("list_ports");
+        if (Array.isArray(list) && list.length) {
+          setPorts(list);
+          setPort(list[0].name);
+        }
+      } catch (e) { /* port fetch best-effort */ }
+      try {
+        const schema = await invokePages("list_setting_keys");
+        const dyn = deriveGroupsFromSchema(schema || []);
+        setGroups(dyn);
+        setVals(emptyValuesFor(dyn));
+        setBase(emptyValuesFor(dyn));
+      } catch (e) { /* schema fetch best-effort */ }
+    })();
+  }, []);
+
+  // Subscribe to settings:event for live status messages.
+  useEffect(() => {
+    if (!IS_TAURI_PAGES || !listenPages) return;
+    let unlisten = null;
+    listenPages("settings:event", ({ payload }) => {
+      if (!payload) return;
+      if (payload.kind === "log" && payload.message) setStatus(payload.message);
+      else if (payload.kind === "warning" && payload.message) setStatus("⚠ " + payload.message);
+    }).then((fn) => { unlisten = fn; });
+    return () => { if (unlisten) unlisten(); };
+  }, []);
+
+  const connect = async () => {
     setConn("connecting"); setStatus("開啟序列埠…");
-    setTimeout(() => { setConn("connected"); setStatus("已連線，請按「讀取設定」載入裝置目前的參數。"); }, 800);
+    if (IS_TAURI_PAGES) {
+      try {
+        await invokePages("connect_device", { port, baud });
+        setConn("connected");
+        setStatus("已連線，請按「讀取設定」載入裝置目前的參數。");
+      } catch (e) {
+        setConn("disconnected");
+        setStatus("✗ 連線失敗：" + (e && e.toString ? e.toString() : e));
+      }
+    } else {
+      setTimeout(() => { setConn("connected"); setStatus("已連線，請按「讀取設定」載入裝置目前的參數。"); }, 800);
+    }
   };
-  const disconnect = () => { setConn("disconnected"); setLoaded(false); setVals(EMPTY_VALUES); setBase(EMPTY_VALUES); setStatus("已中斷連線。"); };
-  const readAll = () => {
-    setVals({ ...DEVICE_VALUES }); setBase({ ...DEVICE_VALUES }); setLoaded(true);
-    setStatus("已讀取 " + Object.keys(DEVICE_VALUES).length + " 項參數（Get ×" + Object.keys(DEVICE_VALUES).length + "）。");
+
+  const disconnect = async () => {
+    if (IS_TAURI_PAGES) { try { await invokePages("disconnect_device"); } catch (_) {} }
+    setConn("disconnected"); setLoaded(false);
+    setVals(emptyValuesFor(groups)); setBase(emptyValuesFor(groups));
+    setStatus("已中斷連線。");
   };
+
+  const readAll = async () => {
+    if (IS_TAURI_PAGES) {
+      setStatus("讀取中…");
+      try {
+        const list = await invokePages("read_all_settings", { port, baud });
+        const next = { ...emptyValuesFor(groups) };
+        for (const row of list || []) { next[row.key] = row.value; }
+        setVals(next); setBase(next); setLoaded(true);
+        setStatus("已讀取 " + (list || []).length + " 項參數。");
+      } catch (e) {
+        setStatus("✗ 讀取失敗：" + (e && e.toString ? e.toString() : e));
+      }
+      return;
+    }
+    // Mock path — preserved for in-browser preview.
+    const allKeys = PARAM_KEYS(groups);
+    const next = Object.fromEntries(allKeys.map((k) => [k, DEVICE_VALUES[k] != null ? DEVICE_VALUES[k] : ""]));
+    setVals(next); setBase(next); setLoaded(true);
+    setStatus("已讀取 " + allKeys.length + " 項參數（Get ×" + allKeys.length + "）。");
+  };
+
   const setField = (k, v) => setVals((s) => ({ ...s, [k]: v }));
   const changed = Object.keys(vals).filter((k) => vals[k] !== base[k]);
-  const writeChanges = () => {
+
+  const writeChanges = async () => {
     if (!changed.length) return;
+    if (IS_TAURI_PAGES) {
+      // Build the change payload using each field's recorded namespace + value_type.
+      const lookup = new Map();
+      for (const g of groups) for (const f of g.fields) lookup.set(f.key, f);
+      const changes = changed.map((k) => {
+        const f = lookup.get(k) || {};
+        return { namespace: f._ns || "", key: k, value_type: f._vt || "String", value: vals[k] };
+      });
+      try {
+        const n = await invokePages("write_changed_settings", { port, baud, changes });
+        setBase({ ...vals });
+        setStatus("已寫入 " + n + " 項修改（" + changed.join(", ") + "）。");
+      } catch (e) {
+        setStatus("✗ 寫入失敗：" + (e && e.toString ? e.toString() : e));
+      }
+      return;
+    }
     setBase({ ...vals });
     setStatus("已寫入 " + changed.length + " 項修改（Set ×" + changed.length + "）：" + changed.join(", "));
   };
-  return { conn, port, setPort, baud, setBaud, vals, base, loaded, status, changed,
+
+  return { conn, port, setPort, baud, setBaud, ports, groups, vals, base, loaded, status, changed,
            connect, disconnect, readAll, setField, writeChanges };
 }
 
@@ -160,7 +304,7 @@ function StudioParams() {
       <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", padding: "var(--s3) var(--s6)",
                     borderBottom: "1px solid var(--border)", flexWrap: "wrap", flex: "none" }}>
         <select className="fld mono" style={{ width: 140, height: 36 }} value={s.port} onChange={(e) => s.setPort(e.target.value)} disabled={connected}>
-          {FLASH_PORTS.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+          {s.ports.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
         </select>
         <select className="fld mono" style={{ width: 104, height: 36 }} value={s.baud} onChange={(e) => s.setBaud(e.target.value)} disabled={connected}>
           {BAUD_RATES.map((b) => <option key={b} value={b}>{b}</option>)}
@@ -181,7 +325,7 @@ function StudioParams() {
             <span className="dot" style={{ background: enabled ? "var(--accent)" : "var(--text-mute)" }} />{s.status}
           </div>
           <div style={{ display: "grid", gap: "var(--s5)", opacity: enabled ? 1 : 0.55, pointerEvents: enabled ? "auto" : "none" }}>
-            {PARAM_GROUPS.map((g) => (
+            {s.groups.map((g) => (
               <div key={g.label} style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r4)", overflow: "hidden" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", padding: "var(--s3) var(--s4)", color: "var(--text-dim)" }}>
                   <Icon d={ICON[g.icon]} size={15} />
