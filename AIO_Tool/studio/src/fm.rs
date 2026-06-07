@@ -107,12 +107,7 @@ pub fn spawn(addr: SocketAddr, app: AppHandle) -> (Sender<FmCmd>, Arc<AtomicBool
     (cmd_tx, cancel)
 }
 
-fn worker_loop(
-    addr: SocketAddr,
-    cmd_rx: Receiver<FmCmd>,
-    app: AppHandle,
-    cancel: Arc<AtomicBool>,
-) {
+fn worker_loop(addr: SocketAddr, cmd_rx: Receiver<FmCmd>, app: AppHandle, cancel: Arc<AtomicBool>) {
     let mut transport = TcpTransport::new(addr)
         .with_read_timeout(Duration::from_millis(500))
         .with_reconnect_interval(Duration::from_millis(500));
@@ -218,11 +213,7 @@ fn handle_cmd(
 
 /// Drain ONE complete message from `accum`. Returns true if a message
 /// was consumed (caller may try again), false if more bytes are needed.
-fn drain_one(
-    accum: &mut Vec<u8>,
-    pending: &mut VecDeque<RequestKind>,
-    app: &AppHandle,
-) -> bool {
+fn drain_one(accum: &mut Vec<u8>, pending: &mut VecDeque<RequestKind>, app: &AppHandle) -> bool {
     if accum.len() < HEADER_SIZE + 1 {
         return false;
     }
@@ -296,9 +287,8 @@ fn emit(app: &AppHandle, evt: FmEventDto) {
 /// Avoids dragging in the `base64` crate for a single use site. Encodes
 /// 3 bytes → 4 chars; pads with `=` to a multiple of 4.
 fn base64_encode(input: &[u8]) -> String {
-    const TABLE: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let mut out = String::with_capacity((input.len() + 2) / 3 * 4);
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(input.len().div_ceil(3) * 4);
     let mut i = 0;
     while i + 3 <= input.len() {
         let n = ((input[i] as u32) << 16) | ((input[i + 1] as u32) << 8) | input[i + 2] as u32;

@@ -476,13 +476,15 @@ pub fn read_all_settings(
         .parse()
         .map_err(|e| format!("invalid baud `{baud}`: {e}"))?;
     let schema = list_setting_keys()?;
-    let mut transport = SerialTransport::open(&port, baud_u32)
-        .map_err(|e| format!("open {port}@{baud}: {e}"))?;
+    let mut transport =
+        SerialTransport::open(&port, baud_u32).map_err(|e| format!("open {port}@{baud}: {e}"))?;
 
     // 1. Fire one GET per schema entry.
     for k in &schema {
         let msg = SettingMsg::get(&k.namespace, &k.key);
-        let bytes = msg.to_wire().map_err(|e| format!("encode GET {}: {e}", k.key))?;
+        let bytes = msg
+            .to_wire()
+            .map_err(|e| format!("encode GET {}: {e}", k.key))?;
         transport
             .write_all(&bytes)
             .map_err(|e| format!("write GET {}: {e}", k.key))?;
@@ -539,7 +541,10 @@ pub fn read_all_settings(
         }
     }
     transport.close();
-    emit_settings_log(&app, &format!("decoded {} of {} keys", values.len(), schema.len()));
+    emit_settings_log(
+        &app,
+        &format!("decoded {} of {} keys", values.len(), schema.len()),
+    );
     Ok(values)
 }
 
@@ -559,8 +564,8 @@ pub fn write_changed_settings(
     if changes.is_empty() {
         return Ok(0);
     }
-    let mut transport = SerialTransport::open(&port, baud_u32)
-        .map_err(|e| format!("open {port}@{baud}: {e}"))?;
+    let mut transport =
+        SerialTransport::open(&port, baud_u32).map_err(|e| format!("open {port}@{baud}: {e}"))?;
     let mut written = 0usize;
     for c in &changes {
         let vt = parse_value_type(&c.value_type)?;
@@ -722,7 +727,14 @@ pub fn convert_image_batch(
     state: State<'_, ConnState>,
 ) -> Result<(), String> {
     let fmt = crate::img::parse_format(&format)?;
-    crate::img::spawn_batch(items, fmt, dither, c_array, state.convert_cancel.clone(), app);
+    crate::img::spawn_batch(
+        items,
+        fmt,
+        dither,
+        c_array,
+        state.convert_cancel.clone(),
+        app,
+    );
     Ok(())
 }
 

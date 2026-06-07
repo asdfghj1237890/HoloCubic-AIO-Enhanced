@@ -9,10 +9,12 @@
 //!
 //! Per-phase events ride `video:event`:
 //!
-//!     { kind: "phase",    phase: 1 | 2 }                   — step boundary
-//!     { kind: "progress", phase, percent: 0..100 }         — time= ticks
-//!     { kind: "log",      line: "...ffmpeg stderr/stdout" } — raw line
-//!     { kind: "finished", ok, out_path, error }            — terminal
+//! ```text
+//! { kind: "phase",    phase: 1 | 2 }                   — step boundary
+//! { kind: "progress", phase, percent: 0..100 }         — time= ticks
+//! { kind: "log",      line: "...ffmpeg stderr/stdout" } — raw line
+//! { kind: "finished", ok, out_path, error }            — terminal
+//! ```
 //!
 //! Cancel comes via the shared `convert_cancel` AtomicBool — independent
 //! from the image converter's so the JS sides can use the same "Cancel"
@@ -171,10 +173,7 @@ fn run_job(
         .and_then(|s| s.to_str())
         .unwrap_or("mp4")
         .to_owned();
-    let cache = cache_dir.join(format!(
-        "{src_stem}_{}x{}_cache.{}",
-        job.w, job.h, src_ext
-    ));
+    let cache = cache_dir.join(format!("{src_stem}_{}x{}_cache.{}", job.w, job.h, src_ext));
 
     // Step 1 — resize.
     emit(&app, VideoEventDto::Phase { phase: 1 });
@@ -186,7 +185,11 @@ fn run_job(
             VideoEventDto::Finished {
                 ok: false,
                 out_path: String::new(),
-                error: if cancelled { "cancelled".to_owned() } else { msg },
+                error: if cancelled {
+                    "cancelled".to_owned()
+                } else {
+                    msg
+                },
             },
         );
         return;
@@ -202,7 +205,11 @@ fn run_job(
             VideoEventDto::Finished {
                 ok: false,
                 out_path: String::new(),
-                error: if cancelled { "cancelled".to_owned() } else { msg },
+                error: if cancelled {
+                    "cancelled".to_owned()
+                } else {
+                    msg
+                },
             },
         );
         let _ = std::fs::remove_file(&cache);
@@ -221,9 +228,9 @@ fn run_job(
 }
 
 /// Run one ffmpeg invocation. Streams stderr lines through the log bus
-/// + extracts percent from `time=HH:MM:SS.MS` against the source
-/// `Duration:` header. Returns `Err` on non-zero exit, spawn failure, or
-/// killed-by-cancel.
+/// and extracts percent from `time=HH:MM:SS.MS` against the source
+/// `Duration:` header. Returns `Err` on non-zero exit, spawn failure,
+/// or killed-by-cancel.
 fn run_step(
     phase: u8,
     args: &[String],
@@ -296,27 +303,28 @@ fn run_step(
     // then optionally drain stdout once stderr is done. ffmpeg's stderr is
     // line-buffered when going to a pipe — perfect for line-at-a-time updates.
     if let Some((stderr_join, rx)) = stderr_thread {
-        loop {
-            match rx.recv() {
-                Ok(line) => {
-                    if total_secs.is_none() {
-                        if let Some(d) = parse_duration_header(&line) {
-                            total_secs = Some(d);
-                        }
-                    }
-                    if let Some(total) = total_secs {
-                        if let Some(t) = parse_time_field(&line) {
-                            let pct = ((t / total) * 100.0).clamp(0.0, 100.0) as u8;
-                            if pct != last_pct_emitted {
-                                last_pct_emitted = pct;
-                                emit(app, VideoEventDto::Progress { phase, percent: pct });
-                            }
-                        }
-                    }
-                    emit_log(app, line);
+        while let Ok(line) = rx.recv() {
+            if total_secs.is_none() {
+                if let Some(d) = parse_duration_header(&line) {
+                    total_secs = Some(d);
                 }
-                Err(_) => break,
             }
+            if let Some(total) = total_secs {
+                if let Some(t) = parse_time_field(&line) {
+                    let pct = ((t / total) * 100.0).clamp(0.0, 100.0) as u8;
+                    if pct != last_pct_emitted {
+                        last_pct_emitted = pct;
+                        emit(
+                            app,
+                            VideoEventDto::Progress {
+                                phase,
+                                percent: pct,
+                            },
+                        );
+                    }
+                }
+            }
+            emit_log(app, line);
         }
         let _ = stderr_join.join();
     }
@@ -344,7 +352,13 @@ fn run_step(
     if !exit_status.success() {
         return Err(format!("ffmpeg exited {exit_status}"));
     }
-    emit(app, VideoEventDto::Progress { phase, percent: 100 });
+    emit(
+        app,
+        VideoEventDto::Progress {
+            phase,
+            percent: 100,
+        },
+    );
     Ok(())
 }
 
@@ -457,7 +471,8 @@ mod tests {
 
     #[test]
     fn parses_time_field() {
-        let line = "frame= 1024 fps=120 q=24.0 size=    512kB time=00:00:51.20 bitrate= 81.9kbits/s";
+        let line =
+            "frame= 1024 fps=120 q=24.0 size=    512kB time=00:00:51.20 bitrate= 81.9kbits/s";
         assert_eq!(parse_time_field(line), Some(51.20));
     }
 

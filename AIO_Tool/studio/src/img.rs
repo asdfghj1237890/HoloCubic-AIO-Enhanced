@@ -110,7 +110,9 @@ pub fn pick_images() -> Vec<PickedImageDto> {
     let picked = rfd::FileDialog::new()
         .add_filter("Images", &["png", "jpg", "jpeg", "bmp"])
         .pick_files();
-    let Some(paths) = picked else { return Vec::new() };
+    let Some(paths) = picked else {
+        return Vec::new();
+    };
     paths
         .into_iter()
         .filter_map(|p| describe_one(&p).ok())
@@ -274,13 +276,9 @@ fn encode_one(
         Some(parent) => parent.join("OutFile"),
         None => PathBuf::from("OutFile"),
     };
-    std::fs::create_dir_all(&out_dir)
-        .map_err(|e| format!("create {}: {e}", out_dir.display()))?;
+    std::fs::create_dir_all(&out_dir).map_err(|e| format!("create {}: {e}", out_dir.display()))?;
 
-    let stem = src
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("output");
+    let stem = src.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
     let (out_path, out_bytes_len) = if c_array {
         // `.c` output has no row-level streaming; synthesize a 100% tick
         // when the string is ready.
@@ -367,10 +365,22 @@ mod tests {
 
     #[test]
     fn parse_format_known_keys() {
-        assert!(matches!(parse_format("RGB565").unwrap(), ColorFormat::Rgb565));
-        assert!(matches!(parse_format("RGB565_SWAP").unwrap(), ColorFormat::Rgb565Swap));
-        assert!(matches!(parse_format("Indexed_4bit").unwrap(), ColorFormat::Indexed4));
-        assert!(matches!(parse_format("Alpha_8bit").unwrap(), ColorFormat::Alpha8));
+        assert!(matches!(
+            parse_format("RGB565").unwrap(),
+            ColorFormat::Rgb565
+        ));
+        assert!(matches!(
+            parse_format("RGB565_SWAP").unwrap(),
+            ColorFormat::Rgb565Swap
+        ));
+        assert!(matches!(
+            parse_format("Indexed_4bit").unwrap(),
+            ColorFormat::Indexed4
+        ));
+        assert!(matches!(
+            parse_format("Alpha_8bit").unwrap(),
+            ColorFormat::Alpha8
+        ));
     }
 
     #[test]
