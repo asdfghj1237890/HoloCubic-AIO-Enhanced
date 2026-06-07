@@ -1,4 +1,6 @@
-//! Settings tab — read / write 15 device config keys via SerialTransport.
+//! Settings tab — Studio layout: page header + toolbar + group cards per
+//! firmware namespace, with per-field diff dots and a "Write Changes (N)"
+//! counter button. Mirrors `StudioParams` in `studio-pages.jsx`.
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
@@ -6,11 +8,13 @@ use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use aio_i18n::t;
-use egui::{ComboBox, ScrollArea, Ui};
+use egui::{ComboBox, RichText, ScrollArea, Ui};
 
 use crate::settings_worker::{self, SettingsCmd};
-use crate::tabs::settings_schema::schema;
+use crate::tabs::settings_schema::{schema, SettingKey};
+use crate::theme;
 use crate::widgets::operation_log::OperationLog;
+use crate::widgets::{page, studio};
 
 /// Lifecycle of the Settings tab's connection to a device.
 #[derive(Debug, Clone)]
@@ -33,12 +37,10 @@ pub struct SettingsState {
     pub baud: String,
     /// Current lifecycle state.
     pub state: DeviceState,
-    /// Per-key edited values. Populated by `SettingsReceived` from the bus
-    /// when a Get reply decodes successfully, or by the user typing in the
-    /// form field. Indexed by key name.
+    /// Per-key edited values.
     pub values: HashMap<String, String>,
     /// Original values from the last Read All. Diff against `values` to
-    /// compute "changed since read" set for Write Changes (Group D).
+    /// compute "changed since read" set for the Write Changes counter.
     pub baseline: HashMap<String, String>,
     /// Cmd channel to the worker (None when Disconnected).
     pub cmd_tx: Option<Sender<SettingsCmd>>,
@@ -63,167 +65,263 @@ impl Default for SettingsState {
     }
 }
 
+/// Friendly section title for a firmware namespace.
+fn namespace_label(namespace: &str) -> &'static str {
+    match namespace {
+        "sys" => "WiFi / System",
+        "zhixin" => "Weather (Seniverse)",
+        "tianqi" => "Weather feed",
+        "other" => "Other",
+        _ => "—",
+    }
+}
+
 /// Render the Settings tab.
 pub fn show(ui: &mut Ui, state: &mut SettingsState, bus_tx: &crate::bus::AppEventTx) {
-    ui.vertical(|ui| {
-        // Connection bar.
-        ui.horizontal(|ui| {
-            ui.label(t("port_number", None));
-            ui.text_edit_singleline(&mut state.port);
-            ui.label(t("baud_rate", None));
-            ComboBox::from_id_salt("settings_baud")
-                .selected_text(&state.baud)
-                .show_ui(ui, |ui| {
-                    for b in ["9600", "115200", "230400", "921600"] {
-                        ui.selectable_value(&mut state.baud, b.to_owned(), b);
+    let connected = matches!(state.state, DeviceState::Connected);
+    let connecting = matches!(state.state, DeviceState::Connecting);
+
+    page::page_header(
+        ui,
+        &t("params_title", None),
+        &t("params_subtitle", None),
+        |ui| {
+            let port_opt = if connected {
+                Some(state.port.as_str())
+            } else {
+                None
+            };
+            page::connection_chip(ui, connected, connecting, port_opt);
+        },
+    );
+
+    // Toolbar — connection + Read All + Write Changes.
+    let changes: Vec<(String, String)> = pending_changes(state);
+    egui::Frame::none()
+        .inner_margin(egui::Margin::symmetric(theme::S6, theme::S3))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut state.port)
+                        .hint_text(t("port_number", None))
+                        .desired_width(150.0),
+                );
+                ComboBox::from_id_salt("settings_baud")
+                    .selected_text(&state.baud)
+                    .show_ui(ui, |ui| {
+                        for b in ["9600", "115200", "230400", "921600"] {
+                            ui.selectable_value(&mut state.baud, b.to_owned(), b);
+                        }
+                    });
+
+                if !connected && !connecting {
+                    if theme::primary_button(ui, t("connect", None)).clicked()
+                        && !state.port.is_empty()
+                    {
+                        state.state = DeviceState::Connecting;
+                        state
+                            .cancel
+                            .store(false, std::sync::atomic::Ordering::Relaxed);
+                        let baud: u32 = state.baud.parse().unwrap_or(115_200);
+                        let (cmd_tx, cancel) =
+                            settings_worker::spawn(state.port.clone(), baud, bus_tx.clone());
+                        state.cmd_tx = Some(cmd_tx);
+                        state.cancel = cancel;
+                        state
+                            .log
+                            .push(format!("Connecting to {} @ {}...", state.port, baud));
                     }
-                });
-
-            let connected = matches!(state.state, DeviceState::Connected);
-            let connecting = matches!(state.state, DeviceState::Connecting);
-
-            if !connected && !connecting {
-                if ui.button(t("connect", None)).clicked() && !state.port.is_empty() {
-                    state.state = DeviceState::Connecting;
+                } else if theme::ghost_button(ui, t("disconnect", None)).clicked() {
                     state
                         .cancel
-                        .store(false, std::sync::atomic::Ordering::Relaxed);
-                    let baud: u32 = state.baud.parse().unwrap_or(115_200);
-                    let (cmd_tx, cancel) =
-                        settings_worker::spawn(state.port.clone(), baud, bus_tx.clone());
-                    state.cmd_tx = Some(cmd_tx);
-                    state.cancel = cancel;
-                    state
-                        .log
-                        .push(format!("Connecting to {} @ {}...", state.port, baud));
+                        .store(true, std::sync::atomic::Ordering::Relaxed);
+                    state.log.push("Disconnect requested.");
                 }
-            } else if ui.button(t("disconnect", None)).clicked() {
-                // Cancel flag is the sole shutdown signal — worker checks
-                // it at the top of every loop iteration (Plan 7 reviewer I2).
-                state
-                    .cancel
-                    .store(true, std::sync::atomic::Ordering::Relaxed);
-                state.log.push("Disconnect requested.");
-            }
-        });
 
-        // Surfaced error.
-        if let DeviceState::Error(msg) = &state.state {
-            ui.colored_label(egui::Color32::LIGHT_RED, format!("Error: {msg}"));
-        }
-
-        ui.separator();
-
-        // Read All / Write Changes action row (Group D).
-        ui.horizontal(|ui| {
-            let connected = matches!(state.state, DeviceState::Connected);
-
-            if ui
-                .add_enabled(connected, egui::Button::new(t("read_settings", None)))
-                .clicked()
-            {
-                if let Some(tx) = &state.cmd_tx {
-                    let mut sent = 0usize;
-                    for key in schema() {
-                        if tx
-                            .send(SettingsCmd::Get {
-                                prefs_name: key.namespace.clone(),
-                                key: key.key.clone(),
-                            })
-                            .is_ok()
-                        {
-                            sent += 1;
-                        }
-                    }
-                    state.log.push(format!("Sent {sent} Get commands."));
-                }
-            }
-
-            // Compute the set of keys whose current value differs from baseline.
-            // (Read on the egui thread; the worker can't observe state.values directly.)
-            let changes: Vec<(String, String)> = schema()
-                .iter()
-                .filter_map(|k| {
-                    let current = state.values.get(&k.key)?;
-                    let baseline = state.baseline.get(&k.key);
-                    if Some(current) == baseline {
-                        None
+                // Push the action buttons to the right.
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let write_label = if changes.is_empty() {
+                        t("write_changes", None)
                     } else {
-                        Some((k.key.clone(), current.clone()))
+                        format!("{} ({})", t("write_changes", None), changes.len())
+                    };
+                    if ui
+                        .add_enabled(
+                            connected && !changes.is_empty(),
+                            egui::Button::new(write_label),
+                        )
+                        .clicked()
+                    {
+                        write_changes(state, &changes);
                     }
-                })
-                .collect();
-
-            let can_write = connected && !changes.is_empty();
-            if ui
-                .add_enabled(
-                    can_write,
-                    egui::Button::new(format!("{} ({})", t("write_changes", None), changes.len())),
-                )
-                .clicked()
-            {
-                if let Some(tx) = &state.cmd_tx {
-                    // Build a key → SettingKey def lookup so we can dispatch the
-                    // right ValueType per key.
-                    let key_to_def: std::collections::HashMap<
-                        &str,
-                        &crate::tabs::settings_schema::SettingKey,
-                    > = schema().iter().map(|k| (k.key.as_str(), k)).collect();
-
-                    let mut sent = 0usize;
-                    for (key, value) in &changes {
-                        let def = match key_to_def.get(key.as_str()) {
-                            Some(d) => *d,
-                            None => continue,
-                        };
-                        let value_type = match def.value_type.as_str() {
-                            "String" => aio_protocol::ValueType::String,
-                            "UChar" => aio_protocol::ValueType::Uchar,
-                            _ => aio_protocol::ValueType::Unknown,
-                        };
-                        if tx
-                            .send(SettingsCmd::Set {
-                                prefs_name: def.namespace.clone(),
-                                key: key.clone(),
-                                value_type,
-                                value: value.clone(),
-                            })
-                            .is_ok()
-                        {
-                            sent += 1;
-                        }
+                    if ui
+                        .add_enabled(connected, egui::Button::new(t("read_settings", None)))
+                        .clicked()
+                    {
+                        read_all(state);
                     }
-                    state.log.push(format!("Sent {sent} Set commands."));
-
-                    // Update baseline so subsequent Write Changes only sends NEW diffs.
-                    for (key, value) in changes {
-                        state.baseline.insert(key, value);
-                    }
-                }
-            }
-        });
-
-        ui.separator();
-
-        // Per-namespace form. Group D wires read/write actions.
-        ScrollArea::vertical().show(ui, |ui| {
-            let mut current_ns: Option<String> = None;
-            for key in schema() {
-                if Some(&key.namespace) != current_ns.as_ref() {
-                    ui.heading(&key.namespace);
-                    current_ns = Some(key.namespace.clone());
-                }
-                ui.horizontal(|ui| {
-                    ui.label(format!("{}:", key.key));
-                    let value = state.values.entry(key.key.clone()).or_default();
-                    ui.text_edit_singleline(value);
-                    ui.weak(&key.value_type);
                 });
-            }
+            });
         });
 
-        ui.separator();
-        ui.heading(t("operation_log", None));
-        state.log.show(ui);
+    if let DeviceState::Error(msg) = &state.state {
+        ui.label(
+            RichText::new(format!("Error: {msg}"))
+                .color(theme::ERR)
+                .size(12.5),
+        );
+    }
+
+    studio::section_divider(ui);
+
+    // Body — group cards per namespace + log at the bottom.
+    ScrollArea::vertical()
+        .auto_shrink([false; 2])
+        .show(ui, |ui| {
+            page::body_frame(ui, |ui| {
+                ui.set_max_width(760.0);
+
+                // Bucket schema rows by namespace, preserving JSON order.
+                let mut groups: Vec<(String, Vec<&SettingKey>)> = Vec::new();
+                for k in schema() {
+                    if let Some((_, v)) = groups.iter_mut().find(|(ns, _)| ns == &k.namespace) {
+                        v.push(k);
+                    } else {
+                        groups.push((k.namespace.clone(), vec![k]));
+                    }
+                }
+
+                for (namespace, keys) in &groups {
+                    page::section_label(ui, namespace_label(namespace));
+                    ui.add_space(theme::S2);
+                    page::group_card(ui, |ui| {
+                        let enabled = connected;
+                        for k in keys {
+                            param_row(ui, state, k, enabled);
+                        }
+                    });
+                    ui.add_space(theme::S4);
+                }
+
+                ui.add_space(theme::S5);
+                page::section_label(ui, t("operation_log", None));
+                ui.add_space(theme::S2);
+                page::group_card(ui, |ui| {
+                    let remaining = ui.available_height().max(120.0);
+                    ui.allocate_ui(egui::Vec2::new(ui.available_width(), remaining), |ui| {
+                        state.log.show(ui);
+                    });
+                });
+            });
+        });
+}
+
+/// One row inside a group card — label + text field + amber diff dot.
+fn param_row(ui: &mut Ui, state: &mut SettingsState, key: &SettingKey, enabled: bool) {
+    let changed = match (state.values.get(&key.key), state.baseline.get(&key.key)) {
+        (Some(cur), Some(base)) => cur != base,
+        _ => false,
+    };
+    ui.horizontal(|ui| {
+        // Label column (150px wide to match the prototype).
+        ui.scope(|ui| {
+            ui.set_width(150.0);
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(&key.key).size(13.0).color(if enabled {
+                    theme::TEXT_DIM
+                } else {
+                    theme::TEXT_MUTE
+                }));
+                if changed {
+                    let (dot_rect, _) =
+                        ui.allocate_exact_size(egui::Vec2::splat(8.0), egui::Sense::hover());
+                    ui.painter()
+                        .circle_filled(dot_rect.center(), 3.5, theme::WARN);
+                }
+            });
+        });
+        // Value control.
+        let value = state.values.entry(key.key.clone()).or_default();
+        ui.add_enabled(
+            enabled,
+            egui::TextEdit::singleline(value).desired_width(280.0),
+        );
+        ui.label(
+            RichText::new(&key.value_type)
+                .monospace()
+                .size(11.0)
+                .color(theme::TEXT_MUTE),
+        );
     });
+    ui.add_space(theme::S1);
+}
+
+fn pending_changes(state: &SettingsState) -> Vec<(String, String)> {
+    schema()
+        .iter()
+        .filter_map(|k| {
+            let current = state.values.get(&k.key)?;
+            let baseline = state.baseline.get(&k.key);
+            if Some(current) == baseline {
+                None
+            } else {
+                Some((k.key.clone(), current.clone()))
+            }
+        })
+        .collect()
+}
+
+fn read_all(state: &mut SettingsState) {
+    if let Some(tx) = &state.cmd_tx {
+        let mut sent = 0usize;
+        for key in schema() {
+            if tx
+                .send(SettingsCmd::Get {
+                    prefs_name: key.namespace.clone(),
+                    key: key.key.clone(),
+                })
+                .is_ok()
+            {
+                sent += 1;
+            }
+        }
+        state.log.push(format!("Sent {sent} Get commands."));
+    }
+}
+
+fn write_changes(state: &mut SettingsState, changes: &[(String, String)]) {
+    if let Some(tx) = &state.cmd_tx {
+        let key_to_def: HashMap<&str, &SettingKey> =
+            schema().iter().map(|k| (k.key.as_str(), k)).collect();
+
+        let mut sent = 0usize;
+        for (key, value) in changes {
+            let def = match key_to_def.get(key.as_str()) {
+                Some(d) => *d,
+                None => continue,
+            };
+            let value_type = match def.value_type.as_str() {
+                "String" => aio_protocol::ValueType::String,
+                "UChar" => aio_protocol::ValueType::Uchar,
+                _ => aio_protocol::ValueType::Unknown,
+            };
+            if tx
+                .send(SettingsCmd::Set {
+                    prefs_name: def.namespace.clone(),
+                    key: key.clone(),
+                    value_type,
+                    value: value.clone(),
+                })
+                .is_ok()
+            {
+                sent += 1;
+            }
+        }
+        state.log.push(format!("Sent {sent} Set commands."));
+
+        // Update baseline so subsequent Write Changes only sends NEW diffs.
+        for (key, value) in changes {
+            state.baseline.insert(key.clone(), value.clone());
+        }
+    }
 }

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HoloCubic 燒錄工具 — Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="theme.css" />
+<style>
+  html, body { margin: 0; height: 100%; background: var(--bg); }
+  #root { height: 100vh; }
+  image-slot:not(:defined) { display: block; background: var(--panel-3); border-radius: 12px; }
+  /* shown only when the page is opened directly via file:// — Babel needs http(s) to fetch jsx. */
+  #file-protocol-notice {
+    display: none; max-width: 560px; margin: 60px auto; padding: 24px 28px;
+    background: #151b24; color: #e8eef6; border: 1px solid #313d4e; border-radius: 12px;
+    font: 14px/1.6 system-ui, -apple-system, "Noto Sans TC", sans-serif;
+  }
+  #file-protocol-notice h2 { margin: 0 0 12px; font-size: 17px; }
+  #file-protocol-notice code { background: #0b0f15; padding: 2px 6px; border-radius: 4px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<div id="file-protocol-notice">
+  <h2>請透過本機 HTTP 伺服器開啟</h2>
+  <p>這個原型使用 Babel 在瀏覽器中轉譯 JSX，需要 <code>http://</code> 載入；直接以 <code>file://</code> 開啟會被瀏覽器 CORS 擋住。</p>
+  <p>在這個資料夾執行任一指令啟動：</p>
+  <p>
+    <code>python -m http.server 8000</code><br />
+    <code>npx serve .</code><br />
+    <code>php -S localhost:8000</code>
+  </p>
+  <p>然後打開 <code>http://localhost:8000</code>。</p>
+</div>
+
+<script>
+  if (location.protocol === "file:") {
+    document.getElementById("file-protocol-notice").style.display = "block";
+  }
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<script src="image-slot.js"></script>
+<script type="text/babel" src="flash-sim.jsx"></script>
+<script type="text/babel" src="fl-shared.jsx"></script>
+<script type="text/babel" src="i18n.jsx"></script>
+<script type="text/babel" src="dir-a-pro.jsx"></script>
+<script type="text/babel" src="studio-pages.jsx"></script>
+<script type="text/babel" src="studio-convert.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+// useTweaks — local persistence via localStorage. Replaces the design-host
+// roundtrip from the original tweaks-panel.jsx so settings survive reloads.
+const TWEAK_STORAGE_KEY = "holocubic-studio-tweaks";
+const TWEAK_DEFAULTS = { font: "Manrope", accent: "#1f6aa5", lang: "tw" };
+
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(TWEAK_STORAGE_KEY) || "{}");
+      return { ...defaults, ...stored };
+    } catch (e) { return defaults; }
+  });
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === "object" && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => {
+      const next = { ...prev, ...edits };
+      try { localStorage.setItem(TWEAK_STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+  }, []);
+  return [values, setTweak];
+}
+
+const FONTS = {
+  "Manrope": '"Manrope", system-ui, sans-serif',
+  "IBM Plex Sans": '"IBM Plex Sans", system-ui, sans-serif',
+  "Space Grotesk": '"Space Grotesk", system-ui, sans-serif',
+  "系統字體 System": 'system-ui, -apple-system, "Noto Sans TC", sans-serif',
+};
+
+const NAV = [
+  { id: "flash", label: "燒錄", d: ICON.bolt },
+  { id: "params", label: "參數", d: ["M4 21v-7", "M4 10V3", "M12 21v-9", "M12 8V3", "M20 21v-5", "M20 12V3", "M1 14h6", "M9 8h6", "M17 16h6"] },
+  { id: "files", label: "檔案", d: ICON.folder },
+  { id: "image", label: "圖片", d: ["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", "M8.5 11a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z", "M21 16l-5-5L5 21"] },
+  { id: "video", label: "影片", d: ["M5 4.5v15l13-7.5z"] },
+  { id: "help", label: "說明", d: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M9.6 9a2.5 2.5 0 1 1 3.5 2.3c-.9.5-1.4 1-1.4 2.2", "M12 17h.01"] },
+];
+const NAV_BOTTOM = [
+  { id: "tool", label: "工具", d: ["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.9 6.91a2.12 2.12 0 0 1-3-3l6.9-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"] },
+];
+
+function RailBtn({ it, on, onPick }) {
+  return (
+    <button onClick={() => onPick(it.id)} title={tr(it.label)}
+      style={{ width: 60, padding: "8px 0", border: "none", cursor: "pointer", borderRadius: "var(--r2)",
+               display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: on ? "var(--accent-weak)" : "transparent",
+               color: on ? "var(--accent)" : "var(--text-mute)", transition: "background .14s, color .14s" }}>
+      <Icon d={it.d} size={20} />
+      <span style={{ fontSize: 10.5, fontWeight: 600 }}>{tr(it.label)}</span>
+    </button>
+  );
+}
+
+function Rail({ active, onPick }) {
+  return (
+    <div style={{ width: 76, flex: "none", background: "var(--panel)", borderRight: "1px solid var(--border)",
+                  display: "flex", flexDirection: "column", alignItems: "center", padding: "var(--s4) 0", gap: "var(--s1)" }}>
+      <div style={{ width: 36, height: 36, borderRadius: "var(--r2)", background: "var(--accent)", color: "#fff",
+                    display: "grid", placeItems: "center", marginBottom: "var(--s4)", boxShadow: "0 4px 14px var(--accent-weak)" }}>
+        <Icon d={ICON.chip} size={20} />
+      </div>
+      {NAV.map((it) => <RailBtn key={it.id} it={it} on={active === it.id} onPick={onPick} />)}
+      <div style={{ flex: 1 }} />
+      {NAV_BOTTOM.map((it) => <RailBtn key={it.id} it={it} on={active === it.id} onPick={onPick} />)}
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [active, setActive] = React.useState("flash");
+  window.__lang = t.lang || "tw";
+
+  React.useEffect(() => {
+    window.__lang = t.lang || "tw";
+    const r = document.documentElement;
+    r.setAttribute("data-theme", "dark");
+    r.setAttribute("lang", t.lang === "en" ? "en" : t.lang === "cn" ? "zh-Hans" : "zh-Hant");
+    r.style.setProperty("--d", 1);
+    r.style.setProperty("--rm", 1.7);
+    r.style.setProperty("--font", FONTS[t.font] || FONTS.Manrope);
+    r.style.setProperty("--accent", t.accent);
+    r.style.setProperty("--accent-2", t.accent);
+  }, [t]);
+
+  return (
+    <div className="appwin" style={{ width: "100%", height: "100%", display: "flex" }}>
+      <Rail active={active} onPick={setActive} />
+      {/* real pages stay mounted to preserve their state; hidden when inactive */}
+      <div style={{ display: active === "flash" ? "flex" : "none", flex: 1, minWidth: 0 }}><StudioFlasher /></div>
+      <div style={{ display: active === "params" ? "flex" : "none", flex: 1, minWidth: 0 }}><StudioParams /></div>
+      <div style={{ display: active === "files" ? "flex" : "none", flex: 1, minWidth: 0 }}><StudioFiles /></div>
+      <div style={{ display: active === "image" ? "flex" : "none", flex: 1, minWidth: 0 }}><StudioImage /></div>
+      <div style={{ display: active === "video" ? "flex" : "none", flex: 1, minWidth: 0 }}><StudioVideo /></div>
+      {active === "help" && <StudioHelp />}
+      {active === "tool" && (
+        <StudioSettings accent={t.accent} font={t.font} fonts={Object.keys(FONTS)} lang={t.lang}
+          onAccent={(v) => setTweak("accent", v)} onFont={(v) => setTweak("font", v)} onLang={(v) => setTweak("lang", v)} />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

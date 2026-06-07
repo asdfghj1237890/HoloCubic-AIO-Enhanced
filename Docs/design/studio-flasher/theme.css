@@ -1,0 +1,151 @@
+/* theme.css — shared semantic tokens for all three flasher directions.
+   Tweaks flip data-theme (dark/light) and set --d (density), --rm (radius
+   multiplier) and --font on the .stage wrapper. Directions only ever read
+   these tokens, so a single toggle re-skins all three coherently. */
+
+:root {
+  --accent: #3b82f6;
+  --accent-2: #60a5fa;
+  --d: 1;        /* density multiplier */
+  --rm: 1;       /* radius multiplier  */
+  --font: "Manrope", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  --display: "Space Grotesk", var(--font);
+
+  /* radius ramp */
+  --r1: calc(4px * var(--rm));
+  --r2: calc(8px * var(--rm));
+  --r3: calc(12px * var(--rm));
+  --r4: calc(18px * var(--rm));
+  --rpill: calc(999px);
+
+  /* spacing ramp scaled by density */
+  --s1: calc(4px * var(--d));
+  --s2: calc(8px * var(--d));
+  --s3: calc(12px * var(--d));
+  --s4: calc(16px * var(--d));
+  --s5: calc(22px * var(--d));
+  --s6: calc(30px * var(--d));
+  --s7: calc(40px * var(--d));
+}
+
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --panel: #151b24;
+  --panel-2: #1a212c;
+  --panel-3: #212b39;
+  --inset: #0b0f15;
+  --text: #e8eef6;
+  --text-dim: #aab6c5;
+  --text-mute: #69748550;
+  --text-mute: #6b7686;
+  --border: #222b38;
+  --border-strong: #313d4e;
+  --accent-ink: #ffffff;
+  --accent-weak: rgba(59, 130, 246, 0.15);
+  --accent-line: rgba(59, 130, 246, 0.45);
+  --ok: #3fb950;
+  --ok-weak: rgba(63, 185, 80, 0.14);
+  --warn: #d6a232;
+  --err: #f85149;
+  --err-weak: rgba(248, 81, 73, 0.13);
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -8px rgba(0,0,0,.55);
+  --grid-line: rgba(255,255,255,.04);
+}
+
+[data-theme="light"] {
+  --bg: #eef1f6;
+  --panel: #ffffff;
+  --panel-2: #f6f8fb;
+  --panel-3: #eceff4;
+  --inset: #f2f5f9;
+  --text: #18212f;
+  --text-dim: #4c5666;
+  --text-mute: #8a94a4;
+  --border: #e4e8ef;
+  --border-strong: #d3dae3;
+  --accent-ink: #ffffff;
+  --accent-weak: rgba(47, 111, 237, 0.10);
+  --accent-line: rgba(47, 111, 237, 0.40);
+  --ok: #1a9e4b;
+  --ok-weak: rgba(26, 158, 75, 0.12);
+  --warn: #a9771a;
+  --err: #d83541;
+  --err-weak: rgba(216, 53, 65, 0.10);
+  --shadow: 0 1px 2px rgba(16,28,48,.06), 0 14px 34px -12px rgba(16,28,48,.18);
+  --grid-line: rgba(20,30,50,.05);
+}
+
+/* light theme keeps blue accent slightly deeper for contrast */
+[data-theme="light"] { --accent: #2f6fed; --accent-2: #2f6fed; }
+
+* { box-sizing: border-box; }
+
+.appwin {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
+.disp { font-family: var(--display); }
+
+/* shared primitives ------------------------------------------------------- */
+.btn {
+  font-family: var(--font);
+  font-weight: 600;
+  border: 1px solid var(--border-strong);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: var(--r2);
+  cursor: pointer;
+  transition: background .14s, border-color .14s, transform .06s, box-shadow .14s, opacity .14s;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) { border-color: var(--accent-line); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: .42; cursor: not-allowed; }
+.btn.primary {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+}
+.btn.primary:hover:not(:disabled) { box-shadow: 0 0 0 4px var(--accent-weak); }
+.btn.danger { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent); background: var(--err-weak); }
+.btn.ghost { background: transparent; border-color: var(--border); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: var(--s2); white-space: nowrap;
+  padding: calc(var(--s1) + 1px) var(--s3);
+  border-radius: var(--rpill); font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); color: var(--text-dim); background: var(--panel-2);
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-mute); flex: none; }
+.dot.live { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-weak); }
+.dot.busy { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes popIn { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes riseIn { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.spin { animation: spin .8s linear infinite; }
+
+.appwin label { white-space: nowrap; }
+
+.scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+.scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+.scroll::-webkit-scrollbar-track { background: transparent; }
+
+input.fld, select.fld {
+  font-family: var(--font); font-size: 13px; color: var(--text);
+  background: var(--inset); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: var(--s2) var(--s3); outline: none; width: 100%;
+}
+input.fld:focus, select.fld:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+
+/* log line levels */
+.lvl-muted  { color: var(--text-mute); }
+.lvl-info   { color: var(--text-dim); }
+.lvl-ok     { color: var(--ok); }
+.lvl-warn   { color: var(--warn); }
+.lvl-err    { color: var(--err); }
+.lvl-accent { color: var(--accent-2); }

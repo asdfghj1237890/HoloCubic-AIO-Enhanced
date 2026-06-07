@@ -1,0 +1,5 @@
+[toolchain]
+# aio-studio uses Tauri 2.x which has transitive deps requiring
+# edition2024 (Rust 1.85+). The rest of AIO_Tool stays on 1.82.
+channel = "stable"
+components = ["rustfmt", "clippy"]
