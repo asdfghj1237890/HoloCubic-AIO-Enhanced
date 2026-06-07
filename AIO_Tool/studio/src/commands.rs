@@ -66,6 +66,17 @@ pub struct ConnState {
     /// in `Arc` so the worker thread can flip it back to `false` on
     /// completion without holding a reference to `state`.
     pub busy: Arc<Mutex<bool>>,
+    /// Handle to the File Manager worker thread when connected.
+    pub fm: Mutex<Option<FmHandle>>,
+}
+
+/// Live handle to a File-Manager worker — `fm_connect` stores it,
+/// per-op commands borrow `cmd_tx`, `fm_disconnect` flips `cancel`.
+pub struct FmHandle {
+    /// Command sender to the worker thread.
+    pub cmd_tx: std::sync::mpsc::Sender<crate::fm::FmCmd>,
+    /// Cancellation flag — flipped by `fm_disconnect`.
+    pub cancel: Arc<AtomicBool>,
 }
 
 /// Active serial connection.
@@ -591,4 +602,91 @@ fn emit_settings_warn(app: &AppHandle, message: &str) {
             message: message.to_owned(),
         },
     );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Phase 5 — File Manager (SD card over TCP/WiFi)
+// ─────────────────────────────────────────────────────────────────────
+
+/// Spawn the File-Manager worker. Idempotent on the same `(ip, port)`
+/// — repeat calls disconnect the existing handle first. Failures to
+/// resolve the address surface synchronously; transport-level failures
+/// arrive later as `fm:event` `Finished` payloads.
+#[tauri::command]
+pub fn fm_connect(
+    ip: String,
+    port: String,
+    app: AppHandle,
+    state: State<'_, ConnState>,
+) -> Result<(), String> {
+    let port_u16: u16 = port
+        .parse()
+        .map_err(|e| format!("invalid TCP port `{port}`: {e}"))?;
+    let addr_str = format!("{ip}:{port_u16}");
+    let addr: std::net::SocketAddr = addr_str
+        .parse()
+        .map_err(|e| format!("resolve {addr_str}: {e}"))?;
+
+    // Tear down the previous worker if any.
+    {
+        let mut guard = state.fm.lock().unwrap();
+        if let Some(prev) = guard.take() {
+            prev.cancel.store(true, Ordering::Relaxed);
+        }
+    }
+
+    let (tx, cancel) = crate::fm::spawn(addr, app);
+    *state.fm.lock().unwrap() = Some(FmHandle { cmd_tx: tx, cancel });
+    Ok(())
+}
+
+/// Flip the worker's cancel flag. Worker drops the transport at the
+/// next loop boundary and emits a final `Finished` event.
+#[tauri::command]
+pub fn fm_disconnect(state: State<'_, ConnState>) {
+    if let Some(prev) = state.fm.lock().unwrap().take() {
+        prev.cancel.store(true, Ordering::Relaxed);
+    }
+}
+
+/// Send `FmCmd::ListDir` to the worker. Caller listens for the
+/// corresponding `fm:event` `DirListed` response.
+#[tauri::command]
+pub fn fm_list_dir(path: String, state: State<'_, ConnState>) -> Result<(), String> {
+    send_fm_cmd(&state, crate::fm::FmCmd::ListDir { path })
+}
+
+/// Send `FmCmd::ReadFile`. Response arrives as `fm:event` `FileBytes`.
+#[tauri::command]
+pub fn fm_read_file(path: String, state: State<'_, ConnState>) -> Result<(), String> {
+    send_fm_cmd(&state, crate::fm::FmCmd::ReadFile { path })
+}
+
+/// Send `FmCmd::RemoveFile`. No response (firmware doesn't send one).
+#[tauri::command]
+pub fn fm_remove(name: String, state: State<'_, ConnState>) -> Result<(), String> {
+    send_fm_cmd(&state, crate::fm::FmCmd::RemoveFile { name })
+}
+
+/// Send `FmCmd::RenameFile`. Preserved-bug B1 — see aio-protocol.
+#[tauri::command]
+pub fn fm_rename(name: String, state: State<'_, ConnState>) -> Result<(), String> {
+    send_fm_cmd(&state, crate::fm::FmCmd::RenameFile { name })
+}
+
+/// Send `FmCmd::GetFileInfo`. Response arrives as `fm:event` `Properties`.
+#[tauri::command]
+pub fn fm_get_info(name: String, state: State<'_, ConnState>) -> Result<(), String> {
+    send_fm_cmd(&state, crate::fm::FmCmd::GetFileInfo { name })
+}
+
+fn send_fm_cmd(state: &State<'_, ConnState>, cmd: crate::fm::FmCmd) -> Result<(), String> {
+    let guard = state.fm.lock().unwrap();
+    let handle = guard
+        .as_ref()
+        .ok_or_else(|| "fm: not connected".to_owned())?;
+    handle
+        .cmd_tx
+        .send(cmd)
+        .map_err(|e| format!("fm: worker gone: {e}"))
 }

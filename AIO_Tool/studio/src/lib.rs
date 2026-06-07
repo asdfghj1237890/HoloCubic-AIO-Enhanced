@@ -13,6 +13,7 @@
 //! subscribes to via `window.__TAURI__.event.listen`.
 
 mod commands;
+mod fm;
 
 /// Entry point — set up Tauri and run the desktop event loop.
 pub fn run() {
@@ -31,6 +32,13 @@ pub fn run() {
             commands::list_setting_keys,
             commands::read_all_settings,
             commands::write_changed_settings,
+            commands::fm_connect,
+            commands::fm_disconnect,
+            commands::fm_list_dir,
+            commands::fm_read_file,
+            commands::fm_remove,
+            commands::fm_rename,
+            commands::fm_get_info,
         ])
         .run(tauri::generate_context!())
         .expect("aio-studio: failed to launch the Tauri runtime");
