@@ -207,7 +207,6 @@ pub fn dpad_cluster(ui: &mut Ui, enabled: bool) -> Option<DpadKey> {
     let cell = 54.0;
     let gap = S2;
     let total = cell * 3.0 + gap * 2.0;
-    let cluster_height = cell * 3.0 + gap * 2.0;
 
     // Center the cluster horizontally inside the available width by
     // padding each side equally via a Frame's `inner_margin`. Computing
@@ -215,83 +214,83 @@ pub fn dpad_cluster(ui: &mut Ui, enabled: bool) -> Option<DpadKey> {
     // sometimes included content that pushed the inner column right —
     // so we measure the parent's clip rect instead.
     let outer_width = ui.clip_rect().width().min(ui.available_width());
-    let pad_each = ((outer_width - total) / 2.0).max(0.0) as i8;
+    let pad_each = ((outer_width - total) / 2.0).max(0.0);
     egui::Frame::none()
-        .inner_margin(egui::Margin::symmetric(pad_each, 0))
+        .inner_margin(egui::Margin::symmetric(pad_each, 0.0))
         .show(ui, |ui| {
             ui.vertical(|ui| {
-            // Up row: invisible left cell — Up — invisible right cell.
-            ui.horizontal(|ui| {
-                ui.allocate_space(Vec2::new(cell, cell));
+                // Up row: invisible left cell — Up — invisible right cell.
+                ui.horizontal(|ui| {
+                    ui.allocate_space(Vec2::new(cell, cell));
+                    ui.add_space(gap);
+                    if dpad_key(
+                        ui,
+                        DpadGlyph::Icon(crate::widgets::icons::Icon::Up),
+                        cell,
+                        false,
+                        enabled,
+                    )
+                    .clicked()
+                    {
+                        pressed = Some(DpadKey::Up);
+                    }
+                    ui.add_space(gap);
+                    ui.allocate_space(Vec2::new(cell, cell));
+                });
                 ui.add_space(gap);
-                if dpad_key(
-                    ui,
-                    DpadGlyph::Icon(crate::widgets::icons::Icon::Up),
-                    cell,
-                    false,
-                    enabled,
-                )
-                .clicked()
-                {
-                    pressed = Some(DpadKey::Up);
-                }
-                ui.add_space(gap);
-                ui.allocate_space(Vec2::new(cell, cell));
-            });
-            ui.add_space(gap);
 
-            // Middle row: Left — OK — Right.
-            ui.horizontal(|ui| {
-                if dpad_key(
-                    ui,
-                    DpadGlyph::Icon(crate::widgets::icons::Icon::Left),
-                    cell,
-                    false,
-                    enabled,
-                )
-                .clicked()
-                {
-                    pressed = Some(DpadKey::Left);
-                }
+                // Middle row: Left — OK — Right.
+                ui.horizontal(|ui| {
+                    if dpad_key(
+                        ui,
+                        DpadGlyph::Icon(crate::widgets::icons::Icon::Left),
+                        cell,
+                        false,
+                        enabled,
+                    )
+                    .clicked()
+                    {
+                        pressed = Some(DpadKey::Left);
+                    }
+                    ui.add_space(gap);
+                    if dpad_key(ui, DpadGlyph::Ok, cell, true, enabled).clicked() {
+                        pressed = Some(DpadKey::Ok);
+                    }
+                    ui.add_space(gap);
+                    if dpad_key(
+                        ui,
+                        DpadGlyph::Icon(crate::widgets::icons::Icon::Right),
+                        cell,
+                        false,
+                        enabled,
+                    )
+                    .clicked()
+                    {
+                        pressed = Some(DpadKey::Right);
+                    }
+                });
                 ui.add_space(gap);
-                if dpad_key(ui, DpadGlyph::Ok, cell, true, enabled).clicked() {
-                    pressed = Some(DpadKey::Ok);
-                }
-                ui.add_space(gap);
-                if dpad_key(
-                    ui,
-                    DpadGlyph::Icon(crate::widgets::icons::Icon::Right),
-                    cell,
-                    false,
-                    enabled,
-                )
-                .clicked()
-                {
-                    pressed = Some(DpadKey::Right);
-                }
-            });
-            ui.add_space(gap);
 
-            // Bottom row: invisible left cell — Home — invisible right cell.
-            ui.horizontal(|ui| {
-                ui.allocate_space(Vec2::new(cell, cell));
-                ui.add_space(gap);
-                if dpad_key(
-                    ui,
-                    DpadGlyph::Icon(crate::widgets::icons::Icon::Home),
-                    cell,
-                    false,
-                    enabled,
-                )
-                .clicked()
-                {
-                    pressed = Some(DpadKey::Home);
-                }
-                ui.add_space(gap);
-                ui.allocate_space(Vec2::new(cell, cell));
-            });
-        }); // ui.vertical
-    }); // egui::Frame::none()
+                // Bottom row: invisible left cell — Home — invisible right cell.
+                ui.horizontal(|ui| {
+                    ui.allocate_space(Vec2::new(cell, cell));
+                    ui.add_space(gap);
+                    if dpad_key(
+                        ui,
+                        DpadGlyph::Icon(crate::widgets::icons::Icon::Home),
+                        cell,
+                        false,
+                        enabled,
+                    )
+                    .clicked()
+                    {
+                        pressed = Some(DpadKey::Home);
+                    }
+                    ui.add_space(gap);
+                    ui.allocate_space(Vec2::new(cell, cell));
+                });
+            }); // ui.vertical
+        }); // egui::Frame::none()
     pressed
 }
 
