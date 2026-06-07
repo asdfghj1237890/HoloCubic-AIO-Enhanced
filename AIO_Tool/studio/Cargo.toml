@@ -15,6 +15,18 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 name = "aio-studio"
 path = "src/main.rs"
 
+# Tauri 2's dev/prod switch is the `custom-protocol` feature on the
+# tauri crate, NOT the cargo release/debug profile. Without it,
+# `generate_context!` bakes in `devUrl` (http://localhost:8765) and
+# the binary refuses to start without a dev server, even when built
+# with `--release`. `cargo tauri build` adds the feature behind the
+# scenes; making it a default here means raw `cargo build --release`
+# also produces a working binary. `cargo tauri dev` passes
+# `--no-default-features` to flip back to the dev-server URL.
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
