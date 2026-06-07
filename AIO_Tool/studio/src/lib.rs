@@ -14,6 +14,7 @@
 
 mod commands;
 mod fm;
+mod img;
 
 /// Entry point — set up Tauri and run the desktop event loop.
 pub fn run() {
@@ -39,6 +40,9 @@ pub fn run() {
             commands::fm_remove,
             commands::fm_rename,
             commands::fm_get_info,
+            commands::convert_pick_images,
+            commands::convert_image_batch,
+            commands::convert_image_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("aio-studio: failed to launch the Tauri runtime");

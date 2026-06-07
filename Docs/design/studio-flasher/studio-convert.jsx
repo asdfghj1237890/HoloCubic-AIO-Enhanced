@@ -1,6 +1,11 @@
 // studio-convert.jsx — 圖片轉換 (LVGL image encoder) + 影片轉碼 (ffmpeg pipeline).
 // Exports: StudioImage, StudioVideo.
 
+// ── tauri bridge detection (file-scoped — convert hooks only) ───────────────
+const IS_TAURI_CONV = typeof window !== "undefined" && !!window.__TAURI__;
+const invokeConv = IS_TAURI_CONV ? window.__TAURI__.core.invoke : null;
+const listenConv = IS_TAURI_CONV ? window.__TAURI__.event.listen : null;
+
 Object.assign(ICON, {
   plus: ["M12 5v14", "M5 12h14"],
   clock: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 7v5l3 2"],
@@ -44,8 +49,59 @@ function useImageConv() {
   const [busy, setBusy] = useState(false);
   const timer = useRef(null);
   const addCount = useRef(0);
+  // Tracks the row count per index so Progress events can resolve to a %.
+  const totalRows = useRef({});
 
-  const addSamples = () => {
+  // Subscribe to convert:event in Tauri mode. Mocks use the local timer
+  // path below; the listener is a no-op otherwise.
+  useEffect(() => {
+    if (!IS_TAURI_CONV || !listenConv) return;
+    let unlisten = null;
+    listenConv("convert:event", ({ payload }) => {
+      if (!payload || !payload.kind) return;
+      switch (payload.kind) {
+        case "start":
+          totalRows.current[payload.index] = payload.total_rows || 1;
+          setFiles((F) => F.map((f, idx) => idx === payload.index ? { ...f, status: 0 } : f));
+          break;
+        case "progress": {
+          const total = totalRows.current[payload.index] || 1;
+          const pct = Math.min(99, Math.round((payload.rows_processed / total) * 100));
+          setFiles((F) => F.map((f, idx) => idx === payload.index ? { ...f, status: pct } : f));
+          break;
+        }
+        case "file-done": {
+          setFiles((F) => F.map((f, idx) => idx === payload.index
+            ? (payload.error
+                ? { ...f, status: "error", error: payload.error }
+                : { ...f, status: "done", out: payload.out_bytes, ow: payload.out_w, oh: payload.out_h, outPath: payload.out_path })
+            : f));
+          break;
+        }
+        case "finished":
+          setBusy(false);
+          break;
+      }
+    }).then((fn) => { unlisten = fn; });
+    return () => { if (unlisten) unlisten(); };
+  }, []);
+
+  const addSamples = async () => {
+    if (IS_TAURI_CONV) {
+      try {
+        const picked = await invokeConv("convert_pick_images");
+        if (Array.isArray(picked) && picked.length) {
+          setFiles((F) => [
+            ...F,
+            ...picked.map((p) => ({
+              ...p, id: Date.now() + Math.random(), status: "pending", out: 0,
+              hue: ((p.name.charCodeAt(0) || 0) * 7) % 360,
+            })),
+          ]);
+        }
+      } catch (e) { /* user cancelled / no-op */ }
+      return;
+    }
     const s = IMG_SAMPLES[addCount.current % IMG_SAMPLES.length];
     addCount.current += 1;
     setFiles((F) => [...F, { ...s, id: Date.now() + Math.random(), status: "pending", out: 0 }]);
@@ -53,10 +109,22 @@ function useImageConv() {
   const remove = (id) => setFiles((F) => F.filter((f) => f.id !== id));
   const clear = () => setFiles([]);
 
-  const convert = () => {
+  const convert = async () => {
     if (busy || !files.length) return;
     setBusy(true);
-    setFiles((F) => F.map((f) => ({ ...f, status: "pending", out: 0 })));
+    totalRows.current = {};
+    setFiles((F) => F.map((f) => ({ ...f, status: "pending", out: 0, error: undefined })));
+
+    if (IS_TAURI_CONV) {
+      const items = files.map((f) => ({ path: f.path, name: f.name }));
+      try {
+        await invokeConv("convert_image_batch", { items, format, dither, cArray: carray });
+      } catch (e) {
+        setBusy(false);
+      }
+      return;
+    }
+    // Mock path — preserved for browser preview.
     let i = 0, pct = 0;
     timer.current = setInterval(() => {
       setFiles((F) => {
@@ -76,7 +144,15 @@ function useImageConv() {
       });
     }, 180);
   };
-  const cancel = () => { if (timer.current) clearInterval(timer.current); setBusy(false); };
+  const cancel = () => {
+    if (IS_TAURI_CONV) {
+      invokeConv("convert_image_cancel").catch(() => {});
+      setBusy(false);
+      return;
+    }
+    if (timer.current) clearInterval(timer.current);
+    setBusy(false);
+  };
   useEffect(() => () => timer.current && clearInterval(timer.current), []);
   const doneCount = files.filter((f) => f.status === "done").length;
   return { files, format, setFormat, carray, setCarray, dither, setDither, resize, setResize,

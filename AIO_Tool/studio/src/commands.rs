@@ -68,6 +68,9 @@ pub struct ConnState {
     pub busy: Arc<Mutex<bool>>,
     /// Handle to the File Manager worker thread when connected.
     pub fm: Mutex<Option<FmHandle>>,
+    /// Shared cancellation flag for the image-converter batch. Independent
+    /// from `cancel` (flasher) so cancelling one doesn't affect the other.
+    pub convert_cancel: Arc<AtomicBool>,
 }
 
 /// Live handle to a File-Manager worker — `fm_connect` stores it,
@@ -689,4 +692,39 @@ fn send_fm_cmd(state: &State<'_, ConnState>, cmd: crate::fm::FmCmd) -> Result<()
         .cmd_tx
         .send(cmd)
         .map_err(|e| format!("fm: worker gone: {e}"))
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Phase 6 — Image Converter
+// ─────────────────────────────────────────────────────────────────────
+
+/// Open a native file picker and return picked image metadata. Synchronous
+/// — `rfd` runs the dialog on the Tauri command thread.
+#[tauri::command]
+pub fn convert_pick_images() -> Vec<crate::img::PickedImageDto> {
+    crate::img::pick_images()
+}
+
+/// Run a batch conversion in the background; stream `convert:event`
+/// payloads to JS. Returns immediately. `convert_image_cancel` flips
+/// the shared `AtomicBool` and the converter aborts at the next row
+/// boundary.
+#[tauri::command]
+pub fn convert_image_batch(
+    items: Vec<crate::img::ConvertItem>,
+    format: String,
+    dither: bool,
+    c_array: bool,
+    app: AppHandle,
+    state: State<'_, ConnState>,
+) -> Result<(), String> {
+    let fmt = crate::img::parse_format(&format)?;
+    crate::img::spawn_batch(items, fmt, dither, c_array, state.convert_cancel.clone(), app);
+    Ok(())
+}
+
+/// Flip the convert cancel flag. The encoder polls at row boundaries.
+#[tauri::command]
+pub fn convert_image_cancel(state: State<'_, ConnState>) {
+    state.convert_cancel.store(true, Ordering::Relaxed);
 }

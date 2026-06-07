@@ -29,6 +29,11 @@ serialport = { version = "4.6", default-features = false, features = ["serde"] }
 # workspace (pinned to Rust 1.82); building them as sub-deps under
 # stable picks up the same source but the newer toolchain — empirically
 # fine because the existing crates already build clean on 1.82..stable.
-aio-flasher  = { path = "../crates/aio-flasher" }
-aio-device   = { path = "../crates/aio-device" }
-aio-protocol = { path = "../crates/aio-protocol" }
+aio-flasher   = { path = "../crates/aio-flasher" }
+aio-device    = { path = "../crates/aio-device" }
+aio-protocol  = { path = "../crates/aio-protocol" }
+aio-converter = { path = "../crates/aio-converter" }
+
+# Used for synchronous file-picking + cheap (header-only) image dimension probing.
+rfd   = "=0.15.0"
+image = { version = "=0.25.6", default-features = false, features = ["png", "jpeg", "bmp"] }
