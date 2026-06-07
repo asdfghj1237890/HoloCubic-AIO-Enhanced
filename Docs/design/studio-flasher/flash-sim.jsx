@@ -41,6 +41,11 @@ const REMOTE = {
   home:  { label: "首頁", cmd: "~H" },
 };
 
+// True when running inside Tauri (the aio-studio binary). When false we're
+// rendered by `npx http-server` for design preview and stay 100% mock.
+const IS_TAURI = typeof window !== "undefined" && !!window.__TAURI__;
+const invoke = IS_TAURI ? window.__TAURI__.core.invoke : null;
+
 // --- The hook ---------------------------------------------------------------
 function useFlasher() {
   const { useState, useRef, useCallback, useEffect } = React;
@@ -53,7 +58,9 @@ function useFlasher() {
   const [op, setOp] = useState("none");             // none|erasing|flashing|done|error
   const [progress, setProgress] = useState(null);   // {idx,name,addr,percent,done,total,speed,eta}
   const [log, setLog] = useState([
-    { level: "muted", text: "HoloCubic AIO Flasher — 待命中。連接裝置後即可開始。" },
+    { level: "muted", text: IS_TAURI
+      ? "HoloCubic AIO Flasher (Tauri) — 待命中。連接裝置後即可開始。"
+      : "HoloCubic AIO Flasher — 待命中。連接裝置後即可開始。" },
   ]);
   const timer = useRef(null);
   const cancelRef = useRef(false);
@@ -62,11 +69,38 @@ function useFlasher() {
     setLog((L) => [...L.slice(-220), { level, text, t: now() }]);
   }, []);
 
+  // Re-enumerate serial ports. In Tauri we call the `list_ports` Rust
+  // command which uses the `serialport` crate; in browser preview we
+  // fall back to the hard-coded mock list above.
   const refreshPorts = useCallback(() => {
     pushLog("掃描序列埠…", "muted");
-    setPorts(FLASH_PORTS);
-    pushLog(`找到 ${FLASH_PORTS.length} 個裝置：${FLASH_PORTS.map((p) => p.name).join(", ")}`, "ok");
+    if (IS_TAURI) {
+      invoke("list_ports")
+        .then((list) => {
+          // Backend returns [{name, description}] — map to the prototype's
+          // {name, desc} shape so the rest of the hook stays unchanged.
+          const mapped = list.map((p) => ({ name: p.name, desc: p.description }));
+          setPorts(mapped.length ? mapped : FLASH_PORTS);
+          if (mapped.length) {
+            setPort((cur) => mapped.find((p) => p.name === cur) ? cur : mapped[0].name);
+            pushLog(`找到 ${mapped.length} 個裝置：${mapped.map((p) => p.name).join(", ")}`, "ok");
+          } else {
+            pushLog("沒有偵測到任何序列埠 — 確認 USB 線材已連接、驅動已安裝。", "warn");
+          }
+        })
+        .catch((err) => {
+          pushLog(`list_ports 失敗：${err}`, "err");
+          setPorts(FLASH_PORTS);
+        });
+    } else {
+      setPorts(FLASH_PORTS);
+      pushLog(`找到 ${FLASH_PORTS.length} 個裝置：${FLASH_PORTS.map((p) => p.name).join(", ")}`, "ok");
+    }
   }, [pushLog]);
+
+  // Initial enumeration when the hook mounts inside Tauri — the prototype's
+  // mock list otherwise shows even on the real binary.
+  useEffect(() => { if (IS_TAURI) refreshPorts(); }, [refreshPorts]);
 
   const stop = useCallback(() => {
     if (timer.current) { clearInterval(timer.current); timer.current = null; }
@@ -76,16 +110,37 @@ function useFlasher() {
     if (conn === "connected" || conn === "connecting") return;
     setConn("connecting");
     pushLog(`開啟 ${port} @ ${baud} …`, "info");
-    setTimeout(() => {
-      setChip({ model: "ESP32-D0WD-V3", rev: "v3.0", mac: "7c:9e:bd:48:1a:30", flash: "4 MB" });
-      setConn("connected");
-      pushLog("Chip: ESP32-D0WD-V3 (revision v3.0)", "ok");
-      pushLog("Features: WiFi, BT, Dual Core 240MHz · Flash 4 MB · MAC 7c:9e:bd:48:1a:30", "muted");
-    }, 900);
+    if (IS_TAURI) {
+      // Real connect via aio-flasher — drives espflash's handshake to
+      // probe the chip header. Failure flips the UI back to
+      // disconnected with the underlying error in the log.
+      invoke("connect_device", { port, baud })
+        .then((info) => {
+          setChip(info);
+          setConn("connected");
+          pushLog(`Chip: ${info.model} (revision ${info.rev})`, "ok");
+          if (info.mac !== "—") {
+            pushLog(`MAC ${info.mac} · Flash ${info.flash}`, "muted");
+          }
+        })
+        .catch((err) => {
+          setConn("disconnected");
+          setChip(null);
+          pushLog(`連接失敗：${err}`, "err");
+        });
+    } else {
+      setTimeout(() => {
+        setChip({ model: "ESP32-D0WD-V3", rev: "v3.0", mac: "7c:9e:bd:48:1a:30", flash: "4 MB" });
+        setConn("connected");
+        pushLog("Chip: ESP32-D0WD-V3 (revision v3.0)", "ok");
+        pushLog("Features: WiFi, BT, Dual Core 240MHz · Flash 4 MB · MAC 7c:9e:bd:48:1a:30", "muted");
+      }, 900);
+    }
   }, [conn, port, baud, pushLog]);
 
   const disconnect = useCallback(() => {
     stop(); setConn("disconnected"); setChip(null); setOp("none"); setProgress(null);
+    if (IS_TAURI) invoke("disconnect_device").catch(() => {});
     pushLog(`關閉 ${port}。`, "muted");
   }, [stop, port, pushLog]);
 

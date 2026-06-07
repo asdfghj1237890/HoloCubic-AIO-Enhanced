@@ -8,8 +8,10 @@
 //!
 //! Bridges Rust ↔ JS via Tauri commands. Each `#[tauri::command]` in
 //! `commands.rs` becomes an `invoke()`-able function on the JS side.
-//! `flash-sim.jsx`'s mock state machine gets replaced incrementally —
-//! Phase 1 wires `list_ports` so the prototype shows real COM ports.
+//! Phase 1 wires `list_ports` + `connect_device` / `disconnect_device`;
+//! the rest of the flasher / file-manager / converter command set is
+//! queued and lands incrementally as we swap the prototype's mock
+//! state machine for real calls.
 
 mod commands;
 
@@ -17,7 +19,12 @@ mod commands;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![commands::list_ports])
+        .manage(commands::ConnState::default())
+        .invoke_handler(tauri::generate_handler![
+            commands::list_ports,
+            commands::connect_device,
+            commands::disconnect_device,
+        ])
         .run(tauri::generate_context!())
         .expect("aio-studio: failed to launch the Tauri runtime");
 }
