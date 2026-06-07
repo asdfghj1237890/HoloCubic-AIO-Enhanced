@@ -71,6 +71,9 @@ pub struct ConnState {
     /// Shared cancellation flag for the image-converter batch. Independent
     /// from `cancel` (flasher) so cancelling one doesn't affect the other.
     pub convert_cancel: Arc<AtomicBool>,
+    /// Shared cancellation flag for the in-flight video conversion. Also
+    /// independent so the JS Cancel buttons can't accidentally cross-talk.
+    pub video_cancel: Arc<AtomicBool>,
 }
 
 /// Live handle to a File-Manager worker — `fm_connect` stores it,
@@ -727,4 +730,46 @@ pub fn convert_image_batch(
 #[tauri::command]
 pub fn convert_image_cancel(state: State<'_, ConnState>) {
     state.convert_cancel.store(true, Ordering::Relaxed);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Phase 7 — Video Converter (ffmpeg subprocess)
+// ─────────────────────────────────────────────────────────────────────
+
+/// Probe whether ffmpeg is on PATH. Cheap; matches the egui tool's
+/// `ffmpeg_present()` helper. Called from the UI on tab init / refresh.
+#[tauri::command]
+pub fn video_ffmpeg_check() -> bool {
+    crate::video::ffmpeg_present()
+}
+
+/// Open a native picker for the source video.
+#[tauri::command]
+pub fn video_pick_source() -> Option<crate::video::VideoSourceDto> {
+    crate::video::pick_source()
+}
+
+/// Open a save-as dialog. `srcPath` + `w`/`h`/`format` are used to
+/// suggest the default filename matching the egui worker's convention.
+#[tauri::command]
+#[allow(non_snake_case)] // Tauri forwards JS camelCase verbatim.
+pub fn video_pick_output(srcPath: String, w: u32, h: u32, format: String) -> Option<String> {
+    let default = crate::video::default_output_name(&srcPath, w, h, &format);
+    crate::video::pick_output(&default)
+}
+
+/// Spawn the two-step ffmpeg pipeline. Streams `video:event` payloads.
+#[tauri::command]
+pub fn video_run(
+    job: crate::video::VideoJobDto,
+    app: AppHandle,
+    state: State<'_, ConnState>,
+) -> Result<(), String> {
+    crate::video::spawn_job(job, state.video_cancel.clone(), app)
+}
+
+/// Flip the video cancel flag — the watcher thread kills the child.
+#[tauri::command]
+pub fn video_cancel(state: State<'_, ConnState>) {
+    state.video_cancel.store(true, Ordering::Relaxed);
 }

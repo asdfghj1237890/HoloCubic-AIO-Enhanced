@@ -15,6 +15,7 @@
 mod commands;
 mod fm;
 mod img;
+mod video;
 
 /// Entry point — set up Tauri and run the desktop event loop.
 pub fn run() {
@@ -43,6 +44,11 @@ pub fn run() {
             commands::convert_pick_images,
             commands::convert_image_batch,
             commands::convert_image_cancel,
+            commands::video_ffmpeg_check,
+            commands::video_pick_source,
+            commands::video_pick_output,
+            commands::video_run,
+            commands::video_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("aio-studio: failed to launch the Tauri runtime");

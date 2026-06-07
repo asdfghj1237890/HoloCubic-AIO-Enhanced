@@ -271,22 +271,131 @@ function useVideoConv() {
   const [outPath, setOutPath] = useState("");
   const [mode, setMode] = useState("default");
   const [cfg, setCfg] = useState({ ...VID_DEFAULT });
-  const [ffmpeg, setFfmpeg] = useState("ready"); // ready|checking|missing
+  // In Tauri mode we don't know ffmpeg state until the check resolves;
+  // start as "checking" so the UI doesn't claim "ready" before the probe.
+  const [ffmpeg, setFfmpeg] = useState(IS_TAURI_CONV ? "checking" : "ready");
   const [op, setOp] = useState("idle"); // idle|running|done
   const [progress, setProgress] = useState(null);
   const [log, setLog] = useState([{ level: "muted", text: "選擇來源影片後即可開始轉碼。" }]);
   const timer = useRef(null);
   const push = (text, level = "info") => setLog((L) => [...L.slice(-120), { level, text, t: new Date().toLocaleTimeString("zh-TW", { hour12: false }) }]);
 
-  const pickSrc = () => { setSrc(VID_SAMPLE); setOutPath("C:/HoloCubic/movie/badapple.mjpeg"); push(`已選擇來源：${VID_SAMPLE.name}（${VID_SAMPLE.dur}, ${fmtBytes(VID_SAMPLE.size)}）`, "muted"); };
-  const recheck = () => { setFfmpeg("checking"); push("偵測 ffmpeg…", "muted"); setTimeout(() => { setFfmpeg("ready"); push("ffmpeg 4.4.1 已就緒。", "ok"); }, 700); };
+  // On mount in Tauri, kick off the ffmpeg probe and subscribe to events.
+  useEffect(() => {
+    if (!IS_TAURI_CONV) return;
+    (async () => {
+      try {
+        const ok = await invokeConv("video_ffmpeg_check");
+        setFfmpeg(ok ? "ready" : "missing");
+        push(ok ? "ffmpeg 已就緒。" : "未在 PATH 中找到 ffmpeg。", ok ? "ok" : "warn");
+      } catch (e) {
+        setFfmpeg("missing");
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!IS_TAURI_CONV || !listenConv) return;
+    let unlisten = null;
+    listenConv("video:event", ({ payload }) => {
+      if (!payload || !payload.kind) return;
+      switch (payload.kind) {
+        case "phase":
+          setProgress({ phase: payload.phase, percent: 0 });
+          push(payload.phase === 1 ? "第 1 步：縮放 …" : "第 2 步：編碼 …", "muted");
+          break;
+        case "progress":
+          setProgress({ phase: payload.phase, percent: payload.percent });
+          break;
+        case "log":
+          if (payload.line) push(payload.line, "muted");
+          break;
+        case "finished":
+          setProgress(null);
+          if (payload.ok) {
+            setOp("done");
+            push(`✓ 轉碼完成 → ${payload.out_path}`, "ok");
+          } else {
+            setOp("idle");
+            const msg = payload.error || "未知錯誤";
+            push(msg === "cancelled" ? "已取消轉碼，子程序已結束。" : `✗ ${msg}`, "warn");
+          }
+          break;
+      }
+    }).then((fn) => { unlisten = fn; });
+    return () => { if (unlisten) unlisten(); };
+  }, []);
+
+  const pickSrc = async () => {
+    if (IS_TAURI_CONV) {
+      try {
+        const picked = await invokeConv("video_pick_source");
+        if (!picked) return;
+        setSrc({ name: picked.name, path: picked.path, size: picked.size, dur: "—" });
+        push(`已選擇來源：${picked.name}（${fmtBytes(picked.size)}）`, "muted");
+        // Suggest an output path next to the source.
+        const c = mode === "default" ? VID_DEFAULT : cfg;
+        try {
+          const out = await invokeConv("video_pick_output", {
+            srcPath: picked.path, w: +c.w, h: +c.h, format: c.format,
+          });
+          if (out) { setOutPath(out); push(`輸出路徑：${out}`, "muted"); }
+        } catch (_) { /* user cancelled save dialog */ }
+      } catch (_) { /* user cancelled open dialog */ }
+      return;
+    }
+    setSrc(VID_SAMPLE);
+    setOutPath("C:/HoloCubic/movie/badapple.mjpeg");
+    push(`已選擇來源：${VID_SAMPLE.name}（${VID_SAMPLE.dur}, ${fmtBytes(VID_SAMPLE.size)}）`, "muted");
+  };
+
+  const recheck = async () => {
+    setFfmpeg("checking"); push("偵測 ffmpeg…", "muted");
+    if (IS_TAURI_CONV) {
+      try {
+        const ok = await invokeConv("video_ffmpeg_check");
+        setFfmpeg(ok ? "ready" : "missing");
+        push(ok ? "ffmpeg 已就緒。" : "未在 PATH 中找到 ffmpeg。", ok ? "ok" : "warn");
+      } catch (_) { setFfmpeg("missing"); }
+      return;
+    }
+    setTimeout(() => { setFfmpeg("ready"); push("ffmpeg 4.4.1 已就緒。", "ok"); }, 700);
+  };
+
   const set = (k, v) => setCfg((s) => ({ ...s, [k]: v }));
 
-  const run = () => {
+  const run = async () => {
     if (!src || ffmpeg !== "ready" || op === "running") return;
     const c = mode === "default" ? VID_DEFAULT : cfg;
     setOp("running");
     push(`開始轉碼 → ${c.w}×${c.h} @ ${c.fps}fps · ${c.format} · q${c.quality}`, "info");
+
+    if (IS_TAURI_CONV) {
+      // Path-based: outPath must be a real filesystem path. If the user
+      // hasn't picked one, ask now.
+      let dest = outPath;
+      if (!dest) {
+        try {
+          dest = await invokeConv("video_pick_output", {
+            srcPath: src.path, w: +c.w, h: +c.h, format: c.format,
+          });
+          if (dest) setOutPath(dest);
+        } catch (_) {}
+      }
+      if (!dest) { setOp("idle"); push("未指定輸出路徑，轉碼取消。", "warn"); return; }
+      try {
+        await invokeConv("video_run", {
+          job: { src: src.path, out: dest, w: +c.w, h: +c.h, fps: +c.fps, quality: +c.quality, format: c.format },
+        });
+        setProgress({ phase: 1, percent: 0 });
+      } catch (e) {
+        setOp("idle");
+        push("✗ " + (e && e.toString ? e.toString() : e), "warn");
+      }
+      return;
+    }
+
+    // Mock path — preserved for browser preview.
     push("ffmpeg -i 來源 -vf scale,fps -f image2pipe …（第 1 步：抽取影格）", "muted");
     let phase = 1, pct = 0;
     setProgress({ phase: 1, percent: 0 });
@@ -304,7 +413,18 @@ function useVideoConv() {
       } else setProgress({ phase, percent: pct });
     }, 150);
   };
-  const cancel = () => { if (timer.current) clearInterval(timer.current); setProgress(null); setOp("idle"); push("已取消轉碼，子程序已結束。", "warn"); };
+
+  const cancel = () => {
+    if (IS_TAURI_CONV) {
+      invokeConv("video_cancel").catch(() => {});
+      // Op transitions to idle via the upcoming "finished" event with
+      // error="cancelled", so don't preempt the state here.
+      return;
+    }
+    if (timer.current) clearInterval(timer.current);
+    setProgress(null); setOp("idle");
+    push("已取消轉碼，子程序已結束。", "warn");
+  };
   useEffect(() => () => timer.current && clearInterval(timer.current), []);
   return { src, outPath, setOutPath, mode, setMode, cfg, ffmpeg, op, progress, log, pickSrc, recheck, set, run, cancel };
 }
