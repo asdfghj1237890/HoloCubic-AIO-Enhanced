@@ -45,6 +45,7 @@ const REMOTE = {
 // rendered by `npx http-server` for design preview and stay 100% mock.
 const IS_TAURI = typeof window !== "undefined" && !!window.__TAURI__;
 const invoke = IS_TAURI ? window.__TAURI__.core.invoke : null;
+const listen = IS_TAURI ? window.__TAURI__.event.listen : null;
 
 // --- The hook ---------------------------------------------------------------
 function useFlasher() {
@@ -154,7 +155,83 @@ function useFlasher() {
 
   const cancel = useCallback(() => {
     cancelRef.current = true;
+    if (IS_TAURI) invoke("cancel_op").catch(() => {});
     pushLog("已要求取消…", "warn");
+  }, [pushLog]);
+
+  // Tauri flash event listeners — translate `flash:event` /
+  // `flash:finished` from the Rust backend into the same `progress` /
+  // `op` / `log` state shape the mock state machine uses, so the rest
+  // of the prototype renders identically. Only registered once per
+  // mount; cleanup unsubscribes on unmount.
+  useEffect(() => {
+    if (!IS_TAURI) return;
+    let unlistenEvt = null;
+    let unlistenFin = null;
+    let queue = [];
+    let qi = 0;
+    let perIndexTotal = new Map();
+    let tStart = 0;
+    listen("flash:event", ({ payload }) => {
+      switch (payload.kind) {
+        case "erase-start":
+          pushLog("Erasing flash (this may take a while)…", "info");
+          setProgress({ idx: 0, name: "清空晶片", addr: 0, percent: 0, done: 0, total: 1, speed: 0, eta: 0 });
+          break;
+        case "erase-done":
+          pushLog("Chip erase completed successfully.", "ok");
+          break;
+        case "partition-start":
+          perIndexTotal.set(payload.index, payload.total_bytes);
+          tStart = performance.now();
+          qi = payload.index;
+          {
+            const p = queue[qi] || { name: `partition ${qi}`, addr: 0, file: "" };
+            pushLog(`Writing ${fmtBytes(payload.total_bytes)} at ${hex(p.addr)} — ${p.file}`, "info");
+            setProgress({ idx: qi, name: p.name, addr: p.addr, percent: 0, done: 0, total: payload.total_bytes, speed: 0, eta: 0 });
+          }
+          break;
+        case "progress":
+          {
+            const total = perIndexTotal.get(payload.index) || 1;
+            const done = Math.min(total, payload.bytes_written);
+            const secs = (performance.now() - tStart) / 1000;
+            const speed = done / Math.max(0.001, secs);
+            const eta = (total - done) / Math.max(1, speed);
+            const p = queue[payload.index] || { name: "", addr: 0 };
+            setProgress({ idx: payload.index, name: p.name, addr: p.addr, percent: (done / total) * 100, done, total, speed, eta });
+          }
+          break;
+        case "partition-done":
+          {
+            const total = perIndexTotal.get(payload.index) || 1;
+            const secs = (performance.now() - tStart) / 1000;
+            const speed = total / Math.max(0.001, secs);
+            const p = queue[payload.index] || { addr: 0 };
+            pushLog(`Wrote ${fmtBytes(total)} at ${hex(p.addr)} in ${secs.toFixed(1)}s (${fmtBytes(speed)}/s)`, "ok");
+          }
+          break;
+      }
+    }).then(u => unlistenEvt = u);
+    listen("flash:finished", ({ payload }) => {
+      setProgress(null);
+      if (payload.cancelled) {
+        setOp("none");
+        pushLog("Operation cancelled.", "warn");
+      } else if (payload.ok) {
+        setOp("done");
+        pushLog("Hard resetting via RTS pin…", "muted");
+        pushLog("✓ 韌體燒錄成功！裝置即將重新啟動。", "ok");
+        setTimeout(() => setOp("none"), 600);
+      } else {
+        setOp("error");
+        pushLog(`✗ ${payload.error || "flash failed"}`, "err");
+        setTimeout(() => setOp("none"), 1500);
+      }
+    }).then(u => unlistenFin = u);
+    // Wire so the run() Tauri branch can drop the per-call queue.
+    window.__aio_setFlashQueue = (q) => { queue = q; qi = 0; perIndexTotal = new Map(); };
+    return () => { if (unlistenEvt) unlistenEvt(); if (unlistenFin) unlistenFin(); };
   }, [pushLog]);
 
   // Core simulated write loop, shared by erase + flash.
@@ -168,6 +245,23 @@ function useFlasher() {
     pushLog(mode === "flash"
       ? `開始燒錄 ${queue.length} 個分割區…`
       : "Erasing flash (this may take a while)…", "info");
+
+    if (IS_TAURI) {
+      // Hand the partition list to the flash:event listener so its
+      // PartitionStart/Done lookups have file metadata for the log.
+      if (typeof window.__aio_setFlashQueue === "function") {
+        window.__aio_setFlashQueue(queue);
+      }
+      const cmd = mode === "flash" ? "start_flash" : "start_erase";
+      const args = mode === "flash"
+        ? { parts: queue.map((p) => ({ address: p.addr, path: p.file })), port, baud }
+        : { port, baud };
+      invoke(cmd, args).catch((err) => {
+        setOp("none");
+        pushLog(`${cmd} 失敗：${err}`, "err");
+      });
+      return;
+    }
 
     if (mode === "erase") {
       let pct = 0;
@@ -233,15 +327,25 @@ function useFlasher() {
   const reboot = useCallback(() => {
     if (conn !== "connected") { pushLog("請先連接裝置再重新開機。", "warn"); return; }
     pushLog("→ 重新開機指令 (RTS/DTR reset)", "accent");
+    if (IS_TAURI) {
+      invoke("reboot_device", { port, baud }).catch((err) => {
+        pushLog(`reboot_device 失敗：${err}`, "err");
+      });
+    }
     pushLog("裝置重新啟動中…", "muted");
-  }, [conn, pushLog]);
+  }, [conn, port, baud, pushLog]);
 
   const sendRemote = useCallback((dir) => {
     const r = REMOTE[dir];
     if (!r) return;
     if (conn !== "connected") { pushLog("請先連接裝置再使用遙控。", "warn"); return; }
     pushLog(`→ ${r.cmd}  (${r.label})`, "accent");
-  }, [conn, pushLog]);
+    if (IS_TAURI) {
+      invoke("send_remote", { port, baud, dir }).catch((err) => {
+        pushLog(`send_remote ${dir} 失敗：${err}`, "err");
+      });
+    }
+  }, [conn, port, baud, pushLog]);
 
   useEffect(() => () => stop(), [stop]);
 

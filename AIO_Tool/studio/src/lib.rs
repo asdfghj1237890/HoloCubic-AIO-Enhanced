@@ -8,10 +8,9 @@
 //!
 //! Bridges Rust ↔ JS via Tauri commands. Each `#[tauri::command]` in
 //! `commands.rs` becomes an `invoke()`-able function on the JS side.
-//! Phase 1 wires `list_ports` + `connect_device` / `disconnect_device`;
-//! the rest of the flasher / file-manager / converter command set is
-//! queued and lands incrementally as we swap the prototype's mock
-//! state machine for real calls.
+//! Background flash / erase work emits `flash:event` and
+//! `flash:finished` events that the prototype's `useFlasher` hook
+//! subscribes to via `window.__TAURI__.event.listen`.
 
 mod commands;
 
@@ -24,6 +23,11 @@ pub fn run() {
             commands::list_ports,
             commands::connect_device,
             commands::disconnect_device,
+            commands::start_flash,
+            commands::start_erase,
+            commands::cancel_op,
+            commands::send_remote,
+            commands::reboot_device,
         ])
         .run(tauri::generate_context!())
         .expect("aio-studio: failed to launch the Tauri runtime");
