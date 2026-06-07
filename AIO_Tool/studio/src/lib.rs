@@ -20,6 +20,17 @@ mod video;
 /// Entry point — set up Tauri and run the desktop event loop.
 pub fn run() {
     tauri::Builder::default()
+        // Single-instance MUST be the first plugin per Tauri docs —
+        // when a second launch fires, the callback runs on the FIRST
+        // instance and we re-focus its main window.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            use tauri::Manager;
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
         .manage(commands::ConnState::default())
         .invoke_handler(tauri::generate_handler![
