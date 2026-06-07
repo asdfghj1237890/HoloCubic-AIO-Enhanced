@@ -191,7 +191,7 @@ function StudioFlasher() {
                         borderTop: i ? "1px solid var(--border)" : "none", fontSize: 12 }}>
                     <input type="checkbox" checked={p.enabled} onChange={() => fl.togglePart(i)} style={{ accentColor: "var(--accent)", width: 15, height: 15 }} />
                     <span className="mono" style={{ color: "var(--accent)", width: 62 }}>{hexAddr(p.addr)}</span>
-                    <span style={{ flex: 1, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.file}</span>
+                    <span style={{ flex: 1, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={p.file}>{p.displayFile || p.file}</span>
                     <span className="mono" style={{ color: "var(--text-mute)", width: 64, textAlign: "right" }}>{fmtBytes(p.bytes)}</span>
                     <button className="btn ghost" style={{ height: 27, padding: "0 var(--s2)", fontSize: 11 }} onClick={() => fl.pickFile(i)}>選擇</button>
                   </div>
@@ -224,7 +224,7 @@ function StudioFlasher() {
                         {st === "done" ? <Icon d={ICON.check} size={11} /> : st === "active" ? <Icon d={ICON.refresh} size={11} className="spin" /> : "·"}
                       </span>
                       <span className="mono" style={{ color: "var(--accent)", width: 60 }}>{hexAddr(p.addr)}</span>
-                      <span style={{ flex: 1, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.file}</span>
+                      <span style={{ flex: 1, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={p.file}>{p.displayFile || p.file}</span>
                       <span className="mono" style={{ color: st === "active" ? "var(--accent)" : "var(--text-mute)", width: 42, textAlign: "right" }}>{pct.toFixed(0)}%</span>
                     </div>
                   );

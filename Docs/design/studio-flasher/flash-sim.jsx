@@ -148,7 +148,25 @@ function useFlasher() {
   const togglePart = useCallback((i) => {
     setParts((P) => P.map((p, j) => (j === i ? { ...p, enabled: !p.enabled } : p)));
   }, []);
-  const pickFile = useCallback((i) => {
+  const pickFile = useCallback(async (i) => {
+    if (IS_TAURI) {
+      // Suggest the default filename so the user can recognise the
+      // partition. invoke returns null on cancel — leave parts[i]
+      // untouched in that case.
+      try {
+        const picked = await invoke("pick_partition_bin", { initialName: parts[i].file });
+        if (!picked) return;
+        const name = picked.replace(/\\/g, "/").split("/").pop() || picked;
+        setParts((P) => P.map((p, j) => (j === i
+          ? { ...p, enabled: true, file: picked, displayFile: name }
+          : p)));
+        pushLog(`已選擇 ${parts[i].name} → ${name}`, "muted");
+      } catch (e) {
+        pushLog(`✗ 檔案選擇失敗：${e}`, "warn");
+      }
+      return;
+    }
+    // Browser-preview mock: nothing to pick, just flip enabled on.
     setParts((P) => P.map((p, j) => (j === i ? { ...p, enabled: true } : p)));
     pushLog(`已選擇 ${parts[i].name} 的 bin 檔。`, "muted");
   }, [parts, pushLog]);

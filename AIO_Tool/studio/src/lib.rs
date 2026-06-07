@@ -35,6 +35,7 @@ pub fn run() {
         .manage(commands::ConnState::default())
         .invoke_handler(tauri::generate_handler![
             commands::list_ports,
+            commands::pick_partition_bin,
             commands::connect_device,
             commands::disconnect_device,
             commands::start_flash,

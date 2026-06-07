@@ -122,6 +122,22 @@ pub struct FlashFinishedDto {
     pub error: Option<String>,
 }
 
+/// Open a native file picker for a single `.bin` partition image.
+///
+/// `initial_name` becomes the default selection in the dialog (e.g.
+/// "bootloader_qio_80m.bin") so the user can match the partition row
+/// to the right file at a glance. Returns the absolute path on
+/// confirm, or `None` on cancel — the JS side stores the absolute
+/// path in `parts[i].file` and that's what `start_flash` reads.
+#[tauri::command]
+pub fn pick_partition_bin(initial_name: Option<String>) -> Option<String> {
+    let mut dlg = rfd::FileDialog::new().add_filter("Firmware (.bin)", &["bin"]);
+    if let Some(name) = initial_name {
+        dlg = dlg.set_file_name(&name);
+    }
+    dlg.pick_file().map(|p| p.to_string_lossy().into_owned())
+}
+
 /// Enumerate the system's serial ports.
 #[tauri::command]
 pub fn list_ports() -> Vec<SerialPortInfo> {
