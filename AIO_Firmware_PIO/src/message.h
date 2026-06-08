@@ -9,8 +9,9 @@ enum MODULE_TYPE : unsigned char
     MODULE_TYPE_UNKNOW = 0,
     MODULE_TYPE_CUBIC_FILE_MANAGER,
     MODULE_TYPE_C_FILE_MANAGER,
-    MODULE_TYPE_CUBIC_SETTINGS,
-    MODULE_TYPE_TOOL_SETTINGS
+    // CUBIC_SETTINGS / TOOL_SETTINGS removed with B15 fix PR3 — the serial
+    // SettingsMsg flow was never functional and is superseded by HTTP
+    // /api/settings + /save<Cat>Conf form handlers.
 };
 
 enum ACTION_TYPE : unsigned char
@@ -29,9 +30,7 @@ enum ACTION_TYPE : unsigned char
     AT_FILE_REMOVE,
     AT_FILE_RENAME,
     AT_FILE_GET_INFO,
-
-    AT_SETTING_SET,
-    AT_SETTING_GET,
+    // AT_SETTING_SET / AT_SETTING_GET removed with B15 fix PR3 (see above).
 };
 
 class MsgHead
@@ -52,32 +51,12 @@ public:
     uint32_t encode(uint8_t *msg);
 };
 
-enum VALUE_TYPE : unsigned char
-{
-    VALUE_TYPE_UNKNOWN = 0,
-
-    VALUE_TYPE_INT,
-    VALUE_TYPE_UCHAR,
-    VALUE_TYPE_STRING
-};
-
-class SettingsMsg
-{
-public:
-    MsgHead m_msg_head;
-    // 以下数据直接使用空格隔开
-    char m_prefs_name[15];
-    char m_key[16];
-    VALUE_TYPE m_value_type;
-    unsigned char m_value[15];
-
-public:
-    SettingsMsg(ACTION_TYPE action_type = AT_SETTING_SET);
-    ~SettingsMsg(){};
-    bool isLegal();
-    uint32_t decode(const uint8_t *msg);
-    uint32_t encode(uint8_t *msg);
-};
+// VALUE_TYPE enum + SettingsMsg class removed with B15 fix PR3. The serial
+// settings protocol was never functional end-to-end (firmware decode/encode
+// had bugs, prefs.* persistence calls were commented out). Studio's Settings
+// tab now uses HTTP /api/settings; the egui tool's Settings tab still
+// references the old types via aio-protocol::SettingMsg + settings_worker.rs
+// and will be migrated in a follow-up PR.
 
 class FileSystem
 {

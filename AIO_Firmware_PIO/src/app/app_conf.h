@@ -84,11 +84,9 @@
 #include "app/server/server.h"
 #endif
 
-// 设置APP
-#define APP_SETTING_USE 1
-#if APP_SETTING_USE
-#include "app/settings/settings.h"
-#endif
+// 设置APP — REMOVED (B15 fix PR3). The serial-settings module was never
+// functional (`prefs.*` calls commented out since d47c88d, 2022-10) and is
+// superseded by the firmware web flow + Studio's HTTP-based Settings tab.
 
 // 股票行情查看APP
 #define APP_STOCK_MARKET_USE 1
