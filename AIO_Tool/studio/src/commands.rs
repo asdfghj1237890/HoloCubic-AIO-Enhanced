@@ -444,18 +444,18 @@ pub fn save_settings_http(
     // are currently registered in `server.cpp` are accepted — submitting to
     // a disabled #if APP_X_USE branch would return 404 and confuse the user.
     let handler = match category.as_str() {
-        "sys"          => "saveSysConf",
-        "rgb"          => "saveRgbConf",
-        "weather"      => "saveWeatherConf",
-        "weather_old"  => "saveWeatherOldConf",
-        "bili"         => "saveBiliConf",
-        "stock"        => "saveStockConf",
-        "picture"      => "savePictureConf",
-        "media"        => "saveMediaConf",
-        "screen"       => "saveScreenConf",
-        "heartbeat"    => "saveHeartbeatConf",
-        "anniversary"  => "saveAnniversaryConf",
-        "pc_resource"  => "savePCResourceConf",
+        "sys" => "saveSysConf",
+        "rgb" => "saveRgbConf",
+        "weather" => "saveWeatherConf",
+        "weather_old" => "saveWeatherOldConf",
+        "bili" => "saveBiliConf",
+        "stock" => "saveStockConf",
+        "picture" => "savePictureConf",
+        "media" => "saveMediaConf",
+        "screen" => "saveScreenConf",
+        "heartbeat" => "saveHeartbeatConf",
+        "anniversary" => "saveAnniversaryConf",
+        "pc_resource" => "savePCResourceConf",
         other => return Err(format!("unknown settings category `{other}`")),
     };
     let url = format!("http://{host}/{handler}");
