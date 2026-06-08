@@ -1,6 +1,6 @@
 [package]
 name = "aio-studio"
-version = "3.0.1"
+version = "3.1.0"
 edition = "2021"
 rust-version = "1.85"
 description = "HoloCubic AIO Tool — Studio (Tauri 2 + prototype HTML)"
