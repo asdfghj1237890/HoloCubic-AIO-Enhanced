@@ -163,9 +163,6 @@ void setup()
 #if APP_BILIBILI_FANS_USE
     app_controller->app_install(&bilibili_app);
 #endif
-#if APP_SETTING_USE
-    app_controller->app_install(&settings_app);
-#endif
 #if APP_GAME_2048_USE
     app_controller->app_install(&game_2048_app);
 #endif

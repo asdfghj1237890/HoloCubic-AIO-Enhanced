@@ -82,6 +82,7 @@ void start_web_config()
     // JSON API endpoints for the Glass UI dashboard + system page.
     server.on("/api/stats", HTTP_GET, api_stats);
     server.on("/api/wifi-scan", HTTP_GET, api_wifi_scan);
+    server.on("/api/settings", HTTP_GET, api_settings);
 
     // 连接
     server.on("/saveSysConf", saveSysConf);

@@ -26,7 +26,7 @@
 #include "app/tomato/tomato.h"
 #include "app/game_2048/game_2048.h"
 #include "app/heartbeat/heartbeat.h"
-#include "app/settings/settings.h"
+// app/settings/settings.h removed in B15 fix PR3 — module was dead code.
 #include "app/game_snake/game_snake.h"
 #include "app/example/example.h"
 #include "app/bilibili_fans/bilibili.h"
@@ -172,7 +172,7 @@ static const ScenarioApp kRegisteredApps[] = {
     { "tomato",      &tomato_app },
     { "2048",        &game_2048_app },
     { "heartbeat",   &heartbeat_app },
-    { "settings",    &settings_app },
+    // settings app removed in B15 fix PR3 — module was dead code.
     { "snake",       &game_snake_app },
     { "example",     &example_app },
     { "bilibili",    &bilibili_app },
