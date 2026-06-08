@@ -2,6 +2,7 @@
 #include "server.h"
 #include "common.h"
 #include "network.h"
+#include "web_setting.h"   // extern AppController *app_controller — feeds /api/settings
 #include <WiFi.h>
 
 // ESP32-specific helpers: not part of common.h to keep its include surface narrow.
@@ -33,6 +34,21 @@ void send_json(const String &body)
     server.sendHeader("Cache-Control", "no-store");
     server.sendHeader("Access-Control-Allow-Origin", "*");
     server.send(200, "application/json", body);
+}
+
+// JSON-escape a String value for embedding inside double quotes.
+// Quotes + backslashes get prefixed; control chars <0x20 are dropped
+// (these never appear in our config strings — SSID / app name etc.).
+String json_escape(const String &s)
+{
+    String out;
+    out.reserve(s.length() + 4);
+    for (size_t i = 0; i < s.length(); ++i) {
+        char c = s[i];
+        if (c == '"' || c == '\\') { out += '\\'; out += c; }
+        else if ((unsigned char)c >= 0x20)  out += c;
+    }
+    return out;
 }
 
 }  // namespace
@@ -145,5 +161,60 @@ void api_wifi_scan(void)
     }
     body += "]}";
     WiFi.scanDelete();
+    send_json(body);
+}
+
+void api_settings(void)
+{
+    // Read side of the B15 fix — emit the live config structs as JSON so
+    // Studio's Settings tab can populate fields. Mirrors the source of truth
+    // the existing /save<Cat>Conf form handlers write to (via
+    // APP_MESSAGE_SET_PARAM → deal_config → write_config → SPIFFS .cfg).
+    //
+    // No password redaction — same level of trust as the existing
+    // /sys_setting HTML page, which renders password fields in plaintext.
+    // Both flows assume LAN-only access.
+    const SysUtilConfig &sys = app_controller->sys_cfg;
+    const RgbConfig     &rgb = app_controller->rgb_cfg;
+    const SysMpuConfig  &mpu = app_controller->mpu_cfg;
+
+    String body;
+    body.reserve(1280);
+    body  = F("{\"sys\":{");
+    body += F("\"ssid_0\":\"");      body += json_escape(sys.ssid_0);        body += F("\",");
+    body += F("\"password_0\":\"");  body += json_escape(sys.password_0);    body += F("\",");
+    body += F("\"ssid_1\":\"");      body += json_escape(sys.ssid_1);        body += F("\",");
+    body += F("\"password_1\":\"");  body += json_escape(sys.password_1);    body += F("\",");
+    body += F("\"ssid_2\":\"");      body += json_escape(sys.ssid_2);        body += F("\",");
+    body += F("\"password_2\":\"");  body += json_escape(sys.password_2);    body += F("\",");
+    body += F("\"auto_start_app\":\""); body += json_escape(sys.auto_start_app); body += F("\",");
+    body += F("\"power_mode\":");        body += (int)sys.power_mode;           body += F(",");
+    body += F("\"backLight\":");         body += (int)sys.backLight;            body += F(",");
+    body += F("\"rotation\":");          body += (int)sys.rotation;             body += F(",");
+    body += F("\"auto_calibration_mpu\":"); body += (int)sys.auto_calibration_mpu; body += F(",");
+    body += F("\"mpu_order\":");         body += (int)sys.mpu_order;
+    body += F("},\"rgb\":{");
+    body += F("\"mode\":");          body += (int)rgb.mode;            body += F(",");
+    body += F("\"min_value_0\":");   body += (int)rgb.min_value_0;     body += F(",");
+    body += F("\"min_value_1\":");   body += (int)rgb.min_value_1;     body += F(",");
+    body += F("\"min_value_2\":");   body += (int)rgb.min_value_2;     body += F(",");
+    body += F("\"max_value_0\":");   body += (int)rgb.max_value_0;     body += F(",");
+    body += F("\"max_value_1\":");   body += (int)rgb.max_value_1;     body += F(",");
+    body += F("\"max_value_2\":");   body += (int)rgb.max_value_2;     body += F(",");
+    body += F("\"step_0\":");        body += (int)rgb.step_0;          body += F(",");
+    body += F("\"step_1\":");        body += (int)rgb.step_1;          body += F(",");
+    body += F("\"step_2\":");        body += (int)rgb.step_2;          body += F(",");
+    body += F("\"min_brightness\":"); body += (int)rgb.min_brightness; body += F(",");
+    body += F("\"max_brightness\":"); body += (int)rgb.max_brightness; body += F(",");
+    body += F("\"brightness_step\":"); body += (int)rgb.brightness_step; body += F(",");
+    body += F("\"time\":");          body += rgb.time;
+    body += F("},\"mpu\":{");
+    body += F("\"x_gyro_offset\":"); body += mpu.x_gyro_offset;   body += F(",");
+    body += F("\"y_gyro_offset\":"); body += mpu.y_gyro_offset;   body += F(",");
+    body += F("\"z_gyro_offset\":"); body += mpu.z_gyro_offset;   body += F(",");
+    body += F("\"x_accel_offset\":"); body += mpu.x_accel_offset; body += F(",");
+    body += F("\"y_accel_offset\":"); body += mpu.y_accel_offset; body += F(",");
+    body += F("\"z_accel_offset\":"); body += mpu.z_accel_offset;
+    body += F("}}");
     send_json(body);
 }
