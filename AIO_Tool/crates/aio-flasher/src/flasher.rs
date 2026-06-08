@@ -30,12 +30,31 @@ use std::sync::Arc;
 
 use espflash::connection::reset::{ResetAfterOperation, ResetBeforeOperation};
 use espflash::elf::RomSegment;
-use espflash::flasher::{Flasher as EspFlasher, ProgressCallbacks};
+use espflash::flasher::{FlashSize, Flasher as EspFlasher, ProgressCallbacks};
+use espflash::targets::Chip;
 use serialport::{FlowControl, UsbPortInfo};
 
 use crate::error::FlashError;
 use crate::partition::{self, Partition};
 use crate::progress::FlashEvent;
+
+/// Human-readable chip identity, populated by [`Flasher::device_info`].
+///
+/// Every field is a pre-formatted display string so the caller (Tauri / UI)
+/// doesn't need to depend on `espflash` enums or unit conversions. Missing
+/// data is reported as `"—"` rather than `None` for the same reason.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceSummary {
+    /// Chip family — `"ESP32"`, `"ESP32-C3"`, `"ESP32-S3"`, etc.
+    pub chip: String,
+    /// Silicon revision — `"v3.0"` etc., or `"—"` if espflash couldn't read it.
+    pub revision: String,
+    /// MAC address — `"a4:cf:12:34:56:78"`. Pulled from BLK0 efuses.
+    pub mac: String,
+    /// Total flash size — `"4 MB"`. Auto-detected during connect; falls back
+    /// to espflash's 4 MB default if the SPI flash chip's size ID is unknown.
+    pub flash_size: String,
+}
 
 /// HoloCubic flasher. Holds the open serial connection to the ROM bootloader.
 pub struct Flasher {
@@ -93,6 +112,31 @@ impl Flasher {
             inner: Some(inner),
             port: port.to_owned(),
             baud,
+        })
+    }
+
+    /// Read chip identity (model, revision, MAC, flash size) from the
+    /// already-connected device.
+    ///
+    /// Thin wrapper over [`espflash::flasher::Flasher::device_info`] that
+    /// returns a [`DeviceSummary`] of pre-formatted display strings — no
+    /// `espflash` types leak through. Espflash auto-detects flash size
+    /// during `new`; if detection fails it falls back to its 4 MB default
+    /// (espflash logs a warning to its `log` facade).
+    pub fn device_info(&mut self) -> Result<DeviceSummary, FlashError> {
+        let f = self
+            .inner
+            .as_mut()
+            .ok_or(FlashError::Connect(espflash::error::Error::FlashConnect))?;
+        let info = f.device_info().map_err(FlashError::DeviceInfo)?;
+        Ok(DeviceSummary {
+            chip: format_chip(info.chip),
+            revision: info
+                .revision
+                .map(|(maj, min)| format!("v{maj}.{min}"))
+                .unwrap_or_else(|| "—".to_owned()),
+            mac: info.mac_address,
+            flash_size: format_flash_size(info.flash_size),
         })
     }
 
@@ -224,6 +268,39 @@ impl Drop for Flasher {
         // extra to do here — explicit `take` for symmetry with future
         // explicit-close additions.
         let _ = self.inner.take();
+    }
+}
+
+/// Map espflash's `Chip` enum to the marketing name (uppercase, with the
+/// family suffix dash — `ESP32-S3`, not the strum default `esp32s3`).
+///
+/// `Chip` is `#[non_exhaustive]`, so future variants fall back to an
+/// uppercased Display rather than panicking — degrades gracefully when a
+/// newer espflash adds chips before we update this table.
+fn format_chip(chip: Chip) -> String {
+    match chip {
+        Chip::Esp32 => "ESP32".to_owned(),
+        Chip::Esp32c2 => "ESP32-C2".to_owned(),
+        Chip::Esp32c3 => "ESP32-C3".to_owned(),
+        Chip::Esp32c6 => "ESP32-C6".to_owned(),
+        Chip::Esp32h2 => "ESP32-H2".to_owned(),
+        Chip::Esp32p4 => "ESP32-P4".to_owned(),
+        Chip::Esp32s2 => "ESP32-S2".to_owned(),
+        Chip::Esp32s3 => "ESP32-S3".to_owned(),
+        other => format!("{other}").to_uppercase(),
+    }
+}
+
+/// Format a `FlashSize` as a short human-readable string — `"4 MB"`,
+/// `"256 KB"`, etc. espflash's Display would give `"4MB"` (SCREAMING_SNAKE
+/// case on the variant name) which reads poorly in a UI label.
+fn format_flash_size(size: FlashSize) -> String {
+    let bytes = size.size();
+    let mb = bytes / (1024 * 1024);
+    if mb >= 1 {
+        format!("{mb} MB")
+    } else {
+        format!("{} KB", bytes / 1024)
     }
 }
 
@@ -460,6 +537,22 @@ mod tests {
                 total_bytes: 0,
             }
         );
+    }
+
+    #[test]
+    fn format_chip_marketing_names() {
+        assert_eq!(format_chip(Chip::Esp32), "ESP32");
+        assert_eq!(format_chip(Chip::Esp32c3), "ESP32-C3");
+        assert_eq!(format_chip(Chip::Esp32s3), "ESP32-S3");
+        assert_eq!(format_chip(Chip::Esp32h2), "ESP32-H2");
+    }
+
+    #[test]
+    fn format_flash_size_renders_mb_and_kb() {
+        assert_eq!(format_flash_size(FlashSize::_256Kb), "256 KB");
+        assert_eq!(format_flash_size(FlashSize::_512Kb), "512 KB");
+        assert_eq!(format_flash_size(FlashSize::_4Mb), "4 MB");
+        assert_eq!(format_flash_size(FlashSize::_16Mb), "16 MB");
     }
 
     #[test]

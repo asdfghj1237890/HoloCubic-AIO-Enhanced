@@ -154,6 +154,11 @@ pub fn list_ports() -> Vec<SerialPortInfo> {
 }
 
 /// Open a serial port to the ESP32 and read back its chip identity.
+///
+/// Returns model / revision / MAC / flash size as queried from the chip —
+/// these populate the right-side info panel in the prototype. The flasher
+/// is dropped at the end of this call (we don't keep a live espflash
+/// handle around between operations); `start_flash` re-opens its own.
 #[tauri::command]
 pub fn connect_device(
     port: String,
@@ -163,13 +168,16 @@ pub fn connect_device(
     let baud_u32: u32 = baud
         .parse()
         .map_err(|e| format!("invalid baud `{baud}`: {e}"))?;
-    let _flasher = aio_flasher::Flasher::new(&port, baud_u32)
+    let mut flasher = aio_flasher::Flasher::new(&port, baud_u32)
         .map_err(|e| format!("open/connect {port}@{baud}: {e}"))?;
+    let summary = flasher
+        .device_info()
+        .map_err(|e| format!("read chip info {port}: {e}"))?;
     let info = ChipInfo {
-        model: "ESP32".to_owned(),
-        rev: "v3.0".to_owned(),
-        mac: "—".to_owned(),
-        flash: "—".to_owned(),
+        model: summary.chip,
+        rev: summary.revision,
+        mac: summary.mac,
+        flash: summary.flash_size,
     };
     *state.open_port.lock().unwrap() = Some(OpenPort {
         name: port,

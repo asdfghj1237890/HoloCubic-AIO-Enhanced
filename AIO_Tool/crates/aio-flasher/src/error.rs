@@ -21,6 +21,10 @@ pub enum FlashError {
     #[error("ROM bootloader connect failed (is the device in download mode?): {0}")]
     Connect(#[source] espflash::error::Error),
 
+    /// Reading chip metadata (revision / MAC / flash size / features) failed.
+    #[error("read device info: {0}")]
+    DeviceInfo(#[source] espflash::error::Error),
+
     /// Erase operation failed.
     #[error("erase flash failed: {0}")]
     Erase(#[source] espflash::error::Error),
