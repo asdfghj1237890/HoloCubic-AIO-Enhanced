@@ -20,7 +20,7 @@ pub mod partition;
 pub mod progress;
 
 pub use error::FlashError;
-pub use flasher::Flasher;
+pub use flasher::{reboot, DeviceSummary, Flasher};
 pub use partition::{
     Partition, PARTITION_BOOTAPP0, PARTITION_BOOTLOADER, PARTITION_FIRMWARE, PARTITION_PARTITIONS,
 };
