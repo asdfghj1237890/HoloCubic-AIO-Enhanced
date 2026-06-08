@@ -27,12 +27,13 @@ use std::borrow::Cow;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::time::Duration;
 
 use espflash::connection::reset::{ResetAfterOperation, ResetBeforeOperation};
 use espflash::elf::RomSegment;
 use espflash::flasher::{FlashSize, Flasher as EspFlasher, ProgressCallbacks};
 use espflash::targets::Chip;
-use serialport::{FlowControl, UsbPortInfo};
+use serialport::{FlowControl, SerialPort, UsbPortInfo};
 
 use crate::error::FlashError;
 use crate::partition::{self, Partition};
@@ -304,6 +305,49 @@ fn format_flash_size(size: FlashSize) -> String {
     }
 }
 
+/// Reboot the device into its firmware by pulsing the chip's EN (reset)
+/// line via the USB-serial adapter's RTS control line.
+///
+/// **Why control lines, not a serial command.** The HoloCubic firmware's
+/// remote protocol only understands the 2-byte `~U/~D/~L/~R/~H/~F` D-pad
+/// codes — there is no "reboot" opcode, so a serial write can't reset it.
+/// The auto-reset circuit every HoloCubic carrier board has (RTS → EN,
+/// DTR → GPIO0) is the firmware-agnostic way to do it, and it's the only
+/// way to bring the chip back out of the ROM bootloader it gets parked in
+/// after [`Flasher::new`] (espflash's `DefaultReset` resets *into* the
+/// bootloader to read chip info, and closing the port doesn't undo that).
+///
+/// **Sequence.** Mirrors espflash 3.3's `reset_after_flash` for non-JTAG
+/// USB-serial bridges (CH340 / CP210x): hold DTR de-asserted (GPIO0 high →
+/// normal application boot, *not* download mode), pulse RTS to drive EN low
+/// then high. espflash documents that esptool's "ClassicReset" DTR+RTS
+/// dance breaks on Windows (esp-rs/espflash#592); the RTS-only pulse works
+/// on every platform, so that's what we use.
+///
+/// Opens its own short-lived port handle — there is no long-lived serial
+/// connection to conflict with (`connect_device` drops its flasher; the
+/// File Manager talks TCP/WiFi).
+pub fn reboot(port: &str) -> Result<(), FlashError> {
+    reboot_inner(port).map_err(|e| FlashError::Reboot {
+        port: port.to_owned(),
+        source: espflash::error::Error::from(e),
+    })
+}
+
+/// Inner reboot that yields the raw `serialport::Error`; [`reboot`] wraps it.
+/// Split out so the whole open-and-toggle sequence maps through one error
+/// conversion instead of four.
+fn reboot_inner(port: &str) -> Result<(), serialport::Error> {
+    let mut sp = serialport::new(port, 115_200)
+        .timeout(Duration::from_millis(500))
+        .open_native()?;
+    sp.write_data_terminal_ready(false)?; // GPIO0 = HIGH → boot application
+    sp.write_request_to_send(true)?; // EN = LOW → chip held in reset
+    std::thread::sleep(Duration::from_millis(100));
+    sp.write_request_to_send(false)?; // EN = HIGH → chip boots firmware
+    Ok(())
+}
+
 /// Adapter from espflash's `ProgressCallbacks` trait to our `mpsc` channel.
 ///
 /// A single instance handles every partition in one `write_bins_to_flash`
@@ -553,6 +597,18 @@ mod tests {
         assert_eq!(format_flash_size(FlashSize::_512Kb), "512 KB");
         assert_eq!(format_flash_size(FlashSize::_4Mb), "4 MB");
         assert_eq!(format_flash_size(FlashSize::_16Mb), "16 MB");
+    }
+
+    #[test]
+    fn reboot_on_nonexistent_port_returns_reboot_error() {
+        // Can't exercise the control-line toggle without hardware, but the
+        // open-failure path is the realistic error case and confirms the
+        // error is wrapped as FlashError::Reboot (not a panic / wrong variant).
+        let err = reboot("COM_DOES_NOT_EXIST_99999").unwrap_err();
+        match err {
+            FlashError::Reboot { port, .. } => assert_eq!(port, "COM_DOES_NOT_EXIST_99999"),
+            other => panic!("expected FlashError::Reboot, got {other:?}"),
+        }
     }
 
     #[test]

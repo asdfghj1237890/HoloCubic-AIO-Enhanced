@@ -25,6 +25,18 @@ pub enum FlashError {
     #[error("read device info: {0}")]
     DeviceInfo(#[source] espflash::error::Error),
 
+    /// Rebooting the device via the serial control lines (RTS → EN pulse)
+    /// failed — either the port couldn't be opened or a control-line write
+    /// was rejected by the driver.
+    #[error("reboot device on `{port}`: {source}")]
+    Reboot {
+        /// Port name attempted.
+        port: String,
+        /// Underlying serial error (open or DTR/RTS write).
+        #[source]
+        source: espflash::error::Error,
+    },
+
     /// Erase operation failed.
     #[error("erase flash failed: {0}")]
     Erase(#[source] espflash::error::Error),

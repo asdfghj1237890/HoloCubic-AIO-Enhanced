@@ -344,14 +344,17 @@ function useFlasher() {
 
   const reboot = useCallback(() => {
     if (conn !== "connected") { pushLog("請先連接裝置再重新開機。", "warn"); return; }
-    pushLog("→ 重新開機指令 (RTS/DTR reset)", "accent");
+    pushLog("→ 重新開機指令 (RTS → EN reset)", "accent");
     if (IS_TAURI) {
-      invoke("reboot_device", { port, baud }).catch((err) => {
-        pushLog(`reboot_device 失敗：${err}`, "err");
-      });
+      // Only report success once the native reset actually returns — the
+      // command pulses RTS, so failure means the line toggle was rejected.
+      invoke("reboot_device", { port })
+        .then(() => pushLog("裝置重新啟動中…", "muted"))
+        .catch((err) => pushLog(`reboot_device 失敗：${err}`, "err"));
+    } else {
+      pushLog("裝置重新啟動中…", "muted");
     }
-    pushLog("裝置重新啟動中…", "muted");
-  }, [conn, port, baud, pushLog]);
+  }, [conn, port, pushLog]);
 
   const sendRemote = useCallback((dir) => {
     const r = REMOTE[dir];

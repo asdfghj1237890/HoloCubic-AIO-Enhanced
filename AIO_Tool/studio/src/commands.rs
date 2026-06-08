@@ -329,23 +329,18 @@ pub fn send_remote(port: String, baud: String, dir: String) -> Result<(), String
     Ok(())
 }
 
-/// Reboot — sends the firmware's reset trigger over serial. The
-/// HoloCubic firmware listens for `~B` to drop into a soft reset; in
-/// the absence of that we toggle DTR/RTS which on CH340 / CP210x
-/// effectively pulses the ESP32's EN pin.
+/// Reboot the connected device into its firmware.
+///
+/// Pulses the chip's EN pin via the USB-serial adapter's RTS line
+/// (`aio_flasher::reboot`). The firmware has no serial "reboot" opcode —
+/// its remote protocol only knows the `~U/~D/~L/~R/~H/~F` D-pad codes —
+/// so a control-line reset is both the firmware-agnostic path and the only
+/// way to bring the chip back out of the ROM bootloader it's parked in
+/// after `connect_device`. Baud is irrelevant to a line-toggle reset, so
+/// it isn't taken here.
 #[tauri::command]
-pub fn reboot_device(port: String, baud: String) -> Result<(), String> {
-    let baud_u32: u32 = baud
-        .parse()
-        .map_err(|e| format!("invalid baud `{baud}`: {e}"))?;
-    let mut sp = serialport::new(port.as_str(), baud_u32)
-        .timeout(Duration::from_millis(500))
-        .open()
-        .map_err(|e| format!("open {port}: {e}"))?;
-    // Best-effort firmware-level reset trigger.
-    sp.write_all(b"~B")
-        .map_err(|e| format!("write reboot: {e}"))?;
-    Ok(())
+pub fn reboot_device(port: String) -> Result<(), String> {
+    aio_flasher::reboot(&port).map_err(|e| format!("{e}"))
 }
 
 fn encode_event(evt: aio_flasher::FlashEvent) -> FlashEventDto {
