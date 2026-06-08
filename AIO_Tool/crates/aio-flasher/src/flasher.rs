@@ -3,27 +3,33 @@
 //! Wraps espflash 3.3.0's [`espflash::flasher::Flasher`] with the aio-flasher
 //! contract: `new(port, baud)` opens the serial port and connects to the ROM
 //! bootloader; `erase(progress, cancel)` chip-erases; and
-//! `write_partitions(parts, progress, cancel)` writes a list of partitions
-//! sequentially. Progress events go through an `mpsc::Sender<FlashEvent>`;
-//! cancellation flows in via `Arc<AtomicBool>` and is checked at partition
-//! boundaries and inside the [`espflash::flasher::ProgressCallbacks`] bridge.
+//! `write_partitions(parts, progress, cancel)` writes every partition in a
+//! single espflash session. Progress events flow through an
+//! `mpsc::Sender<FlashEvent>`; cancellation flows in via `Arc<AtomicBool>`
+//! and is observed by silencing the [`espflash::flasher::ProgressCallbacks`]
+//! bridge — the in-flight write itself can't be interrupted (see the
+//! cancellation note on [`crate::progress`]).
 //!
 //! espflash 3.3.0 API surface used:
 //! - [`espflash::flasher::Flasher::connect`] — port + UsbPortInfo + baud +
 //!   reset strategy in / out.
 //! - [`espflash::flasher::Flasher::erase_flash`] — full-chip erase.
-//! - [`espflash::flasher::Flasher::write_bin_to_flash`] — single segment write
-//!   at `addr` with `&[u8]` payload and an optional `&mut dyn ProgressCallbacks`.
+//! - [`espflash::flasher::Flasher::write_bins_to_flash`] — multi-segment write
+//!   in a single session (one `begin` / N `write_segment` / one `finish`),
+//!   avoiding the post-partition hard reset that `write_bin_to_flash` would
+//!   trigger between each segment. See `Flasher::write_partitions` for the
+//!   full reasoning.
 //! - [`espflash::flasher::ProgressCallbacks`] — `init(addr, total)`,
-//!   `update(current)`, `finish()`. None return `Result`, so cancel is checked
-//!   inside `update` by skipping further sends (espflash carries on writing,
-//!   the caller-loop catches cancel at the next partition boundary).
+//!   `update(current)`, `finish()`. None return `Result`, so cancel is
+//!   observed by skipping further sends; espflash carries on writing.
 
+use std::borrow::Cow;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 
 use espflash::connection::reset::{ResetAfterOperation, ResetBeforeOperation};
+use espflash::elf::RomSegment;
 use espflash::flasher::{Flasher as EspFlasher, ProgressCallbacks};
 use serialport::{FlowControl, UsbPortInfo};
 
@@ -123,8 +129,21 @@ impl Flasher {
         Ok(())
     }
 
-    /// Write a list of partitions sequentially. Validates partition list
-    /// (no overlapping address ranges) before starting any writes.
+    /// Write a list of partitions in a single espflash session. Validates the
+    /// list (no overlapping address ranges) before touching hardware.
+    ///
+    /// **Why one session.** espflash 3.3's `write_bin_to_flash` is a thin
+    /// wrapper around `write_bins_to_flash(&[single_segment], ...)`, which
+    /// calls `target.finish(connection, reboot=true)` on the way out — and
+    /// `reboot=true` on the ESP32 target invokes
+    /// `connection.reset_after(use_stub)`, **hard-resetting the chip after
+    /// every single partition**. Calling it in a loop, as we used to, would
+    /// reset between the bootloader and the partition table; the chip then
+    /// boots the newly-written bootloader (which doesn't speak the esptool
+    /// protocol) and the next `FlashDeflBegin` times out after ~11 s with
+    /// `Communication error while flashing device`. esptool.py avoids this
+    /// by passing all (addr, bin) pairs to a single `write_flash` invocation;
+    /// we mirror that by handing all segments to `write_bins_to_flash` once.
     pub fn write_partitions(
         &mut self,
         parts: Vec<Partition>,
@@ -136,32 +155,55 @@ impl Flasher {
         // exercises this path with `inner = None`.
         partition::validate(&parts)?;
 
+        if cancel.load(Ordering::Relaxed) {
+            return Err(FlashError::Cancelled);
+        }
+
         let f = self
             .inner
             .as_mut()
             .ok_or(FlashError::Connect(espflash::error::Error::FlashConnect))?;
 
-        for (i, part) in parts.iter().enumerate() {
-            if cancel.load(Ordering::Relaxed) {
-                return Err(FlashError::Cancelled);
-            }
+        // Per-partition byte sizes for the adapter — espflash's
+        // ProgressCallbacks::init receives only an address, so the adapter
+        // looks up which partition (and its true byte size) by address.
+        let sizes: Vec<(u32, u64)> = parts
+            .iter()
+            .map(|p| (p.address, p.data.len() as u64))
+            .collect();
 
-            // The bridge sends PartitionStart from ProgressCallbacks::init —
-            // espflash calls init() at the start of each write_bin_to_flash
-            // with the same addr + size we pass.
-            let mut adapter = CallbackAdapter {
-                tx: progress_tx.clone(),
-                cancel: cancel.clone(),
-                partition_index: i,
-            };
+        let segments: Vec<RomSegment<'_>> = parts
+            .iter()
+            .map(|p| RomSegment {
+                addr: p.address,
+                data: Cow::Borrowed(&p.data),
+            })
+            .collect();
 
-            f.write_bin_to_flash(part.address, &part.data, Some(&mut adapter))
-                .map_err(|e| FlashError::WritePartition {
-                    index: i,
-                    address: part.address,
+        let mut adapter = CallbackAdapter {
+            tx: progress_tx,
+            cancel: cancel.clone(),
+            sizes,
+            current: None,
+        };
+
+        f.write_bins_to_flash(&segments, Some(&mut adapter))
+            .map_err(|e| {
+                // Best-effort: report the partition we were on when the error
+                // fired. Falls back to partition 0 / address 0 if init never
+                // ran (e.g. failure inside `begin`).
+                let (index, address) = adapter
+                    .current
+                    .as_ref()
+                    .map(|c| (c.index, c.address))
+                    .unwrap_or((0, 0));
+                FlashError::WritePartition {
+                    index,
+                    address,
                     source: e,
-                })?;
-        }
+                }
+            })?;
+
         Ok(())
     }
 
@@ -187,16 +229,39 @@ impl Drop for Flasher {
 
 /// Adapter from espflash's `ProgressCallbacks` trait to our `mpsc` channel.
 ///
-/// Constructed fresh per partition so `partition_index` is fixed for the
-/// callbacks fired during one `write_bin_to_flash` call. espflash's
-/// `ProgressCallbacks` methods do not return `Result`, so cancellation can't
-/// abort mid-write — instead we (a) stop emitting progress events once the
-/// cancel flag is set, and (b) let the outer loop in `write_partitions`
-/// catch cancel at the next partition boundary.
+/// A single instance handles every partition in one `write_bins_to_flash`
+/// call. `init(addr, num_chunks)` is the per-partition boundary: it fires
+/// once at the start of each segment, telling us the address (we look up the
+/// true byte size in `sizes`) and the zlib-compressed chunk count.
+///
+/// **Cancellation.** espflash's `ProgressCallbacks` methods don't return
+/// `Result`, so the cancel flag can't abort an in-flight `write_bins_to_flash`
+/// call — it can only silence further progress events (so the UI stops
+/// reporting motion). Cancel set BEFORE `write_partitions` is called is still
+/// honored as an early `FlashError::Cancelled` return.
+///
+/// **Unit translation.** espflash reports progress in zlib-compressed chunk
+/// units (see `targets/flash_target/esp32.rs:194-225` in espflash 3.3): `init`
+/// receives the number of compressed chunks, `update` receives a 1-based
+/// chunk index. We translate to bytes using the partition's true raw size:
+///   bytes_written = current * total_bytes / total_chunks  (clamped to total)
 struct CallbackAdapter {
     tx: Sender<FlashEvent>,
     cancel: Arc<AtomicBool>,
-    partition_index: usize,
+    /// (address, total_bytes) per partition, in the caller's supplied order.
+    /// `init(addr, _)` looks here by address to recover (index, byte size).
+    sizes: Vec<(u32, u64)>,
+    /// State of the partition currently being written. Set by `init`,
+    /// cleared by `finish`. Read by `write_partitions` to populate the
+    /// `FlashError::WritePartition` index/address on failure.
+    current: Option<CurrentPartition>,
+}
+
+struct CurrentPartition {
+    index: usize,
+    address: u32,
+    total_bytes: u64,
+    total_chunks: u64,
 }
 
 impl CallbackAdapter {
@@ -210,24 +275,45 @@ impl CallbackAdapter {
 }
 
 impl ProgressCallbacks for CallbackAdapter {
-    fn init(&mut self, _addr: u32, total: usize) {
-        self.send(FlashEvent::PartitionStart {
-            index: self.partition_index,
-            total_bytes: total as u64,
+    fn init(&mut self, addr: u32, total: usize) {
+        // Look up which partition this address corresponds to and recover
+        // its real byte size. Falls back to (0, 0) defensively if espflash
+        // ever supplies an address we didn't hand it — currently impossible.
+        let (index, total_bytes) = self
+            .sizes
+            .iter()
+            .enumerate()
+            .find(|(_, (a, _))| *a == addr)
+            .map(|(i, (_, b))| (i, *b))
+            .unwrap_or((0, 0));
+        self.current = Some(CurrentPartition {
+            index,
+            address: addr,
+            total_bytes,
+            total_chunks: total as u64,
         });
+        self.send(FlashEvent::PartitionStart { index, total_bytes });
     }
 
     fn update(&mut self, current: usize) {
-        self.send(FlashEvent::Progress {
-            index: self.partition_index,
-            bytes_written: current as u64,
-        });
+        if let Some(cp) = self.current.as_ref() {
+            let bytes_written = if cp.total_chunks == 0 {
+                0
+            } else {
+                ((current as u64).saturating_mul(cp.total_bytes) / cp.total_chunks)
+                    .min(cp.total_bytes)
+            };
+            self.send(FlashEvent::Progress {
+                index: cp.index,
+                bytes_written,
+            });
+        }
     }
 
     fn finish(&mut self) {
-        self.send(FlashEvent::PartitionDone {
-            index: self.partition_index,
-        });
+        if let Some(cp) = self.current.as_ref() {
+            self.send(FlashEvent::PartitionDone { index: cp.index });
+        }
     }
 }
 
@@ -273,7 +359,7 @@ mod tests {
     // cancel-silencing is the minimum useful coverage.
 
     fn make_adapter(
-        idx: usize,
+        sizes: Vec<(u32, u64)>,
     ) -> (
         CallbackAdapter,
         std::sync::mpsc::Receiver<FlashEvent>,
@@ -284,55 +370,106 @@ mod tests {
         let adapter = CallbackAdapter {
             tx,
             cancel: cancel.clone(),
-            partition_index: idx,
+            sizes,
+            current: None,
         };
         (adapter, rx, cancel)
     }
 
     #[test]
-    fn callback_init_emits_partition_start() {
-        let (mut adapter, rx, _cancel) = make_adapter(2);
-        adapter.init(0x1000, 4096);
-        let evt = rx.try_recv().unwrap();
+    fn callback_init_emits_partition_start_with_real_byte_count() {
+        // espflash hands us (addr, num_chunks); we look up the partition by
+        // address and emit PartitionStart with its TRUE byte size.
+        let (mut adapter, rx, _cancel) = make_adapter(vec![(0x1000, 18_528), (0x8000, 3_072)]);
+        adapter.init(0x1000, 13);
         assert_eq!(
-            evt,
+            rx.try_recv().unwrap(),
             FlashEvent::PartitionStart {
-                index: 2,
-                total_bytes: 4096
+                index: 0,
+                total_bytes: 18_528,
+            }
+        );
+        adapter.init(0x8000, 1);
+        assert_eq!(
+            rx.try_recv().unwrap(),
+            FlashEvent::PartitionStart {
+                index: 1,
+                total_bytes: 3_072,
             }
         );
     }
 
     #[test]
-    fn callback_update_emits_progress() {
-        let (mut adapter, rx, _cancel) = make_adapter(0);
-        adapter.update(512);
-        let evt = rx.try_recv().unwrap();
+    fn callback_update_scales_chunk_index_to_bytes() {
+        // 13 chunks, 18_528 bytes total → chunk 1 ≈ 1425 bytes, chunk 13
+        // clamps to 18_528. Matches the real-world bootloader case from the
+        // bug report.
+        let (mut adapter, rx, _cancel) = make_adapter(vec![(0x1000, 18_528)]);
+        adapter.init(0x1000, 13);
+        let _ = rx.try_recv(); // PartitionStart
+        adapter.update(1);
         assert_eq!(
-            evt,
+            rx.try_recv().unwrap(),
             FlashEvent::Progress {
                 index: 0,
-                bytes_written: 512
+                bytes_written: 1425, // 1 * 18528 / 13 = 1425
+            }
+        );
+        adapter.update(13);
+        assert_eq!(
+            rx.try_recv().unwrap(),
+            FlashEvent::Progress {
+                index: 0,
+                bytes_written: 18_528, // clamped to total
             }
         );
     }
 
     #[test]
-    fn callback_finish_emits_partition_done() {
-        let (mut adapter, rx, _cancel) = make_adapter(7);
+    fn callback_update_before_init_is_silent() {
+        // Defensive: update without prior init is a no-op (espflash always
+        // calls init first; this guards a hypothetical contract change).
+        let (mut adapter, rx, _cancel) = make_adapter(vec![(0x1000, 1000)]);
+        adapter.update(5);
+        assert!(rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn callback_finish_emits_partition_done_for_current_partition() {
+        let (mut adapter, rx, _cancel) = make_adapter(vec![(0x1000, 1024)]);
+        adapter.init(0x1000, 2);
+        let _ = rx.try_recv(); // PartitionStart
         adapter.finish();
-        let evt = rx.try_recv().unwrap();
-        assert_eq!(evt, FlashEvent::PartitionDone { index: 7 });
+        assert_eq!(
+            rx.try_recv().unwrap(),
+            FlashEvent::PartitionDone { index: 0 }
+        );
+    }
+
+    #[test]
+    fn callback_init_with_unknown_address_falls_back_safely() {
+        // espflash currently can't supply an unknown address (we hand it
+        // every segment), but if the contract ever changes we want a
+        // controlled fallback rather than a panic.
+        let (mut adapter, rx, _cancel) = make_adapter(vec![(0x1000, 18_528)]);
+        adapter.init(0xdead_beef, 5);
+        assert_eq!(
+            rx.try_recv().unwrap(),
+            FlashEvent::PartitionStart {
+                index: 0,
+                total_bytes: 0,
+            }
+        );
     }
 
     #[test]
     fn callback_silenced_after_cancel_flag_set() {
-        let (mut adapter, rx, cancel) = make_adapter(0);
+        let (mut adapter, rx, cancel) = make_adapter(vec![(0x1000, 4096)]);
         cancel.store(true, Ordering::Relaxed);
-        adapter.init(0x1000, 4096);
-        adapter.update(2048);
+        adapter.init(0x1000, 4);
+        adapter.update(2);
         adapter.finish();
-        // Receiver got nothing — adapter swallowed all three events.
+        // Receiver got nothing — adapter swallowed all events.
         assert!(rx.try_recv().is_err());
     }
 }

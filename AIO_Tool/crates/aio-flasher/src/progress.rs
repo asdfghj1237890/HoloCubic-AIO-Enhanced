@@ -15,18 +15,22 @@
 //!
 //! ## Cancellation semantics
 //!
-//! Cancellation is checked at partition boundaries inside
-//! `Flasher::write_partitions` and just before the start of `Flasher::erase`.
-//! Once espflash is mid-`erase_flash` or mid-`write_bin_to_flash`, cancel
-//! can NOT interrupt the in-flight op (espflash 3.3.0's `ProgressCallbacks`
-//! methods return `()`, not `Result`). Plan 7 UI implications:
+//! Cancellation is checked once, just before handing data to espflash.
+//! Once espflash is mid-`erase_flash` or mid-`write_bins_to_flash`, the
+//! cancel flag can NOT interrupt the in-flight op (espflash 3.3.0's
+//! `ProgressCallbacks` methods return `()`, not `Result`, and all
+//! partitions go through one `write_bins_to_flash` call to avoid the
+//! per-segment hard-reset bug — see `Flasher::write_partitions` for why).
+//! Plan 7 UI implications:
 //!
 //! - On `Cancel` during chip-erase (~10 s on 4 MB ESP32): set a
 //!   "Cancelling…" UI state and **ignore the trailing `EraseDone`**.
 //!   The next user-initiated op (e.g. `write_partitions`) WILL see the
 //!   cancel flag and return `FlashError::Cancelled` early.
-//! - On `Cancel` mid-partition-write: the current partition finishes;
-//!   the outer loop returns `FlashError::Cancelled` before the next one.
+//! - On `Cancel` mid-flash: all partitions finish writing (one espflash
+//!   session, can't be cut). The adapter stops emitting progress events
+//!   after cancel, so the UI sees motion stop even though writes
+//!   continue under the hood.
 
 /// One event emitted from a flash operation.
 #[derive(Debug, Clone, PartialEq, Eq)]
