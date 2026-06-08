@@ -1,5 +1,32 @@
 #include "app_controller_gui.h"
 // #include "lvgl.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
+
+// The global LVGL mutex defined in common.h (extern there) and protected
+// every other lv_task_handler / lv_timer_handler caller. We only re-declare
+// it here so this C TU doesn't have to drag in common.h (which has C++
+// types like `String` further down).
+extern SemaphoreHandle_t lvgl_mutex;
+
+void aio_lvgl_aniend_wait(void)
+{
+    // Each iteration: take the lvgl mutex, advance one tick of the LVGL
+    // pipeline (which drains pending invalidations + flushes via flush_cb),
+    // release the mutex so the Display task can take its turn. vTaskDelay(1)
+    // yields to lower-priority tasks instead of starving them via tight
+    // mutex re-acquisition.
+    while (lv_anim_count_running())
+    {
+        if (pdTRUE == xSemaphoreTake(lvgl_mutex, portMAX_DELAY))
+        {
+            lv_task_handler();
+            xSemaphoreGive(lvgl_mutex);
+        }
+        vTaskDelay(1);
+    }
+}
 
 // 必须定义为全局或者静态
 static lv_obj_t *app_scr = NULL;
