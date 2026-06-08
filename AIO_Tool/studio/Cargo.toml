@@ -52,3 +52,11 @@ aio-converter = { path = "../crates/aio-converter" }
 # Used for synchronous file-picking + cheap (header-only) image dimension probing.
 rfd   = "=0.15.0"
 image = { version = "=0.25.6", default-features = false, features = ["png", "jpeg", "bmp"] }
+
+# HTTP client for the B15 Settings flow — fetches GET /api/settings + form-POSTs
+# changes to existing /save<Cat>Conf handlers. Sync ureq picked over async
+# reqwest to avoid pulling tokio into the Studio binary (settings I/O is
+# request/response, no streaming, no concurrency).
+ureq = { version = "2.10", default-features = false, features = ["tls", "json"] }
+# (serde_json already declared above — used by fetch_settings_http to
+# pass /api/settings JSON to the JS side without typed deserialisation.)

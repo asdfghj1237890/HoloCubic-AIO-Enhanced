@@ -51,22 +51,31 @@ PR or issue. Reference each step by its `[ID]` for easy correlation.
 - [ ] **[F-8] D-pad remote** — Up / Left / OK / Right / Home each move
       the on-device UI cursor or select the highlighted item.
 
-## Settings tab (device parameters)
+## Settings tab (device parameters via HTTP — B15 fix)
 
-- [ ] **[S-1] Schema renders** — every key from `cubictool.json`
-      (15 rows across sys / zhixin / tianqi / other) shows as a row.
-      Friendly labels apply to the keys listed in `FIRMWARE_FIELD_META`;
-      unknown keys fall through to raw-key labels.
-- [ ] **[S-2] Connect → Read** — connect to the device's COM port, click
-      讀取設定. Status chip flips to "已連線"; the inputs populate.
-      Note: against current firmware (B15), many or all rows may show
-      "(undecodable N bytes — firmware bug B15)" — that's expected
-      until the firmware-side parser is fixed.
-- [ ] **[S-3] Write changes** — edit a known-safe field (e.g. `cityname`
-      → "Taipei"), click 寫入修改 (1). Confirm device picks up the
-      change on next read.
-- [ ] **[S-4] Connect-disconnect-reconnect** — cycle 中斷 → 連接 a few
-      times. No hung worker thread, no state cross-talk into Flasher tab.
+The Studio Settings tab no longer uses serial. It calls firmware HTTP routes
+added in `web_api.cpp`: `GET /api/settings` (read) + `POST /save<Cat>Conf`
+form handlers (write). The device must be on the same WiFi as the host.
+
+- [ ] **[S-1] GET /api/settings** — enter the device's STA or AP IP, click
+      讀取設定. Within ~1s the rows populate: `sys` block (WiFi creds,
+      brightness, rotation, auto_calibration_mpu, mpu_order, auto_start_app,
+      power_mode), `rgb` block (mode + R/G/B values + brightness + step),
+      `mpu` block (gyro/accel offsets, read-only). Values match those visible
+      in `http://<ip>/sys_setting` browser page.
+- [ ] **[S-2] Write changes** — edit `backLight` from current value, click
+      寫入修改 (1). Status shows "已寫入 1 項修改, 重新讀取以確認…" and
+      auto-refetches. The new value persists; brightness on the physical
+      device changes accordingly.
+- [ ] **[S-3] Multi-category save** — edit one field in `sys` AND one in
+      `rgb`. Click 寫入修改 (2). Both `POST /saveSysConf` and `POST
+      /saveRgbConf` fire; both changes persist.
+- [ ] **[S-4] Read-only categories** — try editing an `mpu` field. The row
+      stays disabled (no `/saveMpuConf` handler exists yet). Cat header
+      shows "(唯讀)" badge.
+- [ ] **[S-5] Offline error** — turn off device WiFi or use a wrong IP,
+      click 讀取設定. Status shows "✗ 讀取失敗: GET http://...: …" within
+      ~3s (the ureq timeout setting). No hang.
 
 ## File Manager tab (TCP/WiFi)
 

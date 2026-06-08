@@ -57,208 +57,187 @@ function StatusChip({ conn, port }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  參數設定 — device parameters with Read All / Write Changes (diff count)
+//  參數設定 — device parameters via HTTP /api/settings + /save<Cat>Conf
+//
+//  Talks to the firmware's web flow (the same one the browser settings pages
+//  use). Schema is firmware-driven: whatever categories /api/settings emits
+//  get rendered. Replaces the broken serial SettingMsg protocol (B15).
 // ════════════════════════════════════════════════════════════════════════════
-const PARAM_GROUPS = [
-  { label: "WiFi 設定", icon: "wifi", fields: [
-    { key: "ssid1", label: "SSID 1", type: "text", ph: "主要 WiFi 名稱" },
-    { key: "pwd1", label: "密碼 1", type: "password", ph: "WiFi 密碼" },
-    { key: "ssid2", label: "SSID 2", type: "text", ph: "備用 WiFi 名稱" },
-    { key: "pwd2", label: "密碼 2", type: "password", ph: "備用 WiFi 密碼" },
-  ] },
-  { label: "系統設定", icon: "chip", fields: [
-    { key: "backlight", label: "背光亮度", type: "slider", min: 0, max: 255 },
-    { key: "rotation", label: "螢幕旋轉", type: "select", options: [["0", "0°"], ["1", "90°"], ["2", "180°"], ["3", "270°"]] },
-    { key: "auto_mpu", label: "自動 MPU 翻轉", type: "toggle" },
-    { key: "sleep", label: "待機息屏", type: "select", options: [["0", "永不"], ["30", "30 秒"], ["60", "1 分鐘"], ["300", "5 分鐘"]] },
-    { key: "wake", label: "喚醒方式", type: "select", options: [["mpu", "翻轉喚醒"], ["touch", "觸控喚醒"], ["both", "翻轉 + 觸控"]] },
-  ] },
-  { label: "天氣設定", icon: "img", fields: [
-    { key: "city", label: "城市名稱", type: "text", ph: "例如 Taipei" },
-    { key: "weather_key", label: "天氣 API 金鑰", type: "password", ph: "心知天氣金鑰" },
-    { key: "weather_interval", label: "更新間隔", type: "select", options: [["10", "10 分鐘"], ["30", "30 分鐘"], ["60", "60 分鐘"]] },
-  ] },
-  { label: "其他設定", icon: "braces", fields: [
-    { key: "server_ip", label: "伺服器 IP", type: "text", ph: "192.168.0.100" },
-    { key: "server_port", label: "連接埠", type: "text", ph: "6677" },
-    { key: "timezone", label: "時區", type: "select", options: [["8", "UTC+8 台北/北京"], ["9", "UTC+9 東京"], ["0", "UTC+0 倫敦"]] },
-  ] },
-];
-const DEVICE_VALUES = {
-  ssid1: "Holo_Home_2.4G", pwd1: "home12345", ssid2: "Holo_Backup", pwd2: "",
-  backlight: "180", rotation: "1", auto_mpu: "1", sleep: "60", wake: "both",
-  city: "Taipei", weather_key: "SmiKQ3v9xPq7-Az0", weather_interval: "30",
-  server_ip: "192.168.0.165", server_port: "6677", timezone: "8",
-};
 
-// Friendly metadata for known firmware keys. Anything not listed falls
-// back to a plain text field labelled with the raw key.
+// Friendly metadata per firmware-emitted field. Anything not listed falls
+// back to plain text input with the raw key as label. Categories
+// (sys/rgb/mpu/...) map to nice section labels + icons.
 const FIRMWARE_FIELD_META = {
-  ssid:        { label: "SSID（舊版）", type: "text",     ph: "舊版單一 SSID" },
-  ssid_1:      { label: "SSID 1",       type: "text",     ph: "主要 WiFi 名稱" },
-  password_1:  { label: "密碼 1",       type: "password", ph: "WiFi 密碼" },
-  ssid_2:      { label: "SSID 2",       type: "text",     ph: "備用 WiFi 名稱" },
-  password_2:  { label: "密碼 2",       type: "password", ph: "備用 WiFi 密碼" },
-  backLight:   { label: "背光亮度",     type: "slider",   min: 0, max: 255 },
-  rotation:    { label: "螢幕旋轉",     type: "select",
-                 options: [["0","0°"],["1","90°"],["2","180°"],["3","270°"]] },
-  auto_mpu:    { label: "自動 MPU 翻轉", type: "toggle" },
-  cityname:    { label: "城市名稱",     type: "text",     ph: "例如 Taipei" },
-  language:    { label: "語言",         type: "text",     ph: "zh-Hant" },
-  weather_key: { label: "天氣 API 金鑰", type: "password", ph: "心知天氣金鑰" },
-  tianqi_aid:  { label: "天氣 AID",     type: "text" },
-  tianqi_as:   { label: "天氣 AS",      type: "text" },
-  tianqi_addr: { label: "天氣地址",     type: "text" },
-  bili_uid:    { label: "B 站 UID",     type: "text" },
+  ssid_0:               { label: "SSID（自動連線）", type: "text",     ph: "預設 WiFi 名稱" },
+  password_0:           { label: "密碼（自動連線）", type: "password", ph: "預設 WiFi 密碼" },
+  ssid_1:               { label: "SSID 1",          type: "text",     ph: "備用 WiFi 名稱" },
+  password_1:           { label: "密碼 1",          type: "password" },
+  ssid_2:               { label: "SSID 2",          type: "text",     ph: "備用 WiFi 名稱" },
+  password_2:           { label: "密碼 2",          type: "password" },
+  auto_start_app:       { label: "開機自啟 App",    type: "text",     ph: "Heartbeat / Weather / …" },
+  power_mode:           { label: "功耗模式",         type: "select",
+                          options: [["0","節能"],["1","效能"]] },
+  backLight:            { label: "背光亮度",         type: "slider",   min: 1, max: 100 },
+  rotation:             { label: "螢幕旋轉",         type: "select",
+                          options: [["0","0°"],["1","90°"],["2","180°"],["3","270°"]] },
+  auto_calibration_mpu: { label: "自動校準 MPU",    type: "toggle" },
+  mpu_order:            { label: "操作方向",         type: "text",     ph: "0-7" },
+  // RGB knobs — sliders so the live edit feels tangible
+  mode:                 { label: "模式",            type: "text" },
+  min_value_0:          { label: "Min R",           type: "slider", min: 0, max: 255 },
+  min_value_1:          { label: "Min G",           type: "slider", min: 0, max: 255 },
+  min_value_2:          { label: "Min B",           type: "slider", min: 0, max: 255 },
+  max_value_0:          { label: "Max R",           type: "slider", min: 0, max: 255 },
+  max_value_1:          { label: "Max G",           type: "slider", min: 0, max: 255 },
+  max_value_2:          { label: "Max B",           type: "slider", min: 0, max: 255 },
+  step_0:               { label: "Step R",          type: "text" },
+  step_1:               { label: "Step G",          type: "text" },
+  step_2:               { label: "Step B",          type: "text" },
+  min_brightness:       { label: "Min 亮度",        type: "slider", min: 0, max: 1000 },
+  max_brightness:       { label: "Max 亮度",        type: "slider", min: 0, max: 1000 },
+  brightness_step:      { label: "亮度步進",        type: "slider", min: 0, max: 100 },
+  time:                 { label: "動畫週期 (ms)",   type: "slider", min: 10, max: 1000 },
+  // MPU offsets — informational sliders
+  x_gyro_offset:        { label: "X gyro offset",   type: "text" },
+  y_gyro_offset:        { label: "Y gyro offset",   type: "text" },
+  z_gyro_offset:        { label: "Z gyro offset",   type: "text" },
+  x_accel_offset:       { label: "X accel offset",  type: "text" },
+  y_accel_offset:       { label: "Y accel offset",  type: "text" },
+  z_accel_offset:       { label: "Z accel offset",  type: "text" },
 };
-const NAMESPACE_META = {
-  sys:    { label: "WiFi / 系統設定", icon: "wifi" },
-  zhixin: { label: "心知天氣",         icon: "img" },
-  tianqi: { label: "天氣 API",         icon: "img" },
-  other:  { label: "其他",             icon: "braces" },
+const CATEGORY_META = {
+  sys: { label: "系統 / WiFi", icon: "wifi", saveable: true },
+  rgb: { label: "RGB LED",     icon: "img",  saveable: true },
+  mpu: { label: "IMU 校準",    icon: "chip", saveable: false },  // no /saveMpuConf — read-only
 };
 
-// Derive PARAM_GROUPS-shaped object from the firmware schema returned by
-// `list_setting_keys`. Each row carries (namespace, value_type, key) so
-// write_changed_settings can echo them back.
-function deriveGroupsFromSchema(schema) {
-  const byNs = new Map();
-  for (const row of schema) {
-    const meta = FIRMWARE_FIELD_META[row.key] || { label: row.key, type: "text" };
-    const entry = { ...meta, key: row.key, _ns: row.namespace, _vt: row.value_type };
-    if (!byNs.has(row.namespace)) byNs.set(row.namespace, []);
-    byNs.get(row.namespace).push(entry);
-  }
+// Default device host stored on window so re-entering the tab keeps the IP.
+const DEFAULT_HOST = "192.168.4.1";
+
+function flattenSnapshot(json) {
+  // [{cat: "sys", key: "ssid_0", value: "...", meta}, ...]
   const out = [];
-  for (const [ns, fields] of byNs) {
-    const m = NAMESPACE_META[ns] || { label: ns, icon: "braces" };
-    out.push({ label: m.label, icon: m.icon, fields });
+  if (!json || typeof json !== "object") return out;
+  for (const [cat, fields] of Object.entries(json)) {
+    if (!fields || typeof fields !== "object") continue;
+    for (const [key, value] of Object.entries(fields)) {
+      const meta = FIRMWARE_FIELD_META[key] || { label: key, type: "text" };
+      out.push({ cat, key, value: String(value ?? ""), meta });
+    }
   }
   return out;
 }
 
-const PARAM_KEYS = (groups) => groups.flatMap((g) => g.fields.map((f) => f.key));
-function emptyValuesFor(groups) {
-  return Object.fromEntries(PARAM_KEYS(groups).map((k) => [k, ""]));
-}
-
 function useSettings() {
-  const { useState, useEffect } = React;
-  const [conn, setConn] = useState("disconnected");
-  const [port, setPort] = useState(FLASH_PORTS[0].name);
-  const [baud, setBaud] = useState("115200");
-  const [groups, setGroups] = useState(PARAM_GROUPS);
-  const [vals, setVals] = useState(() => emptyValuesFor(PARAM_GROUPS));
-  const [base, setBase] = useState(() => emptyValuesFor(PARAM_GROUPS));
-  const [loaded, setLoaded] = useState(false);
-  const [status, setStatus] = useState("連接裝置後即可讀取目前設定。");
-  const [ports, setPorts] = useState(FLASH_PORTS);
+  const { useState, useEffect, useCallback } = React;
+  const [host, setHost]       = useState(window.__AIO_SETTINGS_HOST__ || DEFAULT_HOST);
+  const [rows, setRows]       = useState([]);          // flattened from snapshot
+  const [edits, setEdits]     = useState({});          // {"cat:key": newValue}
+  const [status, setStatus]   = useState("輸入裝置 IP 後按「讀取設定」開始。");
+  const [busy, setBusy]       = useState(false);
+  const [loaded, setLoaded]   = useState(false);
 
-  // On mount in Tauri, fetch real ports + the firmware schema.
-  useEffect(() => {
-    if (!IS_TAURI_PAGES) return;
-    (async () => {
-      try {
-        const list = await invokePages("list_ports");
-        if (Array.isArray(list) && list.length) {
-          setPorts(list);
-          setPort(list[0].name);
-        }
-      } catch (e) { /* port fetch best-effort */ }
-      try {
-        const schema = await invokePages("list_setting_keys");
-        const dyn = deriveGroupsFromSchema(schema || []);
-        setGroups(dyn);
-        setVals(emptyValuesFor(dyn));
-        setBase(emptyValuesFor(dyn));
-      } catch (e) { /* schema fetch best-effort */ }
-    })();
-  }, []);
+  // Persist host across tab switches.
+  useEffect(() => { window.__AIO_SETTINGS_HOST__ = host; }, [host]);
 
-  // Subscribe to settings:event for live status messages.
-  useEffect(() => {
-    if (!IS_TAURI_PAGES || !listenPages) return;
-    let unlisten = null;
-    listenPages("settings:event", ({ payload }) => {
-      if (!payload) return;
-      if (payload.kind === "log" && payload.message) setStatus(payload.message);
-      else if (payload.kind === "warning" && payload.message) setStatus("⚠ " + payload.message);
-    }).then((fn) => { unlisten = fn; });
-    return () => { if (unlisten) unlisten(); };
-  }, []);
-
-  const connect = async () => {
-    setConn("connecting"); setStatus("開啟序列埠…");
+  const fetchAll = useCallback(async () => {
+    const ip = host.trim();
+    if (!ip) { setStatus("✗ 請先輸入裝置 IP。"); return; }
+    setBusy(true); setStatus("從 " + ip + " 讀取中…");
     if (IS_TAURI_PAGES) {
       try {
-        await invokePages("connect_device", { port, baud });
-        setConn("connected");
-        setStatus("已連線，請按「讀取設定」載入裝置目前的參數。");
+        const { json } = await invokePages("fetch_settings_http", { host: ip });
+        const flat = flattenSnapshot(json);
+        setRows(flat); setEdits({}); setLoaded(true);
+        setStatus("已讀取 " + flat.length + " 項參數,跨 " + Object.keys(json).length + " 個分類。");
       } catch (e) {
-        setConn("disconnected");
-        setStatus("✗ 連線失敗：" + (e && e.toString ? e.toString() : e));
+        setStatus("✗ 讀取失敗:" + (e && e.toString ? e.toString() : e));
       }
     } else {
-      setTimeout(() => { setConn("connected"); setStatus("已連線，請按「讀取設定」載入裝置目前的參數。"); }, 800);
+      // Browser-preview mock — emits a sample shape matching the firmware.
+      const mock = {
+        sys: { ssid_0: "Holo_Home_2.4G", password_0: "home12345",
+               ssid_1: "Holo_Backup", password_1: "", ssid_2: "", password_2: "",
+               auto_start_app: "Heartbeat", power_mode: 1, backLight: 80,
+               rotation: 1, auto_calibration_mpu: 1, mpu_order: 0 },
+        rgb: { mode: 0, min_value_0: 0, min_value_1: 0, min_value_2: 0,
+               max_value_0: 255, max_value_1: 255, max_value_2: 255,
+               step_0: 1, step_1: 1, step_2: 1, min_brightness: 100,
+               max_brightness: 800, brightness_step: 5, time: 50 },
+        mpu: { x_gyro_offset: 0, y_gyro_offset: 0, z_gyro_offset: 0,
+               x_accel_offset: 0, y_accel_offset: 0, z_accel_offset: 0 },
+      };
+      setRows(flattenSnapshot(mock)); setEdits({}); setLoaded(true);
+      setStatus("(瀏覽器預覽模式) 已載入 mock 資料。");
     }
+    setBusy(false);
+  }, [host]);
+
+  const setField = (cat, key, value) =>
+    setEdits((prev) => ({ ...prev, [cat + ":" + key]: value }));
+
+  const dirtyKeys = Object.keys(edits);
+  const dirtyByCategory = () => {
+    const out = {};
+    for (const k of dirtyKeys) {
+      const ix = k.indexOf(":");
+      const cat = k.slice(0, ix), field = k.slice(ix + 1);
+      const meta = CATEGORY_META[cat];
+      if (!meta || !meta.saveable) continue;   // skip mpu (no save handler)
+      (out[cat] ||= []).push({ key: field, value: edits[k] });
+    }
+    return out;
   };
 
-  const disconnect = async () => {
-    if (IS_TAURI_PAGES) { try { await invokePages("disconnect_device"); } catch (_) {} }
-    setConn("disconnected"); setLoaded(false);
-    setVals(emptyValuesFor(groups)); setBase(emptyValuesFor(groups));
-    setStatus("已中斷連線。");
-  };
-
-  const readAll = async () => {
-    if (IS_TAURI_PAGES) {
-      setStatus("讀取中…");
-      try {
-        const list = await invokePages("read_all_settings", { port, baud });
-        const next = { ...emptyValuesFor(groups) };
-        for (const row of list || []) { next[row.key] = row.value; }
-        setVals(next); setBase(next); setLoaded(true);
-        setStatus("已讀取 " + (list || []).length + " 項參數。");
-      } catch (e) {
-        setStatus("✗ 讀取失敗：" + (e && e.toString ? e.toString() : e));
-      }
+  const save = useCallback(async () => {
+    if (!dirtyKeys.length) return;
+    const ip = host.trim();
+    const groups = dirtyByCategory();
+    if (!Object.keys(groups).length) {
+      setStatus("⚠ 已修改的欄位都在唯讀分類(例如 IMU);無 /save handler。");
       return;
     }
-    // Mock path — preserved for in-browser preview.
-    const allKeys = PARAM_KEYS(groups);
-    const next = Object.fromEntries(allKeys.map((k) => [k, DEVICE_VALUES[k] != null ? DEVICE_VALUES[k] : ""]));
-    setVals(next); setBase(next); setLoaded(true);
-    setStatus("已讀取 " + allKeys.length + " 項參數（Get ×" + allKeys.length + "）。");
-  };
-
-  const setField = (k, v) => setVals((s) => ({ ...s, [k]: v }));
-  const changed = Object.keys(vals).filter((k) => vals[k] !== base[k]);
-
-  const writeChanges = async () => {
-    if (!changed.length) return;
+    setBusy(true); setStatus("寫入中…");
     if (IS_TAURI_PAGES) {
-      // Build the change payload using each field's recorded namespace + value_type.
-      const lookup = new Map();
-      for (const g of groups) for (const f of g.fields) lookup.set(f.key, f);
-      const changes = changed.map((k) => {
-        const f = lookup.get(k) || {};
-        return { namespace: f._ns || "", key: k, value_type: f._vt || "String", value: vals[k] };
-      });
       try {
-        const n = await invokePages("write_changed_settings", { port, baud, changes });
-        setBase({ ...vals });
-        setStatus("已寫入 " + n + " 項修改（" + changed.join(", ") + "）。");
+        let total = 0;
+        for (const [cat, fields] of Object.entries(groups)) {
+          await invokePages("save_settings_http", { host: ip, category: cat, fields });
+          total += fields.length;
+        }
+        setStatus("已寫入 " + total + " 項修改,重新讀取以確認…");
+        await fetchAll();
       } catch (e) {
-        setStatus("✗ 寫入失敗：" + (e && e.toString ? e.toString() : e));
+        setStatus("✗ 寫入失敗:" + (e && e.toString ? e.toString() : e));
       }
-      return;
+    } else {
+      const total = Object.values(groups).reduce((a, fs) => a + fs.length, 0);
+      setStatus("(瀏覽器預覽模式) 模擬寫入 " + total + " 項。");
+      setEdits({});
     }
-    setBase({ ...vals });
-    setStatus("已寫入 " + changed.length + " 項修改（Set ×" + changed.length + "）：" + changed.join(", "));
+    setBusy(false);
+  }, [host, edits, fetchAll, dirtyKeys.length]);
+
+  // Group rows by category for rendering.
+  const byCategory = () => {
+    const out = [];
+    const seen = new Map();
+    for (const row of rows) {
+      if (!seen.has(row.cat)) {
+        const m = CATEGORY_META[row.cat] || { label: row.cat, icon: "braces", saveable: false };
+        const group = { cat: row.cat, label: m.label, icon: m.icon, saveable: m.saveable, fields: [] };
+        seen.set(row.cat, group); out.push(group);
+      }
+      seen.get(row.cat).fields.push(row);
+    }
+    return out;
   };
 
-  return { conn, port, setPort, baud, setBaud, ports, groups, vals, base, loaded, status, changed,
-           connect, disconnect, readAll, setField, writeChanges };
+  return {
+    host, setHost, rows, edits, status, busy, loaded,
+    dirtyCount: dirtyKeys.length, byCategory,
+    fetchAll, setField, save,
+  };
 }
 
 function ParamField({ f, value, changed, disabled, onChange }) {
@@ -293,29 +272,30 @@ function ParamField({ f, value, changed, disabled, onChange }) {
 
 function StudioParams() {
   const s = useSettings();
-  const connected = s.conn === "connected";
-  const enabled = connected && s.loaded;
+  const groups = s.byCategory();
+  const enabled = s.loaded;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-      <PageHeader title={tr("參數設定")} sub={tr("讀取與修改 HoloCubic 的 WiFi、系統、天氣等參數")}
-        right={<StatusChip conn={s.conn} port={connected ? s.port : null} />} />
+      <PageHeader title={tr("參數設定")} sub={tr("透過 /api/settings 讀取裝置設定,改完後 POST 到對應的 /save<Cat>Conf")}
+        right={
+          <span className="chip" style={{ fontSize: 12.5, padding: "6px 14px" }}>
+            <span className={"dot " + (s.busy ? "busy" : s.loaded ? "live" : "")} />
+            {s.busy ? "處理中…" : s.loaded ? "已載入" : "待讀取"}
+          </span>
+        } />
 
-      {/* toolbar */}
+      {/* toolbar — IP input + read + write */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", padding: "var(--s3) var(--s6)",
                     borderBottom: "1px solid var(--border)", flexWrap: "wrap", flex: "none" }}>
-        <select className="fld mono" style={{ width: 140, height: 36 }} value={s.port} onChange={(e) => s.setPort(e.target.value)} disabled={connected}>
-          {s.ports.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
-        </select>
-        <select className="fld mono" style={{ width: 104, height: 36 }} value={s.baud} onChange={(e) => s.setBaud(e.target.value)} disabled={connected}>
-          {BAUD_RATES.map((b) => <option key={b} value={b}>{b}</option>)}
-        </select>
-        {connected
-          ? <button className="btn" style={{ height: 36 }} onClick={s.disconnect}>中斷</button>
-          : <button className="btn primary" style={{ height: 36 }} onClick={s.connect}>{s.conn === "connecting" ? "連線中…" : "連接"}</button>}
+        <span style={{ fontSize: 13, color: "var(--text-mute)" }}>裝置 IP</span>
+        <input className="fld mono" style={{ width: 180, height: 36 }} placeholder="192.168.x.x"
+          value={s.host} onChange={(e) => s.setHost(e.target.value)} disabled={s.busy} />
+        <button className="btn ghost" style={{ height: 36 }} disabled={s.busy} onClick={s.fetchAll}>
+          <Icon d={ICON.download} size={15} />讀取設定
+        </button>
         <div style={{ flex: 1 }} />
-        <button className="btn ghost" style={{ height: 36 }} disabled={!connected} onClick={s.readAll}><Icon d={ICON.download} size={15} />讀取設定</button>
-        <button className="btn primary" style={{ height: 36 }} disabled={!enabled || !s.changed.length} onClick={s.writeChanges}>
-          <Icon d={ICON.check} size={15} />寫入修改{s.changed.length ? ` (${s.changed.length})` : ""}
+        <button className="btn primary" style={{ height: 36 }} disabled={s.busy || !s.dirtyCount} onClick={s.save}>
+          <Icon d={ICON.check} size={15} />寫入修改{s.dirtyCount ? ` (${s.dirtyCount})` : ""}
         </button>
       </div>
 
@@ -324,17 +304,25 @@ function StudioParams() {
           <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", fontSize: 12.5, color: enabled ? "var(--text-dim)" : "var(--text-mute)", marginBottom: "var(--s4)" }}>
             <span className="dot" style={{ background: enabled ? "var(--accent)" : "var(--text-mute)" }} />{s.status}
           </div>
-          <div style={{ display: "grid", gap: "var(--s5)", opacity: enabled ? 1 : 0.55, pointerEvents: enabled ? "auto" : "none" }}>
-            {s.groups.map((g) => (
-              <div key={g.label} style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r4)", overflow: "hidden" }}>
+          <div style={{ display: "grid", gap: "var(--s5)" }}>
+            {groups.map((g) => (
+              <div key={g.cat} style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r4)", overflow: "hidden" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", padding: "var(--s3) var(--s4)", color: "var(--text-dim)" }}>
-                  <Icon d={ICON[g.icon]} size={15} />
+                  <Icon d={ICON[g.icon] || ICON.braces} size={15} />
                   <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".05em", whiteSpace: "nowrap" }}>{g.label}</span>
+                  {!g.saveable && <span style={{ fontSize: 11, color: "var(--text-mute)" }}>(唯讀)</span>}
                 </div>
                 <div style={{ padding: "0 var(--s4) var(--s2)" }}>
-                  {g.fields.map((f) => (
-                    <ParamField key={f.key} f={f} value={s.vals[f.key]} changed={s.vals[f.key] !== s.base[f.key]} disabled={!enabled} onChange={(v) => s.setField(f.key, v)} />
-                  ))}
+                  {g.fields.map((row) => {
+                    const eKey = row.cat + ":" + row.key;
+                    const current = eKey in s.edits ? s.edits[eKey] : row.value;
+                    const changed = eKey in s.edits;
+                    return (
+                      <ParamField key={eKey} f={row.meta} value={current}
+                        changed={changed} disabled={!g.saveable}
+                        onChange={(v) => s.setField(row.cat, row.key, v)} />
+                    );
+                  })}
                 </div>
               </div>
             ))}

@@ -104,7 +104,7 @@ Four host envs cover firmware layers: `native_unit` (pure logic — parsers, sta
 
 - `AIO_VERSION` in `common.h` lags behind release tags sometimes — this is OK, the tag is source of truth, the constant gates cache-busting on the next bump
 - `dist/HoloCubic_AIO_firmware_v3.0.X.bin` appearing as untracked is fine — local user testing artifact, NOT to be committed
-- Settings tab "Read All" logs "(undecodable N bytes)" against current firmware — this is B15 from the Plan 1 Discovery doc; firmware-side fix is queued separately from the Rust rewrite
+- Studio's Settings tab speaks HTTP to the firmware's existing web flow — `GET /api/settings` reads `sys_cfg`/`rgb_cfg`/`mpu_cfg` as JSON, `POST /save<Cat>Conf` writes form-encoded fields (the same handlers browser-based settings pages use, which persist to SPIFFS `.cfg`). B15 is fixed Studio-side as of 2026-06-09; the egui tool's Settings tab still uses the legacy broken serial flow until a follow-up cleanup PR
 - File Manager Rename / Properties don't actually rename / show properties — these are B1 / B2 wire-format bugs preserved verbatim from the Python tool (firmware-side handler bug; out of scope for the tool rewrite)
 - Many comments in firmware source are zh-cn from the original ClimbSnail upstream — leave them; only translate the ones we change
 
