@@ -42,7 +42,8 @@ void send_json(const String &body)
 String json_escape(const String &s)
 {
     String out;
-    out.reserve(s.length() + 4);
+    // (no reserve() — Arduino String has it but the native_test host stub
+    //  doesn't, and the savings are micro-optimisation only.)
     for (size_t i = 0; i < s.length(); ++i) {
         char c = s[i];
         if (c == '"' || c == '\\') { out += '\\'; out += c; }
@@ -179,7 +180,6 @@ void api_settings(void)
     const SysMpuConfig  &mpu = app_controller->mpu_cfg;
 
     String body;
-    body.reserve(1280);
     body  = F("{\"sys\":{");
     body += F("\"ssid_0\":\"");      body += json_escape(sys.ssid_0);        body += F("\",");
     body += F("\"password_0\":\"");  body += json_escape(sys.password_0);    body += F("\",");
