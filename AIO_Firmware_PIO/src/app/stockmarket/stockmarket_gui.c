@@ -146,7 +146,7 @@ void display_stockmarket_init(void)
     // lifts dec up so its glyph bottom matches the integer's glyph bottom.
     lv_obj_align_to(price_dec_label, price_int_label, LV_ALIGN_OUT_RIGHT_BOTTOM, 4, -28);
 
-    // Change % (color set per-call) — right-aligned, upper row
+    // Change % (color set per-call) — left-aligned on the change row
     chg_pct_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(chg_pct_label, &change_style, LV_STATE_DEFAULT);
     lv_label_set_text(chg_pct_label, "+0.00%");
@@ -183,9 +183,10 @@ void display_stockmarket_init(void)
     lv_obj_align(close_label, LV_ALIGN_TOP_LEFT, 12, 196);
 
     // Last update datetime — right-aligned on the SAME row as close_label.
-    // On harness, ESP32Time stub returns 19-char "1970-01-01 00:00:00" so
-    // text sits tight against the C value; on hardware the strftime format
-    // "%Y/%m/%d %H:%M" is only 16 chars and leaves comfortable spacing.
+    // update_stock_data() truncates the formatted timestamp to 16 chars
+    // ("YYYY-MM-DD HH:MM") regardless of platform, so the layout is
+    // deterministic across hardware and the host harness (whose ESP32Time
+    // stub returns a longer "1970-01-01 00:00:00" before the truncation).
     datetime_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(datetime_label, &datetime_style, LV_STATE_DEFAULT);
     lv_label_set_text(datetime_label, "--");
