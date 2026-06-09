@@ -1,9 +1,9 @@
 name: tool-studio
 
 # Studio crate lives outside the 1.82-pinned workspace (see AIO_Tool/Cargo.toml
-# `exclude = ["studio"]`); it builds on stable + Tauri 2. macOS is excluded
-# until icons/icon.icns is generated — bundling currently targets nsis (Win)
-# and deb / appimage (Linux) only.
+# `exclude = ["studio"]`); it builds on stable + Tauri 2. macOS is now in the
+# matrix — bundling targets nsis (Win), dmg (macOS), and deb / appimage (Linux)
+# now that icons/icon.icns ships in the repo.
 
 on:
   pull_request:
@@ -44,6 +44,8 @@ jobs:
             bundle_targets: 'deb,appimage'
           - os: windows-latest
             bundle_targets: 'nsis'
+          - os: macos-latest
+            bundle_targets: 'dmg'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -98,4 +100,14 @@ jobs:
             AIO_Tool/studio/target/release/aio-studio
             AIO_Tool/studio/target/release/bundle/deb/*.deb
             AIO_Tool/studio/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+
+      - name: Upload macOS bundle
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aio-studio-macos-aarch64
+          path: |
+            AIO_Tool/studio/target/release/aio-studio
+            AIO_Tool/studio/target/release/bundle/dmg/*.dmg
           if-no-files-found: error

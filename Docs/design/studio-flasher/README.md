@@ -72,13 +72,14 @@ on :8765 and `cargo run --no-default-features` against the Studio crate. In a
 release build, Studio's `custom-protocol` feature (default-on outside dev)
 bundles these files into the binary itself.
 
-Studio is the **primary dev/UI target** for the AIO_Tool — recent feature work
-(B15 Settings, single-session writes, latest-release fetch) lands here first.
-The legacy [`AIO_Tool/crates/aio-tool/`](../../../AIO_Tool/crates/aio-tool/)
-egui binary is still what `release.yml` currently packages and uploads, but new
-UI work happens here. See the root [`CLAUDE.md`](../../../CLAUDE.md) →
-"Common commands" for the canonical dev procedure and the relationship between
-the two frontends.
+Studio is the **shipping UI** for AIO_Tool — `release.yml` packages this
+directory + the Tauri shell as NSIS (Windows), DMG (macOS), and AppImage
+(Linux) bundles for every tag. The legacy
+[`AIO_Tool/crates/aio-tool/`](../../../AIO_Tool/crates/aio-tool/) egui binary
+stays in-tree for backend-crate cross-validation and as a fallback dev surface
+but is no longer in release artefacts. See the root
+[`CLAUDE.md`](../../../CLAUDE.md) → "Common commands" for the canonical dev
+procedure and the relationship between the two frontends.
 
 Backend bridging:
 

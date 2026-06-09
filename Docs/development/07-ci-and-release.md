@@ -8,8 +8,8 @@
 |---|---|---|---|
 | **Regression** | `regression.yml` | push to main / PR / manual dispatch | 韌體所有測試（GUI scenario + unit + FTP + firmware build） |
 | **tool-rust** | `tool-rust.yml` | 限定 `AIO_Tool/**` 改動 | egui 工作區 fmt + clippy + test（3 OS matrix：ubuntu / windows / macos） |
-| **tool-studio** | `tool-studio.yml` | 限定 `AIO_Tool/studio/**` / `AIO_Tool/crates/**` / `Docs/design/studio-flasher/**` 改動 | Studio 工作區 fmt + clippy + test + `cargo tauri build`（2 OS matrix：ubuntu + windows；macOS 還沒 icon.icns 暫不打包） |
-| **Release** | `release.yml` | tag push `v*.*.*` | Build firmware .bin + egui binary（3 OS）+ 3 個 boot/partition .bin → publish GitHub Release。**註**：目前還在打 egui 不是 Studio，後續 PR 會切過去。 |
+| **tool-studio** | `tool-studio.yml` | 限定 `AIO_Tool/studio/**` / `AIO_Tool/crates/**` / `Docs/design/studio-flasher/**` 改動 | Studio 工作區 fmt + clippy + test + `cargo tauri build`（3 OS matrix：ubuntu / windows / macos — macOS 在 icns 進 repo 後加入） |
+| **Release** | `release.yml` | tag push `v*.*.*` | Build firmware .bin + Studio bundle（NSIS Win / DMG macOS / AppImage Linux）+ 3 個 boot/partition .bin → publish GitHub Release |
 
 ## 2. Regression workflow — 韌體 CI
 
@@ -74,15 +74,15 @@ Linux runner 額外 `apt install libudev-dev`（`serialport` enum 需要）。`f
 
 兩個 job：
 - `fmt`（ubuntu-22.04）：`cargo fmt --all -- --check`（stable Rust）
-- `build-test`（2 OS：ubuntu-22.04 + windows-latest）：
+- `build-test`（3 OS：ubuntu-22.04 + windows-latest + macos-latest）：
   1. Install Linux deps：`libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev`
   2. `cargo clippy --all-targets -- -D warnings`
   3. `cargo test`
   4. `cargo install tauri-cli --version ^2.0 --locked`
-  5. `cargo tauri build --bundles <nsis|deb,appimage>` — 產 Windows installer / Linux .deb + .AppImage
+  5. `cargo tauri build --bundles <nsis|deb,appimage|dmg>` — 產 Windows installer / Linux .deb + .AppImage / macOS .dmg
   6. Upload 對應的 bundle artifact
 
-**macOS 還沒進 matrix**，因為 `AIO_Tool/studio/icons/icon.icns` 還沒生（只有 `.ico` + `.png`）。要把 macOS 加進來就要先生 icns。
+macOS 在 [`AIO_Tool/studio/icons/icon.icns`](../../AIO_Tool/studio/icons/icon.icns) 進 repo 後加入 matrix（用 `cargo tauri icon` 從 256×256 source PNG 生成完整 icon set）。要動 icon 就重跑 `cargo tauri icon icons/icon.png` 然後刪掉 `android/` `ios/` `Square*.png` `StoreLogo.png` 這些 desktop 用不到的 output。
 
 ## 4. Release workflow — 觸發新版
 
@@ -105,14 +105,17 @@ git push origin v2.6.9
 ┌─────────────────────────────────────────────┐
 │ build_tool (matrix: windows / macos /        │
 │             ubuntu-22.04)                    │
-│   1. dtolnay/rust-toolchain@stable +1.82.0   │
-│   2. cargo build --release --bin aio-tool    │
-│      (NOTE: 目前還是 egui binary，Studio 切換  │
-│       中；改成 cargo tauri build 是 open PR)  │
-│   3. 包成各 OS artefact：                    │
-│      • Windows: aio-tool.exe → .exe          │
-│      • Linux/macOS: aio-tool → tar.gz        │
-│   4. Upload tool artifact                    │
+│   1. dtolnay/rust-toolchain@stable           │
+│      (Studio's rust-toolchain.toml = stable) │
+│   2. Linux only: apt install webkit2gtk +    │
+│      libudev runtime + dev deps              │
+│   3. cargo install tauri-cli --version ^2.0  │
+│   4. cargo tauri build --bundles             │
+│      <nsis | dmg | appimage>                 │
+│   5. Find bundle in target/release/bundle/   │
+│      and rename to CubicAIO_Tool-${tag}-     │
+│      ${arch}-${os}.<ext> 格式                │
+│   6. Upload tool artifact                    │
 └─────────────────────────────────────────────┘
         ↓ all succeed
 ┌─────────────────────────────────────────────┐
@@ -127,9 +130,9 @@ git push origin v2.6.9
 
 Release page 出現以下 7 個檔案：
 - `HoloCubic_AIO_firmware_v3.1.X.bin` (0x10000)
-- `CubicAIO_Tool-v3.1.X-x86_64-windows.exe`
-- `CubicAIO_Tool-v3.1.X-aarch64-macos.tar.gz`
-- `CubicAIO_Tool-v3.1.X-x86_64-linux.tar.gz`
+- `CubicAIO_Tool-v3.1.X-x86_64-windows-setup.exe` (NSIS installer)
+- `CubicAIO_Tool-v3.1.X-aarch64-macos.dmg`
+- `CubicAIO_Tool-v3.1.X-x86_64-linux.AppImage`
 - `bootloader_qio_80m.bin` (0x1000)
 - `partitions.bin` (0x8000)
 - `boot_app0.bin` (0xe000)

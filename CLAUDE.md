@@ -8,7 +8,7 @@ HoloCubic AIO — a third-party firmware for the HoloCubic ESP32 toy. Two main c
 - `AIO_Firmware_PIO/` — ESP32 firmware (PlatformIO + Arduino-core + LVGL 8.3 + ArduinoJson v6)
 - `AIO_Tool/` — Cross-platform GUI flasher + remote control. Two parallel frontends share the 5 backend crates (`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`):
   - **Studio** (`AIO_Tool/studio/`, Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust toolchain) — the **primary dev/UI target**: recent feature work (B15 settings, single-session writes, latest-release fetch) lands here first. **When the user says "run the dev build" / "see the UI" without naming a frontend, launch Studio.**
-  - **egui binary** (`AIO_Tool/crates/aio-tool/`, Rust 1.82 + egui 0.29) — the **legacy frontend**, still actively built and tested in CI (`tool-rust.yml`) and **still what `release.yml` packages and uploads to GitHub Releases** (`cargo build --release --bin aio-tool` for Windows .exe / Linux + macOS tar.gz). Releasing Studio bundles via `cargo tauri build` is not yet wired into `release.yml`; until it is, "the binary users download" still means egui. Plan to flip this over is open work, not in this PR.
+  - **egui binary** (`AIO_Tool/crates/aio-tool/`, Rust 1.82 + egui 0.29) — the **legacy frontend**, still actively built and tested in CI (`tool-rust.yml`) but **no longer what `release.yml` ships**. As of the Studio bundle PR, GitHub Releases get Studio installers / images (Windows NSIS, macOS DMG, Linux AppImage) instead of raw egui binaries. The egui crate stays in the repo for cross-validation of backend-crate changes and as a fallback dev surface; expect it to be removed once Studio has covered every tab.
 
 Plus `lv_simulater_platformio/` for host-side SDL2 GUI simulation, and `test/` for scenario harness.
 
@@ -42,19 +42,21 @@ npx --yes http-server Docs/design/studio-flasher -p 8765 -c-1 --cors  # quickest
 # Step 2: build + launch the Tauri shell (first compile is ~5 min):
 cargo run --manifest-path AIO_Tool/studio/Cargo.toml --no-default-features
 
-# Standalone Studio bundle (manual; NOT what release.yml currently uploads — see "What this is").
+# Studio bundle — what release.yml uploads for every tag (NSIS / DMG / AppImage).
 # Needs `cargo install tauri-cli --version ^2.0` first.
-cargo tauri build --manifest-path AIO_Tool/studio/Cargo.toml
+# Per-OS bundle target: nsis (Win) | dmg (macOS) | appimage (Linux).
+cargo tauri build --manifest-path AIO_Tool/studio/Cargo.toml --bundles nsis,dmg,appimage
 
 # AIO_Tool — egui binary (legacy frontend; Rust 1.82 — pinned via rust-toolchain.toml)
 # Only run this when explicitly working on the egui frontend; for general "see the UI", use Studio above.
-# release.yml STILL builds and uploads this binary (Windows .exe, Linux + macOS tar.gz) on each tag.
+# release.yml no longer ships this binary as of the Studio bundle switch; it still runs as
+# a sanity check via tool-rust.yml on every PR that touches AIO_Tool/.
 cd AIO_Tool
 cargo +1.82.0 run --bin aio-tool           # launch the legacy egui GUI
 cargo +1.82.0 test --workspace             # ~199 unit + integration + golden tests (covers backend crates)
 cargo +1.82.0 clippy --all-targets --workspace -- -D warnings
 cargo +1.82.0 fmt --all -- --check
-cargo +1.82.0 build --release --bin aio-tool   # produces target/release/aio-tool[.exe] (what release.yml runs)
+cargo +1.82.0 build --release --bin aio-tool   # produces target/release/aio-tool[.exe] for manual smoke-test
 ```
 
 Linux build requires `libudev-dev` (Debian/Ubuntu) or `systemd-devel` (Fedora) — `serialport` enumeration uses it.
@@ -120,7 +122,7 @@ These are real rules with real reasons (each cited in [`Docs/development/08-refa
 
 ## Architecture in one paragraph
 
-Firmware main loop (`HoloCubic_AIO.cpp`) reads IMU once per ~50ms tick → passes `ImuAction` to `AppController->main_process()` → routes to active app's `main_process(sys, act_info)`. Each app is an `APP_OBJ` with 7 callbacks (init/process/background_task/exit/message_handle + name/icon/info). Cross-app comms via `sys->send_to(from, to, type, msg, ext)` which is async (queued) — except `GET_PARAM`/`SET_PARAM` which dispatch synchronously. Both `main_process` and `message_handle` run on main thread → no mutex needed but `delay()` is fatal. Full deep-dive in [`Docs/development/02-firmware-architecture.md`](./Docs/development/02-firmware-architecture.md). AIO_Tool's architecture is documented in `AIO_Tool/README.md` + per-crate READMEs — backend crates layered protocol → i18n → device → flasher / converter, consumed by **two parallel frontends**: Studio (Tauri 2 native shell + React/JSX UI rendered in a webview — primary dev target where new UI work lands) and the legacy egui binary `aio-tool` (still what `release.yml` packages into GitHub Releases until the Studio bundle pipeline is wired in). UI changes need to land in the frontend the user is actually running — confirm which one before editing if it's not obvious.
+Firmware main loop (`HoloCubic_AIO.cpp`) reads IMU once per ~50ms tick → passes `ImuAction` to `AppController->main_process()` → routes to active app's `main_process(sys, act_info)`. Each app is an `APP_OBJ` with 7 callbacks (init/process/background_task/exit/message_handle + name/icon/info). Cross-app comms via `sys->send_to(from, to, type, msg, ext)` which is async (queued) — except `GET_PARAM`/`SET_PARAM` which dispatch synchronously. Both `main_process` and `message_handle` run on main thread → no mutex needed but `delay()` is fatal. Full deep-dive in [`Docs/development/02-firmware-architecture.md`](./Docs/development/02-firmware-architecture.md). AIO_Tool's architecture is documented in `AIO_Tool/README.md` + per-crate READMEs — backend crates layered protocol → i18n → device → flasher / converter, consumed by **two parallel frontends**: Studio (Tauri 2 native shell + React/JSX UI rendered in a webview — the shipping UI; what `release.yml` packages as NSIS / DMG / AppImage for every tag) and the legacy egui binary `aio-tool` (kept in-tree for backend-crate cross-validation and as a fallback dev surface). UI changes need to land in the frontend the user is actually running — confirm which one before editing if it's not obvious.
 
 ## Test strategy in one paragraph
 

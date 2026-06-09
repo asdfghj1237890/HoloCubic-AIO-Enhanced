@@ -6,8 +6,8 @@
 
 | 前端 | 路徑 | 角色 |
 |---|---|---|
-| **Studio** | [`AIO_Tool/studio/`](../../AIO_Tool/studio/) | Tauri 2 + JSX 原型在 [`Docs/design/studio-flasher/`](../design/studio-flasher/) — 目前主要 dev / 新功能落腳處。預定的 release frontend。 |
-| **egui** | [`AIO_Tool/crates/aio-tool/`](../../AIO_Tool/crates/aio-tool/) | Rust 1.82 + egui 0.29 — Legacy 前端，但 `release.yml` 目前還在 ship 這個 binary。 |
+| **Studio** | [`AIO_Tool/studio/`](../../AIO_Tool/studio/) | Tauri 2 + JSX 原型在 [`Docs/design/studio-flasher/`](../design/studio-flasher/) — **shipping UI**，release.yml 每 tag 打 NSIS / DMG / AppImage。 |
+| **egui** | [`AIO_Tool/crates/aio-tool/`](../../AIO_Tool/crates/aio-tool/) | Rust 1.82 + egui 0.29 — Legacy 前端，留著做 backend crate 交叉驗證 + fallback dev surface，不再進 release artefact。 |
 
 兩邊共用 5 個 backend crate：`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`。
 
