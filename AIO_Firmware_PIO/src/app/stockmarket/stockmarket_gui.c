@@ -48,7 +48,7 @@ void stockmarket_gui_init(void)
     lv_style_set_text_font(&secondary_style, &lv_font_montserrat_20);
 }
 
-static lv_point_t divider_points[] = {{0, 0}, {240, 0}};
+static const lv_point_t divider_points[] = {{0, 0}, {240, 0}};
 
 void display_stockmarket_init(void)
 {
