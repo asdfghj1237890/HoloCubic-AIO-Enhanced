@@ -11,7 +11,6 @@
 <style>
   html, body { margin: 0; height: 100%; background: var(--bg); }
   #root { height: 100vh; }
-  image-slot:not(:defined) { display: block; background: var(--panel-3); border-radius: 12px; }
   /* shown only when the page is opened directly via file:// — Babel needs http(s) to fetch jsx. */
   #file-protocol-notice {
     display: none; max-width: 560px; margin: 60px auto; padding: 24px 28px;
@@ -47,7 +46,6 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
 
-<script src="image-slot.js"></script>
 <script type="text/babel" src="flash-sim.jsx"></script>
 <script type="text/babel" src="fl-shared.jsx"></script>
 <script type="text/babel" src="i18n.jsx"></script>

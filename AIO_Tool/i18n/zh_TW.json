@@ -96,7 +96,6 @@
   "advanced_partitions_closed": "進階：自訂分割區",
   "flash_succeeded": "韌體燒錄成功",
   "flash_succeeded_sub": "裝置正在重新啟動，稍候即可使用。",
-  "device_photo_placeholder": "放入實拍照",
   "help_subtitle": "關於本工具與 HoloCubic 的相關資源",
   "params_title": "參數設定",
   "params_subtitle": "讀取與修改 HoloCubic 的 WiFi、系統、天氣等參數",

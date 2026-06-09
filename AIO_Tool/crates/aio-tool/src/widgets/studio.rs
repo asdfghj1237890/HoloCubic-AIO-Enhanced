@@ -10,7 +10,7 @@ use egui::{
 };
 
 use crate::theme::{
-    self, ACCENT, ACCENT_INK, ACCENT_WEAK, BORDER, INSET, OK, PANEL_2, PANEL_3, S2, S3, S4, TEXT,
+    self, ACCENT, ACCENT_INK, ACCENT_WEAK, BORDER, OK, PANEL_2, PANEL_3, S2, S3, S4, TEXT,
     TEXT_DIM, TEXT_MUTE,
 };
 
@@ -379,30 +379,6 @@ fn dpad_key(
     response
 }
 
-// ─── inset frame used for the device card placeholder ────────────────────
-
-/// Inset frame with a dashed border — the prototype's
-/// `border: 1px dashed var(--border-strong)` wrap around the device-photo
-/// `<image-slot>`. We paint the dashes manually because egui's stroke is
-/// always solid.
-///
-/// `R4` (31px) rounding matches the prototype's `borderRadius: var(--r4)`
-/// on the outer device-card frame.
-pub fn inset_frame(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
-    let response = egui::Frame::none()
-        .fill(INSET)
-        .rounding(Rounding::same(theme::R4))
-        .inner_margin(egui::Margin::same(12.0)) // prototype: padding: 12
-        .show(ui, add_contents);
-    paint_dashed_rect_stroke(
-        ui.painter(),
-        response.response.rect,
-        theme::BORDER_STRONG,
-        5.0,
-        3.5,
-    );
-}
-
 /// Success banner — green-tinted card with a check mark + label. Painted
 /// after a successful flash completes.
 pub fn success_banner(ui: &mut Ui, title: impl Into<String>, sub: impl Into<String>) {
@@ -438,72 +414,6 @@ pub fn section_divider(ui: &mut Ui) {
     let (rect, _) = ui.allocate_exact_size(Vec2::new(ui.available_width(), 1.0), Sense::hover());
     ui.painter()
         .rect_filled(rect, Rounding::ZERO, theme::BORDER);
-}
-
-/// Stroke a dashed rectangle outline. egui's `rect_stroke` only paints
-/// solid borders, so we segment manually. Rounded corners are approximated
-/// — the dashes lie on a straight rectangle and a small rounded fill sits
-/// inside, hiding the corner gaps.
-pub fn paint_dashed_rect_stroke(
-    painter: &egui::Painter,
-    rect: egui::Rect,
-    color: egui::Color32,
-    dash_len: f32,
-    gap_len: f32,
-) {
-    let stroke = egui::Stroke::new(1.0, color);
-    // Top
-    let mut x = rect.left();
-    while x < rect.right() {
-        let end = (x + dash_len).min(rect.right());
-        painter.line_segment(
-            [
-                egui::Pos2::new(x, rect.top()),
-                egui::Pos2::new(end, rect.top()),
-            ],
-            stroke,
-        );
-        x = end + gap_len;
-    }
-    // Bottom
-    let mut x = rect.left();
-    while x < rect.right() {
-        let end = (x + dash_len).min(rect.right());
-        painter.line_segment(
-            [
-                egui::Pos2::new(x, rect.bottom()),
-                egui::Pos2::new(end, rect.bottom()),
-            ],
-            stroke,
-        );
-        x = end + gap_len;
-    }
-    // Left
-    let mut y = rect.top();
-    while y < rect.bottom() {
-        let end = (y + dash_len).min(rect.bottom());
-        painter.line_segment(
-            [
-                egui::Pos2::new(rect.left(), y),
-                egui::Pos2::new(rect.left(), end),
-            ],
-            stroke,
-        );
-        y = end + gap_len;
-    }
-    // Right
-    let mut y = rect.top();
-    while y < rect.bottom() {
-        let end = (y + dash_len).min(rect.bottom());
-        painter.line_segment(
-            [
-                egui::Pos2::new(rect.right(), y),
-                egui::Pos2::new(rect.right(), end),
-            ],
-            stroke,
-        );
-        y = end + gap_len;
-    }
 }
 
 /// Render a Rect-sized progress bar. Used for the queue total below the

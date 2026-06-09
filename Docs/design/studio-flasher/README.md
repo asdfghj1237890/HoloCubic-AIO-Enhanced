@@ -51,7 +51,6 @@ Google Fonts CDNs.
 studio-flasher/
 ├── index.html          App shell, rail navigation, useTweaks (localStorage-backed)
 ├── theme.css           Design tokens (dark theme, radius/spacing ramps, .btn / .chip primitives)
-├── image-slot.js       <image-slot> Web Component for the device-photo placeholder
 ├── flash-sim.jsx       useFlasher() hook — port list, connect, flash queue, espflash-style log
 ├── fl-shared.jsx       <LogView>, <Icon>, ICON path dictionary
 ├── i18n.jsx            tr() + dictionary for 繁中 / 简中 / English
@@ -63,16 +62,35 @@ studio-flasher/
 Scripts use the legacy "attach to window" pattern (no ES module imports) so they
 can be loaded as `<script type="text/babel" src=...>` without a bundler.
 
-## Relationship to the real AIO_Tool
+## Relationship to AIO_Tool
 
-This is a **design reference**, not production code. The actual flasher is the
-Rust + egui app in [`AIO_Tool/`](../../../AIO_Tool/). Use this prototype to
-preview proposed UX changes before reworking egui widgets — flows like the
-3-step guided connect→firmware→flash, per-partition progress checklist, and the
-in-app appearance / language settings are the main candidates to port.
+This directory IS the **Studio frontend** — the same JSX is served verbatim
+into the Tauri 2 webview that the [`AIO_Tool/studio/`](../../../AIO_Tool/studio/)
+binary opens. The Tauri shell registers `tauri.conf.json::devUrl` =
+`http://localhost:8765`; in dev you serve this directory with any HTTP server
+on :8765 and `cargo run --no-default-features` against the Studio crate. In a
+release build, Studio's `custom-protocol` feature (default-on outside dev)
+bundles these files into the binary itself.
 
-The connect/flash backend is mocked (`flash-sim.jsx`); the AIO_Tool's
-`flasher_worker.rs` is the real implementation.
+Studio is the **primary dev/UI target** for the AIO_Tool — recent feature work
+(B15 Settings, single-session writes, latest-release fetch) lands here first.
+The legacy [`AIO_Tool/crates/aio-tool/`](../../../AIO_Tool/crates/aio-tool/)
+egui binary is still what `release.yml` currently packages and uploads, but new
+UI work happens here. See the root [`CLAUDE.md`](../../../CLAUDE.md) →
+"Common commands" for the canonical dev procedure and the relationship between
+the two frontends.
+
+Backend bridging:
+
+- **Connect / flash / file ops**: real implementations live in the workspace
+  backend crates (`aio-flasher`, `aio-device`, etc.) and are exposed to the
+  webview via Tauri commands in
+  [`AIO_Tool/studio/src/commands.rs`](../../../AIO_Tool/studio/src/commands.rs);
+  events flow back via `Emitter::emit`.
+- **Local-only simulation**: `flash-sim.jsx` is the in-browser mock used when
+  this directory is served standalone (no Tauri shell) — useful for UX
+  iteration without the device round-trip. The Studio binary doesn't read
+  this — its commands.rs path takes over instead.
 
 ## Provenance
 

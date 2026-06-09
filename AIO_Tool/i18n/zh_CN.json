@@ -96,7 +96,6 @@
   "advanced_partitions_closed": "进阶：自定义分区",
   "flash_succeeded": "固件烧录成功",
   "flash_succeeded_sub": "设备正在重新启动，稍候即可使用。",
-  "device_photo_placeholder": "放入实拍照",
   "help_subtitle": "关于本工具与 HoloCubic 的相关资源",
   "params_title": "参数设定",
   "params_subtitle": "读取与修改 HoloCubic 的 WiFi、系统、天气等参数",

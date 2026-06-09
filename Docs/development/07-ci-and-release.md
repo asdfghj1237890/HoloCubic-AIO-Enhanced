@@ -2,13 +2,14 @@
 
 ## 1. CI workflows 一覽
 
-[`.github/workflows/`](../../.github/workflows/) 三個 workflow，trigger 條件不同：
+[`.github/workflows/`](../../.github/workflows/) 目前 4 個 workflow，trigger 條件不同：
 
 | Workflow | 檔名 | 觸發 | 跑什麼 |
 |---|---|---|---|
 | **Regression** | `regression.yml` | push to main / PR / manual dispatch | 韌體所有測試（GUI scenario + unit + FTP + firmware build） |
-| **AIO_Tool** | `aio-tool.yml` | 限定 `AIO_Tool/**` 改動 | Python pytest + ruff format + ruff check |
-| **Release** | `release.yml` | tag push `v*.*.*` | Build .exe + 4 個 .bin → publish GitHub Release |
+| **tool-rust** | `tool-rust.yml` | 限定 `AIO_Tool/**` 改動 | egui 工作區 fmt + clippy + test（3 OS matrix：ubuntu / windows / macos） |
+| **tool-studio** | `tool-studio.yml` | 限定 `AIO_Tool/studio/**` / `AIO_Tool/crates/**` / `Docs/design/studio-flasher/**` 改動 | Studio 工作區 fmt + clippy + test + `cargo tauri build`（2 OS matrix：ubuntu + windows；macOS 還沒 icon.icns 暫不打包） |
+| **Release** | `release.yml` | tag push `v*.*.*` | Build firmware .bin + egui binary（3 OS）+ 3 個 boot/partition .bin → publish GitHub Release。**註**：目前還在打 egui 不是 Studio，後續 PR 會切過去。 |
 
 ## 2. Regression workflow — 韌體 CI
 
@@ -51,17 +52,37 @@ PR #72 加了 `firmware-build` job，從此 host-stub 跟 Arduino-core 不一致
 - **Cache**：`~/.platformio` 跟 project `.pio/` 都 cache，cache key 用 `platformio.ini` hash。改 `platformio.ini` 會 invalidate；改 `src/` 不會。
 - **Retry**：3 次 with backoff 15s/30s。處理 transient lib download failures（GitHub-archive 偶爾 502）。
 
-## 3. AIO_Tool workflow
+## 3. AIO_Tool workflows
 
-[`.github/workflows/aio-tool.yml`](../../.github/workflows/aio-tool.yml)。**只在 `AIO_Tool/**` 或 workflow 自己改動時跑**。所以純韌體 PR 不會被 Python lint 拖慢。
+工具的 CI 拆成兩個檔，因為兩個前端（egui 工作區 + Studio）用不同 Rust toolchain：
 
-四個步驟：
-1. `uv sync --all-groups --frozen`
-2. `uv run pytest`
-3. `uv run ruff format --check .`
-4. `uv run ruff check .`
+### 3a. tool-rust.yml — egui 工作區 + backend crate
 
-任一 fail 擋 PR。`ty` typecheck 還在 alpha，**沒有**強制。
+[`.github/workflows/tool-rust.yml`](../../.github/workflows/tool-rust.yml)。**只在 `AIO_Tool/**` 改動時跑**，純韌體 PR 不會被它拖慢。
+
+兩個 job：
+- `fmt`（ubuntu-22.04）：`cargo +1.82.0 fmt --all -- --check`
+- `check`（3 OS matrix：ubuntu-22.04 / windows-latest / macos-latest）：
+  1. `cargo +1.82.0 clippy --all-targets --workspace -- -D warnings`
+  2. `cargo +1.82.0 test --workspace`
+
+Linux runner 額外 `apt install libudev-dev`（`serialport` enum 需要）。`fail-fast: false`，一個 OS 爛不影響其他繼續跑。
+
+### 3b. tool-studio.yml — Studio (Tauri) 前端
+
+[`.github/workflows/tool-studio.yml`](../../.github/workflows/tool-studio.yml)。觸發路徑：`AIO_Tool/studio/**`、`AIO_Tool/crates/**`、`Docs/design/studio-flasher/**`（因為 Studio 用 backend crate 跟 JSX 前端，三個都會影響它）。
+
+兩個 job：
+- `fmt`（ubuntu-22.04）：`cargo fmt --all -- --check`（stable Rust）
+- `build-test`（2 OS：ubuntu-22.04 + windows-latest）：
+  1. Install Linux deps：`libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev`
+  2. `cargo clippy --all-targets -- -D warnings`
+  3. `cargo test`
+  4. `cargo install tauri-cli --version ^2.0 --locked`
+  5. `cargo tauri build --bundles <nsis|deb,appimage>` — 產 Windows installer / Linux .deb + .AppImage
+  6. Upload 對應的 bundle artifact
+
+**macOS 還沒進 matrix**，因為 `AIO_Tool/studio/icons/icon.icns` 還沒生（只有 `.ico` + `.png`）。要把 macOS 加進來就要先生 icns。
 
 ## 4. Release workflow — 觸發新版
 
@@ -75,33 +96,40 @@ git push origin v2.6.9
 接下來 GitHub Actions 自動：
 
 ```
-┌─────────────────────────────────────────┐
-│ build_firmware (Linux)                   │
-│   1. uvx platformio run -e Releases      │
-│   2. cp firmware.bin → release/          │
-│   3. Upload firmware artifact            │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│ build_tool (Windows)                     │
-│   1. uv sync --all-groups --frozen       │
-│   2. uv run pyinstaller CubicAIO_Tool.spec│
-│   3. cp dist/CubicAIO_Tool.exe → release/│
-│   4. Upload tool artifact                │
-└─────────────────────────────────────────┘
-        ↓ both succeed
-┌─────────────────────────────────────────┐
-│ publish_release (Linux)                  │
-│   1. Download both artifacts             │
-│   2. Stage 3 boot/partition .bin from    │
-│      dist/ (committed in repo)           │
-│   3. softprops/action-gh-release         │
-│      → 5 assets in GitHub release page   │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│ build_firmware (Linux)                       │
+│   1. pio run -e HoloCubic_AIO_Releases       │
+│   2. cp firmware.bin → release/              │
+│   3. Upload firmware artifact                │
+└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│ build_tool (matrix: windows / macos /        │
+│             ubuntu-22.04)                    │
+│   1. dtolnay/rust-toolchain@stable +1.82.0   │
+│   2. cargo build --release --bin aio-tool    │
+│      (NOTE: 目前還是 egui binary，Studio 切換  │
+│       中；改成 cargo tauri build 是 open PR)  │
+│   3. 包成各 OS artefact：                    │
+│      • Windows: aio-tool.exe → .exe          │
+│      • Linux/macOS: aio-tool → tar.gz        │
+│   4. Upload tool artifact                    │
+└─────────────────────────────────────────────┘
+        ↓ all succeed
+┌─────────────────────────────────────────────┐
+│ publish_release (Linux)                      │
+│   1. Download all 4 artifacts                │
+│   2. Stage 3 boot/partition .bin from        │
+│      dist/ (committed in repo)               │
+│   3. softprops/action-gh-release             │
+│      → 7 assets in GitHub release page       │
+└─────────────────────────────────────────────┘
 ```
 
-Release page 出現以下 5 個檔案：
-- `HoloCubic_AIO_firmware_v2.6.9.bin` (0x10000)
-- `HoloCubic_AIO_Tool_v2.6.9.exe`
+Release page 出現以下 7 個檔案：
+- `HoloCubic_AIO_firmware_v3.1.X.bin` (0x10000)
+- `CubicAIO_Tool-v3.1.X-x86_64-windows.exe`
+- `CubicAIO_Tool-v3.1.X-aarch64-macos.tar.gz`
+- `CubicAIO_Tool-v3.1.X-x86_64-linux.tar.gz`
 - `bootloader_qio_80m.bin` (0x1000)
 - `partitions.bin` (0x8000)
 - `boot_app0.bin` (0xe000)
@@ -138,16 +166,16 @@ git push origin v2.6.9
 
 或者把 bump 跟某個 feature PR 綁在一起（最近幾版都這樣做）。
 
-## 6. AIO_Tool TOOL_VERSION
+## 6. AIO_Tool 版本對齊
 
-[`AIO_Tool/util/common.py`](../../AIO_Tool/util/common.py) 有：
-```python
-TOOL_VERSION: str = "v2.5.0"
+**Rust rewrite 後不再有單獨的 `TOOL_VERSION` 變數** — Python era 的 `AIO_Tool/util/common.py:TOOL_VERSION` 跟它的 drift bug 都隨 v3.0.0 一起退場。
+
+現在的 single source of truth 是 `AIO_Tool/Cargo.toml` 的 `[workspace.package] version = "3.1.X"`。`env!("CARGO_PKG_VERSION")` 把它編進 binary、`release.yml` 也 grep 同一行做 release body — 不會再 drift。
+
+升版只改一個地方：
+```bash
+sed -i 's/^version = "3.1.0"/version = "3.1.1"/' AIO_Tool/Cargo.toml
 ```
-
-**這個目前不會自動跟 tag 對齊**，會穩定停在某個值（截至寫這份文件時是 `v2.5.0`）。release 流程用 `github.ref_name`（即 tag）作為檔名 + release title，但 release body 還是會 echo 出 `TOOL_VERSION`。
-
-如果要升 TOOL_VERSION 跟 tag 對齊，編輯 `common.py` 那一行。
 
 ## 7. 萬一 release build 失敗怎麼辦
 

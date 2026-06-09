@@ -96,7 +96,6 @@
   "advanced_partitions_closed": "Advanced: customize partitions",
   "flash_succeeded": "Firmware flashed successfully",
   "flash_succeeded_sub": "Device is rebooting — ready to use shortly.",
-  "device_photo_placeholder": "Drop a photo here",
   "help_subtitle": "About this tool and HoloCubic resources",
   "params_title": "Device Settings",
   "params_subtitle": "Read and edit HoloCubic's WiFi, system and weather parameters",
