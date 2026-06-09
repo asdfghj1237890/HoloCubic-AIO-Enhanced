@@ -77,17 +77,6 @@ function DeviceCard({ fl }) {
   const glow = flashing ? "var(--accent)" : connected ? "var(--ok)" : "transparent";
   return (
     <div style={{ padding: "var(--s5)", borderBottom: "1px solid var(--border)" }}>
-      <div style={{ display: "grid", placeItems: "center", marginBottom: "var(--s4)" }}>
-        <div style={{ position: "relative", padding: 12, borderRadius: "var(--r4)", background: "var(--inset)",
-                      border: "1px dashed var(--border-strong)", transition: "box-shadow .45s",
-                      boxShadow: glow === "transparent" ? "none" : `0 0 0 1px ${glow}, 0 0 40px -8px ${glow}` }}>
-          <image-slot id="studio-device" style={{ width: "118px", height: "146px", display: "block" }}
-            shape="rounded" radius="12" placeholder="放入實拍照"></image-slot>
-          {flashing && <div style={{ position: "absolute", inset: 12, borderRadius: "var(--r3)",
-            background: "repeating-linear-gradient(45deg, transparent, transparent 8px, var(--accent-weak) 8px, var(--accent-weak) 16px)",
-            animation: "pulse 1.2s infinite", pointerEvents: "none" }} />}
-        </div>
-      </div>
       {connected ? (
         <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px var(--s3)", fontSize: 12 }}>
           {[["晶片", fl.chip.model], ["版本", fl.chip.rev], ["Flash", fl.chip.flash], ["MAC", fl.chip.mac]].map(([k, v]) => (

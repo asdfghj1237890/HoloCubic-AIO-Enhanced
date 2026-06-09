@@ -724,44 +724,6 @@ fn show_sidebar(ui: &mut Ui, state: &mut FlasherState, bus_tx: &crate::bus::AppE
 
     // ── Device card section ──
     egui::Frame::none().inner_margin(inner_pad).show(ui, |ui| {
-        // Centered dashed-border frame around a 118×146 inner placeholder,
-        // matching the prototype's `<image-slot>` slot.
-        //
-        // `set_max_width(142)` caps the inset_frame to the 118 + 2*12
-        // content+padding width. Without it the Frame stretches to the
-        // section's full content area and the dashed border looks like
-        // it's pinned to the sidebar edges.
-        ui.vertical_centered(|ui| {
-            ui.set_max_width(142.0);
-            studio::inset_frame(ui, |ui| {
-                let (rect, _) =
-                    ui.allocate_exact_size(egui::Vec2::new(118.0, 146.0), egui::Sense::hover());
-                let p = ui.painter();
-                p.rect_filled(rect, egui::Rounding::same(12.0), theme::PANEL_3);
-                // Connection state glyph centered, placeholder text below.
-                let glyph_pos = egui::Pos2::new(rect.center().x, rect.center().y - 12.0);
-                p.text(
-                    glyph_pos,
-                    egui::Align2::CENTER_CENTER,
-                    if state.connected { "●" } else { "○" },
-                    egui::FontId::proportional(28.0),
-                    if state.connected {
-                        theme::OK
-                    } else {
-                        theme::TEXT_MUTE
-                    },
-                );
-                p.text(
-                    egui::Pos2::new(rect.center().x, rect.center().y + 18.0),
-                    egui::Align2::CENTER_CENTER,
-                    t("device_photo_placeholder", None),
-                    egui::FontId::proportional(11.0),
-                    theme::TEXT_MUTE,
-                );
-            });
-        });
-        ui.add_space(theme::S4);
-
         if state.connected {
             // 2-col grid (auto | 1fr) matching the prototype's chip readout.
             egui::Grid::new("flasher_chip_info")

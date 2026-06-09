@@ -6,7 +6,7 @@ Operational notes for AI agents working in this repo. For architecture / how-to 
 
 HoloCubic AIO — a third-party firmware for the HoloCubic ESP32 toy. Two main components:
 - `AIO_Firmware_PIO/` — ESP32 firmware (PlatformIO + Arduino-core + LVGL 8.3 + ArduinoJson v6)
-- `AIO_Tool/` — Cross-platform GUI flasher + remote control (Rust 1.82 + egui 0.29 + eframe; 6 workspace crates: aio-protocol / aio-i18n / aio-device / aio-flasher / aio-converter / aio-tool)
+- `AIO_Tool/` — Cross-platform GUI flasher + remote control. **The shipping UI is Studio** (`AIO_Tool/studio/` — Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust toolchain). The egui binary (`AIO_Tool/crates/aio-tool/`, Rust 1.82 + egui 0.29) is the legacy frontend; bug-fix PRs typically touch Studio first and the egui frontend trails behind. Both share the 5 backend crates (aio-protocol / aio-i18n / aio-device / aio-flasher / aio-converter). **When the user asks to "run the dev build" or "see the UI", launch Studio — not the egui binary.**
 
 Plus `lv_simulater_platformio/` for host-side SDL2 GUI simulation, and `test/` for scenario harness.
 
@@ -24,10 +24,30 @@ cd lv_simulater_platformio
 pio run -e native_test                 # builds the SDL2 binary
 ./.pio/build/native_test/program --scenario ../test/scenarios/<app>/smoke.scn --headless
 
-# AIO_Tool (Rust 1.82 — pinned via rust-toolchain.toml)
+# AIO_Tool — Studio (Tauri 2, the shipping UI)
+# Stable toolchain (1.85+) — `studio/rust-toolchain.toml` overrides the workspace's 1.82 pin.
+# Studio's frontend is the JSX prototype in Docs/design/studio-flasher/; it loads via Babel-in-browser
+# from an HTTP origin, so dev mode needs a static server on :8765 BEFORE launching the Tauri binary.
+# (.claude/launch.json already has a "studio-flasher" config — `npx http-server` on :8765.)
+# Without --no-default-features, Tauri's `custom-protocol` feature bundles the assets and the binary
+# won't read from the dev URL, so dev launches MUST pass --no-default-features.
+
+# Step 1: start frontend dev server (any of these):
+npx --yes http-server Docs/design/studio-flasher -p 8765 -c-1 --cors  # quickest
+# OR via preview MCP: preview_start("studio-flasher")
+# OR: python -m http.server 8765 -d Docs/design/studio-flasher
+
+# Step 2: build + launch the Tauri shell (first compile is ~5 min):
+cargo run --manifest-path AIO_Tool/studio/Cargo.toml --no-default-features
+
+# Release build (bundles the frontend, single binary — what release.yml produces):
+cargo tauri build --manifest-path AIO_Tool/studio/Cargo.toml   # needs `cargo install tauri-cli@^2`
+
+# AIO_Tool — egui binary (legacy frontend; Rust 1.82 — pinned via rust-toolchain.toml)
+# Only run this when explicitly working on the egui frontend; for general "see the UI", use Studio above.
 cd AIO_Tool
-cargo +1.82.0 run --bin aio-tool           # launch the GUI
-cargo +1.82.0 test --workspace             # ~199 unit + integration + golden tests
+cargo +1.82.0 run --bin aio-tool           # launch the legacy egui GUI
+cargo +1.82.0 test --workspace             # ~199 unit + integration + golden tests (covers backend crates)
 cargo +1.82.0 clippy --all-targets --workspace -- -D warnings
 cargo +1.82.0 fmt --all -- --check
 cargo +1.82.0 build --release --bin aio-tool   # produces target/release/aio-tool[.exe]
@@ -94,7 +114,7 @@ These are real rules with real reasons (each cited in [`Docs/development/08-refa
 
 ## Architecture in one paragraph
 
-Firmware main loop (`HoloCubic_AIO.cpp`) reads IMU once per ~50ms tick → passes `ImuAction` to `AppController->main_process()` → routes to active app's `main_process(sys, act_info)`. Each app is an `APP_OBJ` with 7 callbacks (init/process/background_task/exit/message_handle + name/icon/info). Cross-app comms via `sys->send_to(from, to, type, msg, ext)` which is async (queued) — except `GET_PARAM`/`SET_PARAM` which dispatch synchronously. Both `main_process` and `message_handle` run on main thread → no mutex needed but `delay()` is fatal. Full deep-dive in [`Docs/development/02-firmware-architecture.md`](./Docs/development/02-firmware-architecture.md). AIO_Tool's architecture is documented in `AIO_Tool/README.md` + per-crate READMEs — six workspace crates layered protocol → i18n → device → flasher / converter → tool (egui binary).
+Firmware main loop (`HoloCubic_AIO.cpp`) reads IMU once per ~50ms tick → passes `ImuAction` to `AppController->main_process()` → routes to active app's `main_process(sys, act_info)`. Each app is an `APP_OBJ` with 7 callbacks (init/process/background_task/exit/message_handle + name/icon/info). Cross-app comms via `sys->send_to(from, to, type, msg, ext)` which is async (queued) — except `GET_PARAM`/`SET_PARAM` which dispatch synchronously. Both `main_process` and `message_handle` run on main thread → no mutex needed but `delay()` is fatal. Full deep-dive in [`Docs/development/02-firmware-architecture.md`](./Docs/development/02-firmware-architecture.md). AIO_Tool's architecture is documented in `AIO_Tool/README.md` + per-crate READMEs — backend crates layered protocol → i18n → device → flasher / converter, consumed by **two parallel frontends**: Studio (Tauri 2 native shell + React/JSX UI rendered in a webview, currently the shipping default) and the legacy egui binary (`aio-tool`). UI changes need to land in the frontend the user is actually running — confirm which one before editing if it's not obvious.
 
 ## Test strategy in one paragraph
 

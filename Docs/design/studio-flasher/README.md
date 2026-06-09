@@ -51,7 +51,6 @@ Google Fonts CDNs.
 studio-flasher/
 ├── index.html          App shell, rail navigation, useTweaks (localStorage-backed)
 ├── theme.css           Design tokens (dark theme, radius/spacing ramps, .btn / .chip primitives)
-├── image-slot.js       <image-slot> Web Component for the device-photo placeholder
 ├── flash-sim.jsx       useFlasher() hook — port list, connect, flash queue, espflash-style log
 ├── fl-shared.jsx       <LogView>, <Icon>, ICON path dictionary
 ├── i18n.jsx            tr() + dictionary for 繁中 / 简中 / English
