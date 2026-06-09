@@ -47,6 +47,57 @@ const IS_TAURI = typeof window !== "undefined" && !!window.__TAURI__;
 const invoke = IS_TAURI ? window.__TAURI__.core.invoke : null;
 const listen = IS_TAURI ? window.__TAURI__.event.listen : null;
 
+// Latest GitHub Release of the firmware. One fetch per session, cached on
+// `window` so other components don't refetch. State shape is a tagged union:
+//   { status: "loading" }
+//   { status: "ok", version, filename, bytes, url, publishedAt }
+//   { status: "error", reason: "offline" | "ratelimit" | "http:<code>" | "no-asset" }
+const LATEST_RELEASE_URL =
+  "https://api.github.com/repos/asdfghj1237890/HoloCubic-AIO-Enhanced/releases/latest";
+const FIRMWARE_ASSET_RE = /^HoloCubic_AIO_firmware_v.*\.bin$/;
+function useLatestRelease() {
+  const { useState, useEffect } = React;
+  const [state, setState] = useState(
+    window.__AIO_LATEST_RELEASE__ || { status: "loading" }
+  );
+  useEffect(() => {
+    if (state.status === "ok") return; // already cached on window
+    let cancelled = false;
+    fetch(LATEST_RELEASE_URL, { headers: { Accept: "application/vnd.github+json" } })
+      .then((r) => {
+        if (r.status === 403) throw { kind: "ratelimit" };
+        if (!r.ok) throw { kind: "http", code: r.status };
+        return r.json();
+      })
+      .then((j) => {
+        if (cancelled) return;
+        const fw = (j.assets || []).find((a) => FIRMWARE_ASSET_RE.test(a.name));
+        if (!fw) throw { kind: "no-asset" };
+        const rel = {
+          status: "ok",
+          version: String(j.tag_name || "").replace(/^v/, ""),
+          filename: fw.name,
+          bytes: fw.size,
+          url: fw.browser_download_url,
+          publishedAt: j.published_at,
+        };
+        window.__AIO_LATEST_RELEASE__ = rel;
+        setState(rel);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        // TypeError from fetch == network unreachable; everything else is a
+        // structured throw we made above.
+        const reason = e instanceof TypeError ? "offline"
+          : e?.kind === "http" ? `http:${e.code}`
+          : e?.kind || "error";
+        setState({ status: "error", reason });
+      });
+    return () => { cancelled = true; };
+  }, []);
+  return state;
+}
+
 // --- The hook ---------------------------------------------------------------
 function useFlasher() {
   const { useState, useRef, useCallback, useEffect } = React;
@@ -56,6 +107,15 @@ function useFlasher() {
   const [conn, setConn] = useState("disconnected"); // disconnected|connecting|connected
   const [chip, setChip] = useState(null);
   const [parts, setParts] = useState(() => DEFAULT_PARTITIONS.map((p) => ({ ...p })));
+  const latestRelease = useLatestRelease();
+  useEffect(() => {
+    if (latestRelease.status !== "ok") return;
+    setParts((prev) => prev.map((p) =>
+      p.key === "firmware" && !p.displayFile  // only update if the user hasn't picked their own
+        ? { ...p, file: latestRelease.filename, bytes: latestRelease.bytes }
+        : p
+    ));
+  }, [latestRelease]);
   const [op, setOp] = useState("none");             // none|erasing|flashing|done|error
   const [progress, setProgress] = useState(null);   // {idx,name,addr,percent,done,total,speed,eta}
   const [log, setLog] = useState([
@@ -374,6 +434,7 @@ function useFlasher() {
   return {
     ports, port, setPort, baud, setBaud, conn, chip, parts, op, busy, progress, log,
     refreshPorts, connect, disconnect, togglePart, pickFile, erase, flash, cancel, sendRemote, reboot,
+    latestRelease,
     enabledCount: parts.filter((p) => p.enabled).length,
     totalBytes: parts.filter((p) => p.enabled).reduce((s, p) => s + p.bytes, 0),
   };

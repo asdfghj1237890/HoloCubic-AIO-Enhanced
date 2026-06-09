@@ -176,10 +176,14 @@ function StudioFlasher() {
                 <Icon d={ICON.bolt} size={20} fill />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>HoloCubic AIO 韌體 <span className="mono" style={{ color: "var(--accent)" }}>v2.6.7</span></div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>HoloCubic AIO 韌體 {fl.latestRelease.status === "ok" && <span className="mono" style={{ color: "var(--accent)" }}>v{fl.latestRelease.version}</span>}</div>
                 <div style={{ fontSize: 12, color: "var(--text-mute)" }}>{fl.enabledCount} 個分割區 · {fmtBytes(fl.totalBytes)} · 推薦給多數使用者</div>
               </div>
-              <span className="chip" style={{ background: "var(--panel)", color: "var(--ok)" }}><span className="dot live" />最新</span>
+              {fl.latestRelease.status === "ok"
+                ? <span className="chip" style={{ background: "var(--panel)", color: "var(--ok)" }}><span className="dot live" />最新</span>
+                : fl.latestRelease.status === "loading"
+                  ? <span className="chip" style={{ background: "var(--panel)" }}><span className="dot busy" />查詢中…</span>
+                  : <span className="chip" style={{ background: "var(--panel)" }} title={`無法查詢 GitHub (${fl.latestRelease.reason})`}><span className="dot" />離線</span>}
             </div>
             <button onClick={() => setAdv(!adv)} className="btn ghost" style={{ marginTop: "var(--s3)", fontSize: 12, height: 32 }}>
               {adv ? "▾ 收合進階分割區" : `▸ 進階：自訂 4 個分割區`}
