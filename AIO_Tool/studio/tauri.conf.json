@@ -29,8 +29,14 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "deb", "appimage"],
-    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "targets": ["nsis", "deb", "appimage", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
     "category": "DeveloperTool",
     "shortDescription": "HoloCubic AIO Studio",
     "longDescription": "Cross-platform flasher, settings, file manager and converter for the HoloCubic ESP32 toy.",

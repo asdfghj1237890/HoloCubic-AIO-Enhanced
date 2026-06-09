@@ -58,23 +58,27 @@ jobs:
           if-no-files-found: error
 
   build_tool:
+    # Studio (Tauri 2) bundle. Replaces the legacy `cargo build --bin aio-tool`
+    # egui packaging — Studio is the shipping UI as of this PR. Each OS produces
+    # the platform-native installer/image (NSIS / DMG / AppImage); the raw binary
+    # ships inside the bundle.
     name: build_tool (${{ matrix.target.os }})
     strategy:
       fail-fast: false
       matrix:
         target:
           - os: windows-latest
-            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows.exe
-            staged_relative_path: aio-tool.exe
-            shell: pwsh
+            bundle: nsis
+            bundle_glob: 'AIO_Tool/studio/target/release/bundle/nsis/*-setup.exe'
+            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows-setup.exe
           - os: macos-latest
-            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.tar.gz
-            staged_relative_path: aio-tool
-            shell: bash
+            bundle: dmg
+            bundle_glob: 'AIO_Tool/studio/target/release/bundle/dmg/*.dmg'
+            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.dmg
           - os: ubuntu-22.04
-            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.tar.gz
-            staged_relative_path: aio-tool
-            shell: bash
+            bundle: appimage
+            bundle_glob: 'AIO_Tool/studio/target/release/bundle/appimage/*.AppImage'
+            artifact_name: CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.AppImage
     runs-on: ${{ matrix.target.os }}
     outputs:
       version: ${{ steps.tool_version.outputs.value }}
@@ -82,17 +86,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install libudev-dev (Linux only)
+      - name: Install Linux deps (webkit2gtk for Tauri + libudev for serialport)
         if: matrix.target.os == 'ubuntu-22.04'
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libudev-dev
 
+      # Studio's rust-toolchain.toml pins stable (1.85+ for Tauri 2's edition2024
+      # transitive deps). Don't override.
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: 1.82.0
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: AIO_Tool
+          workspaces: AIO_Tool/studio
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version ^2.0 --locked
 
       - name: Extract tool version (Cargo.toml workspace.package.version)
         id: tool_version
@@ -105,34 +119,29 @@ jobs:
           fi
           echo "value=$version" >> $GITHUB_OUTPUT
 
-      - name: cargo build --release --bin aio-tool
-        working-directory: AIO_Tool
-        run: cargo build --release --bin aio-tool
+      # `cargo tauri build` without --no-default-features picks up the
+      # `custom-protocol` feature (default in studio/Cargo.toml) so the
+      # frontend assets are bundled into the binary instead of fetched from
+      # devUrl. Matches what tool-studio.yml's PR matrix runs.
+      - name: cargo tauri build (${{ matrix.target.bundle }})
+        working-directory: AIO_Tool/studio
+        run: cargo tauri build --bundles ${{ matrix.target.bundle }}
 
-      - name: Package tool artifact (Windows)
-        if: matrix.target.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $artifactDir = "release"
-          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
-          $src = "AIO_Tool\target\release\aio-tool.exe"
-          if (-not (Test-Path $src)) { throw "expected $src" }
-          Copy-Item -Path $src -Destination (Join-Path $artifactDir "${{ matrix.target.artifact_name }}") -Force
-
-      - name: Package tool artifact (Linux / macOS tar.gz)
-        if: matrix.target.os != 'windows-latest'
+      # Tauri emits "HoloCubic AIO Studio_X.Y.Z_<arch>-<format>.<ext>"
+      # (with a space + dynamic version). Rename to the stable per-tag scheme
+      # the release body table expects.
+      - name: Stage + rename bundle artifact
         shell: bash
         run: |
           mkdir -p release
-          src=AIO_Tool/target/release/aio-tool
-          if [ ! -x "$src" ]; then
-            echo "expected executable at $src" >&2
+          src=$(ls ${{ matrix.target.bundle_glob }} 2>/dev/null | head -1)
+          if [ -z "$src" ] || [ ! -f "$src" ]; then
+            echo "::error::No bundle found matching ${{ matrix.target.bundle_glob }}"
+            echo "--- target/release/bundle/ contents ---"
+            ls -la AIO_Tool/studio/target/release/bundle/ || true
             exit 1
           fi
-          mkdir -p stage
-          cp "$src" stage/aio-tool
-          chmod +x stage/aio-tool
-          tar -C stage -czf release/${{ matrix.target.artifact_name }} aio-tool
+          cp "$src" "release/${{ matrix.target.artifact_name }}"
 
       - name: Upload tool artifact
         uses: actions/upload-artifact@v4
@@ -192,22 +201,22 @@ jobs:
             | File | Flash address | Notes |
             |---|---|---|
             | `HoloCubic_AIO_firmware_${{ github.ref_name }}.bin` | `0x10000` | Application firmware (internal AIO_VERSION = `${{ needs.build_firmware.outputs.version }}`) |
-            | `CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows.exe` | — | Windows GUI flasher (Rust, unsigned — SmartScreen warning expected) |
-            | `CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.tar.gz` | — | macOS Apple-Silicon binary inside tar.gz (unsigned — Gatekeeper warning, right-click → Open on first launch) |
-            | `CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.tar.gz` | — | Linux x86_64 binary (requires `libudev` at runtime — install `libudev1` on Debian/Ubuntu, `systemd-libs` on Fedora) |
+            | `CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows-setup.exe` | — | Windows GUI flasher (Studio / Tauri 2 NSIS installer, unsigned — SmartScreen warning expected; uses the system WebView2 runtime, pre-installed on Win10 1803+ / Win11) |
+            | `CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.dmg` | — | macOS Apple-Silicon DMG (unsigned — Gatekeeper will require right-click → Open on first launch; uses the system WKWebView, no runtime install) |
+            | `CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.AppImage` | — | Linux x86_64 portable AppImage. Runtime needs `libwebkit2gtk-4.1` + `libudev1` — on Ubuntu 24.04+ both are present; older distros may need `sudo apt install libwebkit2gtk-4.1-0 libudev1`. `chmod +x` then double-click or run directly. |
             | `bootloader_qio_80m.bin` | `0x1000` | ESP32 second-stage bootloader |
             | `partitions.bin` | `0x8000` | Custom partition table (HoloCubic AIO layout) |
             | `boot_app0.bin` | `0xe000` | OTA boot selector |
 
-            For first-time flash, place all four `.bin` files at the addresses above (the Windows tool's Flasher tab can do this in one click).
+            For first-time flash, place all four `.bin` files at the addresses above (the tool's Flasher tab can do this in one click).
             See [dist/README.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/dist/README.md) for esptool CLI usage.
 
             Internal tool version: `${{ needs.build_tool.outputs.version }}` (from `AIO_Tool/Cargo.toml`).
           files: |
             release/HoloCubic_AIO_firmware_${{ github.ref_name }}.bin
-            release/CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows.exe
-            release/CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.tar.gz
-            release/CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.tar.gz
+            release/CubicAIO_Tool-${{ github.ref_name }}-x86_64-windows-setup.exe
+            release/CubicAIO_Tool-${{ github.ref_name }}-aarch64-macos.dmg
+            release/CubicAIO_Tool-${{ github.ref_name }}-x86_64-linux.AppImage
             release/bootloader_qio_80m.bin
             release/partitions.bin
             release/boot_app0.bin

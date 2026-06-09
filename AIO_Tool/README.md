@@ -6,8 +6,8 @@ Cross-platform GUI for the HoloCubic AIO firmware — flashing, settings, file m
 
 | Frontend | Path | Role | Stack |
 |---|---|---|---|
-| **Studio** | `AIO_Tool/studio/` | **Primary dev/UI target** — recent feature work (B15 Settings, single-session writes, latest-release fetch) lands here first. The intended release frontend. | Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust (1.85+) |
-| **egui binary** (`aio-tool`) | `AIO_Tool/crates/aio-tool/` | Legacy frontend — **still what `release.yml` packages** and uploads to GitHub Releases until the Studio bundle pipeline is wired in. | Rust 1.82 + egui 0.29 + eframe |
+| **Studio** | `AIO_Tool/studio/` | **The shipping UI** — what `release.yml` packages as NSIS / DMG / AppImage for every tag. Recent feature work (B15 Settings, single-session writes, latest-release fetch) lives here. | Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust (1.85+) |
+| **egui binary** (`aio-tool`) | `AIO_Tool/crates/aio-tool/` | Legacy frontend, kept in-tree for backend-crate cross-validation and as a fallback dev surface. **Not shipped** — `tool-rust.yml` still PR-tests it but no release artefact. | Rust 1.82 + egui 0.29 + eframe |
 
 Both share the 5 backend crates (`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`).
 
