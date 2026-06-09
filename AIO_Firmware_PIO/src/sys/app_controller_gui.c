@@ -10,6 +10,9 @@
 // types like `String` further down).
 extern SemaphoreHandle_t lvgl_mutex;
 
+#define LVGL_LOCK()   xSemaphoreTake(lvgl_mutex, portMAX_DELAY)
+#define LVGL_UNLOCK() xSemaphoreGive(lvgl_mutex)
+
 void aio_lvgl_aniend_wait(void)
 {
     // Each iteration: take the lvgl mutex, advance one tick of the LVGL
@@ -19,10 +22,10 @@ void aio_lvgl_aniend_wait(void)
     // mutex re-acquisition.
     while (lv_anim_count_running())
     {
-        if (pdTRUE == xSemaphoreTake(lvgl_mutex, portMAX_DELAY))
+        if (pdTRUE == LVGL_LOCK())
         {
             lv_task_handler();
-            xSemaphoreGive(lvgl_mutex);
+            LVGL_UNLOCK();
         }
         vTaskDelay(1);
     }
@@ -44,6 +47,12 @@ LV_FONT_DECLARE(lv_font_montserrat_24);
 
 void app_control_gui_init(void)
 {
+    // All LVGL state mutation here happens under the global mutex — the
+    // Display task may already be running lv_timer_handler() in parallel
+    // by this point in setup() (see HoloCubic_AIO.cpp). Without the lock
+    // the style+object setup can race with a flush in flight and the
+    // launcher screen comes up with stale framebuffer content.
+    LVGL_LOCK();
     if (NULL != app_scr)
     {
         lv_obj_clean(app_scr);
@@ -77,28 +86,66 @@ void app_control_gui_init(void)
     lv_obj_set_size(app_scr_t, 240, 240);
     lv_obj_align(app_scr_t, LV_ALIGN_CENTER, 0, 0);
     lv_scr_load(app_scr_t);
+    LVGL_UNLOCK();
 }
 
 void app_control_gui_release(void)
 {
+    LVGL_LOCK();
     if (NULL != app_scr)
     {
         lv_obj_clean(app_scr);
         app_scr = NULL;
     }
+    LVGL_UNLOCK();
 }
 
 void display_app_scr_init(const void *src_img_path, const char *app_name)
 {
+    // Whole body under the mutex — touches lv_scr_act(), lv_obj_clean,
+    // lv_img_create / lv_label_create / *_set_src / *_set_text / align /
+    // lv_scr_load_anim. Any of those can corrupt the dirty-region list
+    // or the active-screen pointer if the Display task is flushing.
+    LVGL_LOCK();
     lv_obj_t *act_obj = lv_scr_act(); // 获取当前活动页
     if (act_obj == app_scr)
     {
         // 防止一些不适用lvgl的APP退出 造成画面在无其他动作情况下无法绘制更新
         lv_scr_load_anim(app_scr, LV_SCR_LOAD_ANIM_NONE, 300, 300, false);
+        LVGL_UNLOCK();
         return;
     }
 
-    lv_obj_clean(act_obj); // 清空此前页面
+    lv_obj_clean(act_obj); // 清空此前页面 (the exited app's screen)
+
+    // CRITICAL LEAK FIX (ghosting root cause): delete the previously-tracked
+    // launcher widgets on app_scr before creating new ones.
+    //
+    // AppController::app_exit() calls app_control_display_scr with force=true,
+    // which lands here. The original code overwrote pre_app_image /
+    // pre_app_name with freshly-created widgets without freeing the previous
+    // ones — one icon + label leaked per app entry/exit cycle, all stacked
+    // at LV_ALIGN_CENTER on app_scr. The slide animation only deleted the
+    // most recently tracked widget, so leaked ones accumulated forever as
+    // an immortal background ghost (typically Stockmarket — the default
+    // auto_start_app for fresh installs).
+    //
+    // Do NOT use lv_obj_clean(app_scr) — that would also delete app_scr_t
+    // (the workaround child layer created in app_control_gui_init), which
+    // is currently the lv_scr_load'd active screen on first boot; deleting
+    // it crashes LVGL on the next render tick.
+    //
+    // After a slide, pre_app_image and now_app_image alias the same widget
+    // (the slide animation does `pre_app_image = now_app_image`), so we
+    // only delete via the pre_* pointers and NULL all four to clear any
+    // dangling now_* alias.
+    if (NULL != pre_app_image) lv_obj_del(pre_app_image);
+    if (NULL != pre_app_name)  lv_obj_del(pre_app_name);
+    pre_app_image = NULL;
+    pre_app_name  = NULL;
+    now_app_image = NULL;
+    now_app_name  = NULL;
+
     pre_app_image = lv_img_create(app_scr);
     pre_img_path = src_img_path; // 保存历史
     lv_img_set_src(pre_app_image, src_img_path);
@@ -112,6 +159,7 @@ void display_app_scr_init(const void *src_img_path, const char *app_name)
     lv_obj_align_to(pre_app_name, pre_app_image, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
     lv_scr_load_anim(app_scr, LV_SCR_LOAD_ANIM_NONE, 300, 300, false);
+    LVGL_UNLOCK();
 }
 
 void app_control_display_scr(const void *src_img, const char *app_name, lv_scr_load_anim_t anim_type, bool force)
@@ -151,6 +199,13 @@ void app_control_display_scr(const void *src_img, const char *app_name, lv_scr_l
         old_end_x = -120 - 64;
     }
 
+    // Phase 1: stage the new icon + label and configure both animations
+    // under the lock. Without this, the Display task can flush mid-create
+    // and the dirty-region accounting goes inconsistent — the post-anim
+    // lv_obj_del's invalidation never lands on the previous icon's bbox.
+    static lv_anim_t now_app;
+    static lv_anim_t pre_app;
+    LVGL_LOCK();
     now_app_image = lv_img_create(app_scr);
     lv_img_set_src(now_app_image, src_img);
     lv_obj_align(now_app_image, LV_ALIGN_CENTER, 0, -20);
@@ -164,7 +219,6 @@ void app_control_display_scr(const void *src_img, const char *app_name, lv_scr_l
     pre_app_name = now_app_name;
     lv_obj_align_to(now_app_name, now_app_image, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
-    static lv_anim_t now_app;
     lv_anim_init(&now_app);
     lv_anim_set_exec_cb(&now_app, (lv_anim_exec_xcb_t)lv_obj_set_x);
     lv_anim_set_var(&now_app, now_app_image);
@@ -173,7 +227,6 @@ void app_control_display_scr(const void *src_img, const char *app_name, lv_scr_l
     lv_anim_set_time(&now_app, duration);
     lv_anim_set_path_cb(&now_app, lv_anim_path_linear); // 设置一个动画的路径
 
-    static lv_anim_t pre_app;
     lv_anim_init(&pre_app);
     lv_anim_set_exec_cb(&pre_app, (lv_anim_exec_xcb_t)lv_obj_set_x);
     lv_anim_set_var(&pre_app, pre_app_image);
@@ -184,9 +237,22 @@ void app_control_display_scr(const void *src_img, const char *app_name, lv_scr_l
 
     lv_anim_start(&now_app);
     lv_anim_start(&pre_app);
-    ANIEND_WAIT
-    lv_task_handler(); // 消除 ANIEND_WAIT 执行完后依然"卡顿一下"的问题
+    LVGL_UNLOCK();
 
+    // Phase 2: drive the LVGL pipeline forward while the slide animates.
+    // aio_lvgl_aniend_wait takes/releases the mutex per iteration so the
+    // Display task can still flush rendered chunks to the panel.
+    ANIEND_WAIT
+
+    // Phase 3: post-anim cleanup. The bare lv_task_handler + lv_obj_del
+    // here used to run without the mutex — that's exactly the window
+    // where the previous icon's "delete from app_scr" invalidation
+    // overlapped a Display-task flush and got dropped. Wrap both under
+    // the lock so the dirty rect for the old icon's bbox is fully
+    // accounted for before the next iteration of the Display task.
+    LVGL_LOCK();
+    lv_task_handler(); // 消除 ANIEND_WAIT 执行完后依然"卡顿一下"的问题
     lv_obj_del(pre_app_image); // 删除原先的图像
     pre_app_image = now_app_image;
+    LVGL_UNLOCK();
 }
