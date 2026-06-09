@@ -3,8 +3,18 @@ name: Regression
 on:
   push:
     branches: [main]
+    paths:
+      - 'AIO_Firmware_PIO/**'
+      - 'lv_simulater_platformio/**'
+      - 'test/**'
+      - '.github/workflows/regression.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'AIO_Firmware_PIO/**'
+      - 'lv_simulater_platformio/**'
+      - 'test/**'
+      - '.github/workflows/regression.yml'
   workflow_dispatch:
     inputs:
       mode:
