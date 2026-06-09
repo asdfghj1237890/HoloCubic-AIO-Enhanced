@@ -405,16 +405,25 @@ static void update_stock_data()
                 return;
             }
             
-            // On hardware ESP32Time honours the strftime format (gives a 16-char
-            // "YYYY-MM-DD HH:MM"); the host harness stub in test/stubs/ESP32Time.h
-            // ignores the format arg and always returns 19-char
-            // "1970-01-01 00:00:00". Truncate after the minute so the displayed
-            // string is bounded and goldens stay deterministic.
-            String datetime = rtc.getDateTime("%Y-%m-%d %H:%M");
+            // Compact "MM-DD HH:MM" — drops the year so the datetime fits
+            // beside the larger mont_24 C-row value at 240px width.
+            // On hardware ESP32Time honours the strftime format; the host
+            // harness stub in test/stubs/ESP32Time.h ignores the format arg
+            // and always returns 19-char "1970-01-01 00:00:00", so we
+            // manually trim the leading year ("1970-") and trailing seconds
+            // (":SS") to land on the same 11-char shape both targets render.
+            String datetime = rtc.getDateTime("%m-%d %H:%M");
+            const char *dt_c = datetime.c_str();
+            // Strip the leading "YYYY-" prefix if the stub fell back to its
+            // canonical 19-char form (real hardware skips this branch since
+            // strftime already gave us 11 chars).
+            if (datetime.length() >= 16 && dt_c[4] == '-' && dt_c[7] == '-') {
+                dt_c += 5; // skip "1970-"
+            }
             snprintf(run_data->stockdata.datetime_str,
                      sizeof(run_data->stockdata.datetime_str),
-                     "%s", datetime.c_str());
-            run_data->stockdata.datetime_str[16] = '\0';
+                     "%s", dt_c);
+            run_data->stockdata.datetime_str[11] = '\0';
 
             // Calculate change values
             run_data->stockdata.ChgValue = run_data->stockdata.NowQuo - run_data->stockdata.CloseQuo;
