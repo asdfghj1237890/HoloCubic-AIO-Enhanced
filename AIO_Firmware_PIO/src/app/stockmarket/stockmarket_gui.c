@@ -2,25 +2,44 @@
 
 #include "lvgl.h"
 
+#include <stdio.h>
+#include <string.h>
+
 LV_FONT_DECLARE(ch_font20);
+LV_FONT_DECLARE(lv_font_ibmplex_64);
 
 static lv_obj_t *stockmarket_gui = NULL;
 
 static lv_obj_t *header_label   = NULL;  // "AAPL - Apple Inc."
 static lv_obj_t *divider_top    = NULL;  // lv_line, y=40
-static lv_obj_t *price_label    = NULL;  // big price, e.g. "175.50"
-static lv_obj_t *arrow_img      = NULL;  // up.png / down.png
-static lv_obj_t *chg_pct_label  = NULL;  // "+1.33%"
-static lv_obj_t *chg_value_label = NULL; // "+2.30"
-static lv_obj_t *divider_bot    = NULL;  // lv_line, y=168
-static lv_obj_t *hi_lo_label    = NULL;  // "H 176.20  L 173.42"
+static lv_obj_t *arrow_head_label = NULL; // large LV_SYMBOL_UP/DOWN
+static lv_obj_t *arrow_shaft      = NULL; // filled shaft rectangle
+static lv_obj_t *price_int_label = NULL; // big price integer, e.g. "175"
+static lv_obj_t *price_dec_label = NULL; // smaller price decimal, e.g. ".50"
+static lv_obj_t *chg_pct_label  = NULL;  // "+1.33%", emphasized
+static lv_obj_t *chg_value_label = NULL; // "+2.30", visually paired with %
+static lv_obj_t *divider_bot    = NULL;  // lv_line, y=164
+static lv_obj_t *hi_lo_label    = NULL;  // "H 176.20 | L 173.42"
 static lv_obj_t *close_label    = NULL;  // "C 174.18"
+static lv_obj_t *datetime_label = NULL;  // "2026-06-09 15:30"
 
 static lv_style_t default_style;
 static lv_style_t header_style;
-static lv_style_t price_style;
+static lv_style_t arrow_style;
+static lv_style_t price_int_style;
+static lv_style_t price_dec_style;
 static lv_style_t change_style;
+static lv_style_t change_value_style;
 static lv_style_t secondary_style;
+static lv_style_t datetime_style;
+
+#if LV_FONT_MONTSERRAT_48
+#define STOCKMARKET_ARROW_FONT (&lv_font_montserrat_48)
+#elif LV_FONT_MONTSERRAT_40
+#define STOCKMARKET_ARROW_FONT (&lv_font_montserrat_40)
+#else
+#define STOCKMARKET_ARROW_FONT LV_FONT_DEFAULT
+#endif
 
 void stockmarket_gui_init(void)
 {
@@ -32,23 +51,43 @@ void stockmarket_gui_init(void)
     lv_style_set_text_color(&header_style, lv_color_hex(0xffb84d));
     lv_style_set_text_font(&header_style, &ch_font20);
 
-    lv_style_init(&price_style);
-    lv_style_set_text_opa(&price_style, LV_OPA_COVER);
-    lv_style_set_text_font(&price_style, &lv_font_montserrat_48);
+    lv_style_init(&arrow_style);
+    lv_style_set_text_opa(&arrow_style, LV_OPA_COVER);
+    lv_style_set_text_font(&arrow_style, STOCKMARKET_ARROW_FONT);
+    // color set per-call in display_stockmarket
+
+    lv_style_init(&price_int_style);
+    lv_style_set_text_opa(&price_int_style, LV_OPA_COVER);
+    lv_style_set_text_font(&price_int_style, &lv_font_ibmplex_64);
+    // color set per-call in display_stockmarket
+
+    lv_style_init(&price_dec_style);
+    lv_style_set_text_opa(&price_dec_style, LV_OPA_COVER);
+    lv_style_set_text_font(&price_dec_style, &lv_font_montserrat_30);
     // color set per-call in display_stockmarket
 
     lv_style_init(&change_style);
     lv_style_set_text_opa(&change_style, LV_OPA_COVER);
-    lv_style_set_text_font(&change_style, &lv_font_montserrat_20);
+    lv_style_set_text_font(&change_style, &lv_font_montserrat_24);
+    // color set per-call in display_stockmarket
+
+    lv_style_init(&change_value_style);
+    lv_style_set_text_opa(&change_value_style, LV_OPA_COVER);
+    lv_style_set_text_font(&change_value_style, &lv_font_montserrat_20);
     // color set per-call in display_stockmarket
 
     lv_style_init(&secondary_style);
     lv_style_set_text_opa(&secondary_style, LV_OPA_COVER);
     lv_style_set_text_color(&secondary_style, lv_color_hex(0xaaaaaa));
     lv_style_set_text_font(&secondary_style, &lv_font_montserrat_20);
+
+    lv_style_init(&datetime_style);
+    lv_style_set_text_opa(&datetime_style, LV_OPA_COVER);
+    lv_style_set_text_color(&datetime_style, lv_color_hex(0x777777));
+    lv_style_set_text_font(&datetime_style, &lv_font_montserrat_14);
 }
 
-static const lv_point_t divider_points[] = {{0, 0}, {240, 0}};
+static const lv_point_t divider_points[] = {{0, 0}, {239, 0}};
 
 void display_stockmarket_init(void)
 {
@@ -69,57 +108,88 @@ void display_stockmarket_init(void)
     header_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(header_label, &header_style, LV_STATE_DEFAULT);
     lv_label_set_long_mode(header_label, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(header_label, 224);
+    lv_obj_set_width(header_label, 216);
     lv_label_set_text(header_label, "--");
-    lv_obj_align(header_label, LV_ALIGN_TOP_LEFT, 8, 8);
+    lv_obj_align(header_label, LV_ALIGN_TOP_LEFT, 12, 8);
 
     // Top divider (gold-dim, y=40, full width)
     divider_top = lv_line_create(stockmarket_gui);
     lv_line_set_points(divider_top, divider_points, 2);
-    lv_obj_set_style_line_color(divider_top, lv_color_hex(0x806124), LV_PART_MAIN);
-    lv_obj_set_style_line_width(divider_top, 1, LV_PART_MAIN);
+    lv_obj_set_style_line_color(divider_top, lv_color_hex(0xa07830), LV_PART_MAIN);
+    lv_obj_set_style_line_width(divider_top, 2, LV_PART_MAIN);
     lv_obj_align(divider_top, LV_ALIGN_TOP_LEFT, 0, 40);
 
-    // Price (big, color set per-call)
-    price_label = lv_label_create(stockmarket_gui);
-    lv_obj_add_style(price_label, &price_style, LV_STATE_DEFAULT);
-    lv_label_set_text(price_label, "0.00");
-    lv_obj_align(price_label, LV_ALIGN_TOP_LEFT, 12, 60);
+    // Direction arrow (big, color set per-call)
+    arrow_head_label = lv_label_create(stockmarket_gui);
+    lv_obj_add_style(arrow_head_label, &arrow_style, LV_STATE_DEFAULT);
+    lv_label_set_text(arrow_head_label, LV_SYMBOL_UP);
+    lv_obj_align(arrow_head_label, LV_ALIGN_TOP_LEFT, 12, 54);
 
-    // Arrow image
-    arrow_img = lv_img_create(stockmarket_gui);
-    lv_obj_align(arrow_img, LV_ALIGN_TOP_LEFT, 168, 72);
+    arrow_shaft = lv_obj_create(stockmarket_gui);
+    lv_obj_set_size(arrow_shaft, 6, 44);
+    lv_obj_set_style_radius(arrow_shaft, 0, LV_PART_MAIN);
+    lv_obj_set_style_border_width(arrow_shaft, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(arrow_shaft, 0, LV_PART_MAIN);
 
-    // Change % (color set per-call) — to the right of arrow, upper
+    // Price (big integer + smaller decimal, color set per-call)
+    price_int_label = lv_label_create(stockmarket_gui);
+    lv_obj_add_style(price_int_label, &price_int_style, LV_STATE_DEFAULT);
+    lv_label_set_text(price_int_label, "0");
+    lv_obj_align(price_int_label, LV_ALIGN_TOP_LEFT, 72, 54);
+
+    price_dec_label = lv_label_create(stockmarket_gui);
+    lv_obj_add_style(price_dec_label, &price_dec_style, LV_STATE_DEFAULT);
+    lv_label_set_text(price_dec_label, ".00");
+    // ibmplex_64's bounding box has noticeable descender padding below the
+    // glyph baseline; LV_ALIGN_OUT_RIGHT_BOTTOM aligns boxes, not baselines,
+    // so dec ends up visually below the integer's bottom. Negative y_offset
+    // lifts dec up so its glyph bottom matches the integer's glyph bottom.
+    lv_obj_align_to(price_dec_label, price_int_label, LV_ALIGN_OUT_RIGHT_BOTTOM, 4, -28);
+
+    // Change % (color set per-call) — right-aligned, upper row
     chg_pct_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(chg_pct_label, &change_style, LV_STATE_DEFAULT);
     lv_label_set_text(chg_pct_label, "+0.00%");
-    lv_obj_align(chg_pct_label, LV_ALIGN_TOP_LEFT, 200, 70);
+    lv_obj_align(chg_pct_label, LV_ALIGN_TOP_LEFT, 52, 128);
 
-    // Change absolute value — below change %
+    // Change absolute value — right-aligned, bottom-aligned with chg_pct.
+    // chg_pct is mont_24 (~26px tall) at y=128 → bottom y=154; chg_value
+    // is mont_20 (~22px tall) so its top sits at y=132 to share that
+    // bottom edge. X nudged left so it visually sits closer to chg_pct.
     chg_value_label = lv_label_create(stockmarket_gui);
-    lv_obj_add_style(chg_value_label, &change_style, LV_STATE_DEFAULT);
+    lv_obj_add_style(chg_value_label, &change_value_style, LV_STATE_DEFAULT);
     lv_label_set_text(chg_value_label, "+0.00");
-    lv_obj_align(chg_value_label, LV_ALIGN_TOP_LEFT, 200, 102);
+    lv_obj_align(chg_value_label, LV_ALIGN_TOP_RIGHT, -40, 132);
 
-    // Bottom divider (grey, y=168)
+    // Bottom divider (grey, y=164)
     divider_bot = lv_line_create(stockmarket_gui);
     lv_line_set_points(divider_bot, divider_points, 2);
     lv_obj_set_style_line_color(divider_bot, lv_color_hex(0x444444), LV_PART_MAIN);
-    lv_obj_set_style_line_width(divider_bot, 1, LV_PART_MAIN);
-    lv_obj_align(divider_bot, LV_ALIGN_TOP_LEFT, 0, 168);
+    lv_obj_set_style_line_width(divider_bot, 2, LV_PART_MAIN);
+    lv_obj_align(divider_bot, LV_ALIGN_TOP_LEFT, 0, 164);
 
     // High / Low row
     hi_lo_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(hi_lo_label, &secondary_style, LV_STATE_DEFAULT);
-    lv_label_set_text(hi_lo_label, "H 0.00  L 0.00");
-    lv_obj_align(hi_lo_label, LV_ALIGN_TOP_LEFT, 12, 184);
+    lv_label_set_recolor(hi_lo_label, true);
+    lv_label_set_text(hi_lo_label, "#ffb84d H# 0.00 | #ffb84d L# 0.00");
+    lv_obj_align(hi_lo_label, LV_ALIGN_TOP_LEFT, 12, 170);
 
     // Previous Close row
     close_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(close_label, &secondary_style, LV_STATE_DEFAULT);
-    lv_label_set_text(close_label, "C 0.00");
-    lv_obj_align(close_label, LV_ALIGN_TOP_LEFT, 12, 210);
+    lv_label_set_recolor(close_label, true);
+    lv_label_set_text(close_label, "#ffb84d C# 0.00");
+    lv_obj_align(close_label, LV_ALIGN_TOP_LEFT, 12, 196);
+
+    // Last update datetime — right-aligned on the SAME row as close_label.
+    // On harness, ESP32Time stub returns 19-char "1970-01-01 00:00:00" so
+    // text sits tight against the C value; on hardware the strftime format
+    // "%Y/%m/%d %H:%M" is only 16 chars and leaves comfortable spacing.
+    datetime_label = lv_label_create(stockmarket_gui);
+    lv_obj_add_style(datetime_label, &datetime_style, LV_STATE_DEFAULT);
+    lv_label_set_text(datetime_label, "--");
+    lv_obj_align(datetime_label, LV_ALIGN_TOP_RIGHT, -12, 200);
 
     lv_scr_load(stockmarket_gui);
 }
@@ -154,18 +224,57 @@ void display_stockmarket(struct StockMarket stockInfo, lv_scr_load_anim_t anim_t
     lv_color_t dir_color = (stockInfo.updownflag == 1)
         ? lv_color_hex(0x22c55e)
         : lv_color_hex(0xef4444);
-    lv_obj_set_style_text_color(price_label,     dir_color, LV_PART_MAIN);
+    const char *dir_symbol = (stockInfo.updownflag == 1) ? LV_SYMBOL_UP : LV_SYMBOL_DOWN;
+    lv_label_set_text(arrow_head_label, dir_symbol);
+    lv_obj_set_style_text_color(arrow_head_label, dir_color, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(arrow_shaft, dir_color, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(arrow_shaft, LV_OPA_COVER, LV_PART_MAIN);
+
+    if (stockInfo.updownflag == 1) {
+        // Up: head on top, shaft auto-centered below.
+        lv_obj_align(arrow_head_label, LV_ALIGN_TOP_LEFT, 12, 54);
+        lv_obj_update_layout(arrow_head_label);
+        lv_obj_align_to(arrow_shaft, arrow_head_label, LV_ALIGN_OUT_BOTTOM_MID, 0, -32);
+    } else {
+        // Down: shaft on top, head auto-centered below it.
+        lv_obj_align(arrow_shaft, LV_ALIGN_TOP_LEFT, 0, 54);
+        lv_obj_align(arrow_head_label, LV_ALIGN_TOP_LEFT, 12, 92);
+        lv_obj_update_layout(arrow_head_label);
+        lv_obj_align_to(arrow_shaft, arrow_head_label, LV_ALIGN_OUT_TOP_MID, 0, 32);
+    }
+
+    lv_obj_set_style_text_color(price_int_label, dir_color, LV_PART_MAIN);
+    lv_obj_set_style_text_color(price_dec_label, dir_color, LV_PART_MAIN);
     lv_obj_set_style_text_color(chg_pct_label,   dir_color, LV_PART_MAIN);
     lv_obj_set_style_text_color(chg_value_label, dir_color, LV_PART_MAIN);
-    lv_img_set_src(arrow_img, stockInfo.updownflag == 1 ? &up : &down);
 
     // Numeric values
-    lv_label_set_text_fmt(price_label,     "%.2f",    stockInfo.NowQuo);
+    char price_buf[16];
+    snprintf(price_buf, sizeof(price_buf), "%.2f", stockInfo.NowQuo);
+    char *dot = strchr(price_buf, '.');
+    if (dot) {
+        *dot = '\0';
+        lv_label_set_text(price_int_label, price_buf);
+        char dec_buf[8];
+        snprintf(dec_buf, sizeof(dec_buf), ".%s", dot + 1);
+        lv_label_set_text(price_dec_label, dec_buf);
+    } else {
+        lv_label_set_text(price_int_label, price_buf);
+        lv_label_set_text(price_dec_label, ".00");
+    }
+    lv_obj_update_layout(price_int_label);
+    // ibmplex_64's bounding box has noticeable descender padding below the
+    // glyph baseline; LV_ALIGN_OUT_RIGHT_BOTTOM aligns boxes, not baselines,
+    // so dec ends up visually below the integer's bottom. Negative y_offset
+    // lifts dec up so its glyph bottom matches the integer's glyph bottom.
+    lv_obj_align_to(price_dec_label, price_int_label, LV_ALIGN_OUT_RIGHT_BOTTOM, 4, -28);
     lv_label_set_text_fmt(chg_pct_label,   "%+.2f%%", stockInfo.ChgPercent);
     lv_label_set_text_fmt(chg_value_label, "%+.2f",   stockInfo.ChgValue);
-    lv_label_set_text_fmt(hi_lo_label, "H %.2f  L %.2f",
+    lv_label_set_text_fmt(hi_lo_label, "#ffb84d H# %.2f | #ffb84d L# %.2f",
                           stockInfo.MaxQuo, stockInfo.MinQuo);
-    lv_label_set_text_fmt(close_label, "C %.2f", stockInfo.CloseQuo);
+    lv_label_set_text_fmt(close_label, "#ffb84d C# %.2f", stockInfo.CloseQuo);
+    lv_label_set_text(datetime_label,
+                      stockInfo.datetime_str[0] != '\0' ? stockInfo.datetime_str : "--");
 }
 
 void stockmarket_gui_del(void)
@@ -181,12 +290,15 @@ void stockmarket_gui_del(void)
         stockmarket_gui   = NULL;
         header_label      = NULL;
         divider_top       = NULL;
-        price_label       = NULL;
-        arrow_img         = NULL;
+        arrow_head_label  = NULL;
+        arrow_shaft       = NULL;
+        price_int_label   = NULL;
+        price_dec_label   = NULL;
         chg_pct_label     = NULL;
         chg_value_label   = NULL;
         divider_bot       = NULL;
         hi_lo_label       = NULL;
         close_label       = NULL;
+        datetime_label    = NULL;
     }
 }

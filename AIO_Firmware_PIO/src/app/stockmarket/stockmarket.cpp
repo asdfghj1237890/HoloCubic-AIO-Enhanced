@@ -4,6 +4,7 @@
 #include "../../common.h"
 #include "../../http_util.h"
 #include "ArduinoJson.h"
+#include "ESP32Time.h"
 
 // STOCKmarket configuration for persistence
 #define B_CONFIG_PATH "/stockmarket.cfg"
@@ -68,6 +69,7 @@ struct MyHttpResult
 
 static B_Config cfg_data;
 static StockmarketAppRunData *run_data = NULL;
+static ESP32Time rtc;
 
 // Build stock symbol based on market type
 static String buildStockSymbol(const String& symbol, const String& market)
@@ -139,6 +141,7 @@ static int stockmarket_init(AppController *sys)
     run_data->stockdata.updownflag = 1;
     run_data->stockdata.symbol[0]  = '\0';
     run_data->stockdata.company[0] = '\0';
+    run_data->stockdata.datetime_str[0] = '\0';
     run_data->refresh_status = 0;
     run_data->stockdata.tradvolume = 0;
     run_data->stockdata.turnover = 0;
@@ -402,6 +405,17 @@ static void update_stock_data()
                 return;
             }
             
+            // On hardware ESP32Time honours the strftime format (gives a 16-char
+            // "YYYY-MM-DD HH:MM"); the host harness stub in test/stubs/ESP32Time.h
+            // ignores the format arg and always returns 19-char
+            // "1970-01-01 00:00:00". Truncate after the minute so the displayed
+            // string is bounded and goldens stay deterministic.
+            String datetime = rtc.getDateTime("%Y-%m-%d %H:%M");
+            snprintf(run_data->stockdata.datetime_str,
+                     sizeof(run_data->stockdata.datetime_str),
+                     "%s", datetime.c_str());
+            run_data->stockdata.datetime_str[16] = '\0';
+
             // Calculate change values
             run_data->stockdata.ChgValue = run_data->stockdata.NowQuo - run_data->stockdata.CloseQuo;
             run_data->stockdata.ChgPercent = (run_data->stockdata.CloseQuo != 0) 

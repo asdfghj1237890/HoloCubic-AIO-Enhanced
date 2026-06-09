@@ -14,6 +14,7 @@ struct StockMarket
     unsigned int updownflag;    //升降标志 1：上涨  0:下跌
     char symbol[10];            //股票代号 (e.g. AAPL, 601126, 0700)
     char company[24];           //公司名 (CJK or Latin)
+    char datetime_str[20];      //Last update time (YYYY-MM-DD HH:MM[:SS])
     float tradvolume;           //成交量 (kept; not currently displayed)
     float turnover;             //成交额 (kept; not currently displayed)
 };
