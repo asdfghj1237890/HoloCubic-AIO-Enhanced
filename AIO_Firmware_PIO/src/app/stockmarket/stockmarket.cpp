@@ -6,6 +6,13 @@
 #include "ArduinoJson.h"
 #include "ESP32Time.h"
 
+// Taobao timestamp endpoint — same one weather/anniversary use to bootstrap
+// the RTC without needing a configTime/SNTP setup. The +28800000 ms shifts
+// the UTC epoch into UTC+8 (CST) which matches the firmware's default tz
+// and what weather expects.
+#define STOCK_TIME_API "https://acs.m.taobao.com/gw/mtop.common.getTimestamp/"
+#define STOCK_TZ_OFFSET_MS (28800000LL)
+
 // STOCKmarket configuration for persistence
 #define B_CONFIG_PATH "/stockmarket.cfg"
 struct B_Config
@@ -405,25 +412,40 @@ static void update_stock_data()
                 return;
             }
             
-            // Compact "MM-DD HH:MM" — drops the year so the datetime fits
-            // beside the larger mont_24 C-row value at 240px width.
-            // On hardware ESP32Time honours the strftime format; the host
-            // harness stub in test/stubs/ESP32Time.h ignores the format arg
-            // and always returns 19-char "1970-01-01 00:00:00", so we
-            // manually trim the leading year ("1970-") and trailing seconds
-            // (":SS") to land on the same 11-char shape both targets render.
-            String datetime = rtc.getDateTime("%m-%d %H:%M");
-            const char *dt_c = datetime.c_str();
-            // Strip the leading "YYYY-" prefix if the stub fell back to its
-            // canonical 19-char form (real hardware skips this branch since
-            // strftime already gave us 11 chars).
-            if (datetime.length() >= 16 && dt_c[4] == '-' && dt_c[7] == '-') {
-                dt_c += 5; // skip "1970-"
+            // Bootstrap the RTC from Taobao's timestamp endpoint — same
+            // pattern weather + anniversary use. Cheap (1 sec HTTP GET) and
+            // avoids needing a configTime/SNTP setup at firmware boot. If
+            // the fetch fails we still get whatever the RTC currently holds
+            // (boot epoch ~"01-01 00:00" on cold start), which is bad but
+            // not crashy — and the next update_stock_data tick retries.
+            String ts_payload;
+            int ts_code = http_fetch_string(STOCK_TIME_API, ts_payload, 1500);
+            if (ts_code == HTTP_CODE_OK)
+            {
+                int t_idx = ts_payload.indexOf("\"t\":\"");
+                if (t_idx >= 0)
+                {
+                    t_idx += 5;
+                    int t_end = ts_payload.indexOf("\"", t_idx);
+                    if (t_end > t_idx)
+                    {
+                        long long ms = atoll(ts_payload.substring(t_idx, t_end).c_str())
+                                       + STOCK_TZ_OFFSET_MS;
+                        rtc.setTime(ms / 1000, 0);
+                    }
+                }
             }
+
+            // Compact "MM-DD HH:MM". Must use getTime(String) — getDateTime
+            // takes a `bool mode` (NOT a format string), so a const char*
+            // implicitly converts to `true` and we get a long-form date
+            // like "Thursday, January 1 1970 00:00:00" which then truncates
+            // to "Thursday, J" in the buffer. getTime(String) is the right
+            // strftime-format-string entry point.
+            String datetime = rtc.getTime(String("%m-%d %H:%M"));
             snprintf(run_data->stockdata.datetime_str,
                      sizeof(run_data->stockdata.datetime_str),
-                     "%s", dt_c);
-            run_data->stockdata.datetime_str[11] = '\0';
+                     "%s", datetime.c_str());
 
             // Calculate change values
             run_data->stockdata.ChgValue = run_data->stockdata.NowQuo - run_data->stockdata.CloseQuo;
