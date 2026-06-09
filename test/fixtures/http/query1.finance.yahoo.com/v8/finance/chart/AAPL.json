@@ -4,6 +4,7 @@
       {
         "meta": {
           "symbol": "AAPL",
+          "shortName": "Apple Inc.",
           "regularMarketPrice": 175.50,
           "chartPreviousClose": 173.20
         },
