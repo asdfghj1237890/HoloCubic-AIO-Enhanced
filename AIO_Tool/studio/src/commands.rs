@@ -146,12 +146,29 @@ pub fn list_ports() -> Vec<SerialPortInfo> {
         .unwrap_or_default()
 }
 
-/// Open a serial port to the ESP32 and read back its chip identity.
+/// Open a serial port to the ESP32, read back its chip identity, then
+/// reboot the chip into its firmware before returning.
 ///
 /// Returns model / revision / MAC / flash size as queried from the chip —
-/// these populate the right-side info panel in the prototype. The flasher
-/// is dropped at the end of this call (we don't keep a live espflash
-/// handle around between operations); `start_flash` re-opens its own.
+/// these populate the right-side info panel in the UI.
+///
+/// **Why the reboot.** `aio_flasher::Flasher::new` calls espflash's
+/// `DefaultReset` to enter the ROM bootloader so chip identity can be
+/// read. The Flasher is dropped (releasing the serial port) at the end
+/// of the inner block below, but — as `aio_flasher::reboot`'s doc-comment
+/// at `crates/aio-flasher/src/flasher.rs` spells out — closing the port
+/// does NOT undo the bootloader entry: the ESP32 stays parked until
+/// something pulses EN. While parked, the HoloCubic firmware (LCD, IMU,
+/// app loop) is not running, so the device's display goes blank. The
+/// explicit `aio_flasher::reboot` after dropping the Flasher pulses the
+/// reset line via RTS and brings the firmware back. Adds ~1.5 s to a
+/// connect; the alternative is a permanently blank screen until the
+/// user manually clicks Reboot. See PR comment on the connect-reboot
+/// fix for the user-reported reproduction.
+///
+/// `start_flash` re-opens its own espflash session (and handles the
+/// post-flash reset via espflash's own `reset_after`), so we don't keep
+/// a live handle across this call.
 #[tauri::command]
 pub fn connect_device(
     port: String,
@@ -161,11 +178,18 @@ pub fn connect_device(
     let baud_u32: u32 = baud
         .parse()
         .map_err(|e| format!("invalid baud `{baud}`: {e}"))?;
-    let mut flasher = aio_flasher::Flasher::new(&port, baud_u32)
-        .map_err(|e| format!("open/connect {port}@{baud}: {e}"))?;
-    let summary = flasher
-        .device_info()
-        .map_err(|e| format!("read chip info {port}: {e}"))?;
+    // Inner block so the Flasher is dropped (and the serial port
+    // released) before reboot() reopens the port at 115_200 to toggle
+    // RTS — opening the same port twice concurrently would fail with
+    // "device or resource busy" on Linux / "Access denied" on Windows.
+    let summary = {
+        let mut flasher = aio_flasher::Flasher::new(&port, baud_u32)
+            .map_err(|e| format!("open/connect {port}@{baud}: {e}"))?;
+        flasher
+            .device_info()
+            .map_err(|e| format!("read chip info {port}: {e}"))?
+    };
+    aio_flasher::reboot(&port).map_err(|e| format!("post-connect reboot {port}: {e}"))?;
     let info = ChipInfo {
         model: summary.chip,
         rev: summary.revision,
