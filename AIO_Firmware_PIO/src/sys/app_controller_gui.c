@@ -116,7 +116,25 @@ void display_app_scr_init(const void *src_img_path, const char *app_name)
         return;
     }
 
-    lv_obj_clean(act_obj); // 清空此前页面
+    lv_obj_clean(act_obj); // 清空此前页面 (the exited app's screen)
+
+    // CRITICAL LEAK FIX (ghosting root cause): also clean app_scr itself.
+    // AppController::app_exit() calls app_control_display_scr with force=true,
+    // which lands here. The original code only cleaned `act_obj` (the EXITED
+    // app's screen), then overwrote the static pre_app_image / pre_app_name
+    // pointers with freshly-created widgets ON app_scr — losing the previous
+    // refs but leaving the old widgets parented to app_scr. One leaked icon +
+    // label accumulated per app entry/exit cycle, all stacked at LV_ALIGN_CENTER.
+    // The slide animation's lv_obj_del(pre_app_image) only frees the most
+    // recently tracked widget, never the leaked ones — so whichever app the
+    // user was in when they last exited (auto_start_app default = Stockmarket
+    // for fresh installs) shows up as an immortal background icon + name
+    // behind every subsequent slide.
+    lv_obj_clean(app_scr);
+    pre_app_name = NULL; // its widget just got cleaned; clear the dangling pointer
+    now_app_image = NULL; // any in-flight slide widgets are gone too
+    now_app_name = NULL;
+
     pre_app_image = lv_img_create(app_scr);
     pre_img_path = src_img_path; // 保存历史
     lv_img_set_src(pre_app_image, src_img_path);
