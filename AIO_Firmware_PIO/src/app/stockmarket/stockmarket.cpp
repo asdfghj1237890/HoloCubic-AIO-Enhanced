@@ -176,8 +176,6 @@ static void stockmarket_process(AppController *sys,
         sys->send_to(STOCK_APP_NAME, CTRL_NAME,
                      APP_MESSAGE_WIFI_CONN, NULL, NULL);
     }
-
-    delay(300);
 }
 
 static void stockmarket_background_task(AppController *sys,
