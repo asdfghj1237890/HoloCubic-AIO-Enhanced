@@ -22,12 +22,23 @@ public:
     int getMinute() { return 0; }
     int getSecond() { return 0; }
     int getDayofWeek() { return 4; } // 1970-01-01 was a Thursday
-    String getTime(const char * = "%H:%M:%S") { return String("00:00:00"); }
-    String getTime(const String &) { return String("00:00:00"); }
-    String getDate(const char * = "%Y-%m-%d") { return String("1970-01-01"); }
-    String getDate(const String &) { return String("1970-01-01"); }
-    String getDateTime(const char * = "%Y-%m-%d %H:%M:%S") { return String("1970-01-01 00:00:00"); }
-    String getDateTime(const String &) { return String("1970-01-01 00:00:00"); }
+    // strftime against the unix epoch (1970-01-01 00:00:00 UTC) so harness
+    // output mirrors what the real ESP32Time library does when no NTP sync
+    // has happened yet — keeps the host-rendered goldens semantically
+    // identical to the cold-boot device render, regardless of host TZ.
+    static String _strftime_epoch(const char *fmt) {
+        char buf[64];
+        time_t t = 0;
+        struct tm *tm0 = gmtime(&t);
+        strftime(buf, sizeof(buf), fmt, tm0);
+        return String(buf);
+    }
+    String getTime(const char *fmt = "%H:%M:%S") { return _strftime_epoch(fmt); }
+    String getTime(const String &fmt) { return _strftime_epoch(fmt.c_str()); }
+    String getDate(const char *fmt = "%Y-%m-%d") { return _strftime_epoch(fmt); }
+    String getDate(const String &fmt) { return _strftime_epoch(fmt.c_str()); }
+    String getDateTime(const char *fmt = "%Y-%m-%d %H:%M:%S") { return _strftime_epoch(fmt); }
+    String getDateTime(const String &fmt) { return _strftime_epoch(fmt.c_str()); }
     struct tm getTimeStruct() {
         time_t t = 0;
         return *localtime(&t);

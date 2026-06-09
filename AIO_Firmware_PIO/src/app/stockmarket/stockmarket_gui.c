@@ -19,9 +19,13 @@ static lv_obj_t *price_dec_label = NULL; // smaller price decimal, e.g. ".50"
 static lv_obj_t *chg_pct_label  = NULL;  // "+1.33%", emphasized
 static lv_obj_t *chg_value_label = NULL; // "+2.30", visually paired with %
 static lv_obj_t *divider_bot    = NULL;  // lv_line, y=166
-static lv_obj_t *hi_lo_label    = NULL;  // "H 176.20 | L 173.42"
+static lv_obj_t *hi_label       = NULL;  // "H 176.50" — left half of H/L row
+static lv_obj_t *lo_label       = NULL;  // "L 173.00" — right half of H/L row
+static lv_obj_t *hi_lo_divider  = NULL;  // vertical line between H and L
 static lv_obj_t *close_label    = NULL;  // "C 174.18"
-static lv_obj_t *datetime_label = NULL;  // "2026-06-09 15:30"
+static lv_obj_t *datetime_label = NULL;  // "06-09 15:30"
+static lv_obj_t *col_divider    = NULL;  // vertical line between C and datetime
+                                          // (column-aligned with hi_lo_divider)
 
 static lv_style_t default_style;
 static lv_style_t header_style;
@@ -83,8 +87,8 @@ void stockmarket_gui_init(void)
 
     lv_style_init(&datetime_style);
     lv_style_set_text_opa(&datetime_style, LV_OPA_COVER);
-    lv_style_set_text_color(&datetime_style, lv_color_hex(0xbbbbbb));
-    lv_style_set_text_font(&datetime_style, &lv_font_montserrat_20);
+    lv_style_set_text_color(&datetime_style, lv_color_hex(0xffffff));
+    lv_style_set_text_font(&datetime_style, &lv_font_montserrat_14);
 }
 
 static const lv_point_t divider_points[] = {{0, 0}, {239, 0}};
@@ -167,29 +171,57 @@ void display_stockmarket_init(void)
     lv_obj_set_style_line_width(divider_bot, 2, LV_PART_MAIN);
     lv_obj_align(divider_bot, LV_ALIGN_TOP_LEFT, 0, 166);
 
-    // High / Low row
-    hi_lo_label = lv_label_create(stockmarket_gui);
-    lv_obj_add_style(hi_lo_label, &secondary_style, LV_STATE_DEFAULT);
-    lv_label_set_recolor(hi_lo_label, true);
-    lv_label_set_text(hi_lo_label, "#ffd000 H# 0.00 | #ffd000 L# 0.00");
-    lv_obj_align(hi_lo_label, LV_ALIGN_TOP_LEFT, 12, 172);
+    // Column divider geometry — 2x24 line, same for both H/L row and C row
+    // so the two vertical lines stack into one continuous column rail at
+    // x=128. White to match the inline `|` users expected from the prior
+    // single-label H/L row.
+    static const lv_point_t col_divider_points[] = {{0, 0}, {0, 24}};
 
-    // Previous Close row
+    // High row — left half of H/L row
+    hi_label = lv_label_create(stockmarket_gui);
+    lv_obj_add_style(hi_label, &secondary_style, LV_STATE_DEFAULT);
+    lv_label_set_recolor(hi_label, true);
+    lv_label_set_text(hi_label, "#ffd000 H# 0.00");
+    lv_obj_align(hi_label, LV_ALIGN_TOP_LEFT, 12, 172);
+
+    // H/L vertical divider
+    hi_lo_divider = lv_line_create(stockmarket_gui);
+    lv_line_set_points(hi_lo_divider, col_divider_points, 2);
+    lv_obj_set_style_line_color(hi_lo_divider, lv_color_hex(0xffffff), LV_PART_MAIN);
+    lv_obj_set_style_line_width(hi_lo_divider, 2, LV_PART_MAIN);
+    lv_obj_align(hi_lo_divider, LV_ALIGN_TOP_LEFT, 128, 172);
+
+    // Low row — right half of H/L row, starts just right of the divider
+    lo_label = lv_label_create(stockmarket_gui);
+    lv_obj_add_style(lo_label, &secondary_style, LV_STATE_DEFAULT);
+    lv_label_set_recolor(lo_label, true);
+    lv_label_set_text(lo_label, "#ffd000 L# 0.00");
+    lv_obj_align(lo_label, LV_ALIGN_TOP_LEFT, 140, 172);
+
+    // Previous Close row — left half
     close_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(close_label, &secondary_style, LV_STATE_DEFAULT);
     lv_label_set_recolor(close_label, true);
     lv_label_set_text(close_label, "#ffd000 C# 0.00");
     lv_obj_align(close_label, LV_ALIGN_TOP_LEFT, 12, 200);
 
-    // Last update datetime — right-aligned on the SAME row as close_label.
-    // update_stock_data() truncates the formatted timestamp to 16 chars
-    // ("YYYY-MM-DD HH:MM") regardless of platform, so the layout is
-    // deterministic across hardware and the host harness (whose ESP32Time
-    // stub returns a longer "1970-01-01 00:00:00" before the truncation).
+    // Vertical divider between C value (left) and datetime (right) — same
+    // x=128 as hi_lo_divider so the two stack into one continuous rail.
+    col_divider = lv_line_create(stockmarket_gui);
+    lv_line_set_points(col_divider, col_divider_points, 2);
+    lv_obj_set_style_line_color(col_divider, lv_color_hex(0xffffff), LV_PART_MAIN);
+    lv_obj_set_style_line_width(col_divider, 2, LV_PART_MAIN);
+    lv_obj_align(col_divider, LV_ALIGN_TOP_LEFT, 128, 200);
+
+    // Last update datetime — left-aligned at x=140 (just right of col_divider).
+    // Format is the compact MM-DD HH:MM (11 chars) populated by
+    // update_stock_data via getTime("%m-%d %H:%M") after NTP bootstrap.
     datetime_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(datetime_label, &datetime_style, LV_STATE_DEFAULT);
     lv_label_set_text(datetime_label, "--");
-    lv_obj_align(datetime_label, LV_ALIGN_TOP_RIGHT, -12, 204);
+    // mont_14 (~16px) bottom-aligned with mont_24 close (bottom ~y=226):
+    // datetime top = 226 - 16 = 210.
+    lv_obj_align(datetime_label, LV_ALIGN_TOP_LEFT, 140, 210);
 
     lv_scr_load(stockmarket_gui);
 }
@@ -270,8 +302,8 @@ void display_stockmarket(struct StockMarket stockInfo, lv_scr_load_anim_t anim_t
     lv_obj_align_to(price_dec_label, price_int_label, LV_ALIGN_OUT_RIGHT_BOTTOM, 4, -28);
     lv_label_set_text_fmt(chg_pct_label,   "%+.2f%%", stockInfo.ChgPercent);
     lv_label_set_text_fmt(chg_value_label, "%+.2f",   stockInfo.ChgValue);
-    lv_label_set_text_fmt(hi_lo_label, "#ffd000 H# %.2f | #ffd000 L# %.2f",
-                          stockInfo.MaxQuo, stockInfo.MinQuo);
+    lv_label_set_text_fmt(hi_label, "#ffd000 H# %.2f", stockInfo.MaxQuo);
+    lv_label_set_text_fmt(lo_label, "#ffd000 L# %.2f", stockInfo.MinQuo);
     lv_label_set_text_fmt(close_label, "#ffd000 C# %.2f", stockInfo.CloseQuo);
     lv_label_set_text(datetime_label,
                       stockInfo.datetime_str[0] != '\0' ? stockInfo.datetime_str : "--");
@@ -297,8 +329,11 @@ void stockmarket_gui_del(void)
         chg_pct_label     = NULL;
         chg_value_label   = NULL;
         divider_bot       = NULL;
-        hi_lo_label       = NULL;
+        hi_label          = NULL;
+        lo_label          = NULL;
+        hi_lo_divider     = NULL;
         close_label       = NULL;
+        col_divider       = NULL;
         datetime_label    = NULL;
     }
 }
