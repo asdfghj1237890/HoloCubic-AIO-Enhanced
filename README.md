@@ -582,6 +582,17 @@ python Script/get_font.py path/to/font_file.c
 </details>
 
 <details>
+<summary><b>v2.6.x</b></summary>
+
+### Firmware Changes
+- **Web Settings**: "Glass UI" rewrite — new sidebar/forms/toast frontend, WiFi-scan UI on the System page, per-field tooltips, full i18n across all 12 setting forms, and static-asset browser caching
+- **Refactors**: Split `weather.cpp` (1081→363) and `ESP32FtpServer.cpp` (1091→264) into focused modules; added an FTP (Unity) test harness and an ESP32 firmware build to the CI regression
+- **Tooling**: AIO_Tool gained a remote-control overlay — 4-direction + ✓ buttons send IMU actions over serial (test without tilting the cube); plus clearer serial/flash error surfacing
+- **Fixes**: weather parser (v2.6.10), Snake direction handling, `-Wformat-truncation` warnings (incl. two latent bugs)
+
+</details>
+
+<details>
 <summary><b>v2.5.x</b></summary>
 
 ### Firmware Changes
