@@ -7,6 +7,9 @@
 
 LV_FONT_DECLARE(ch_font20);
 LV_FONT_DECLARE(lv_font_ibmplex_64);
+LV_FONT_DECLARE(lv_font_ibmplex_bold_64);
+LV_FONT_DECLARE(lv_font_ibmplex_bold_30);
+LV_FONT_DECLARE(lv_font_ibmplex_bold_14);
 
 static lv_obj_t *stockmarket_gui = NULL;
 
@@ -62,12 +65,12 @@ void stockmarket_gui_init(void)
 
     lv_style_init(&price_int_style);
     lv_style_set_text_opa(&price_int_style, LV_OPA_COVER);
-    lv_style_set_text_font(&price_int_style, &lv_font_ibmplex_64);
+    lv_style_set_text_font(&price_int_style, &lv_font_ibmplex_bold_64);
     // color set per-call in display_stockmarket
 
     lv_style_init(&price_dec_style);
     lv_style_set_text_opa(&price_dec_style, LV_OPA_COVER);
-    lv_style_set_text_font(&price_dec_style, &lv_font_montserrat_30);
+    lv_style_set_text_font(&price_dec_style, &lv_font_ibmplex_bold_30);
     // color set per-call in display_stockmarket
 
     lv_style_init(&change_style);
@@ -77,7 +80,7 @@ void stockmarket_gui_init(void)
 
     lv_style_init(&change_value_style);
     lv_style_set_text_opa(&change_value_style, LV_OPA_COVER);
-    lv_style_set_text_font(&change_value_style, &lv_font_montserrat_24);
+    lv_style_set_text_font(&change_value_style, &lv_font_montserrat_30);
     // color set per-call in display_stockmarket
 
     lv_style_init(&secondary_style);
@@ -88,7 +91,7 @@ void stockmarket_gui_init(void)
     lv_style_init(&datetime_style);
     lv_style_set_text_opa(&datetime_style, LV_OPA_COVER);
     lv_style_set_text_color(&datetime_style, lv_color_hex(0xffffff));
-    lv_style_set_text_font(&datetime_style, &lv_font_montserrat_14);
+    lv_style_set_text_font(&datetime_style, &lv_font_ibmplex_bold_14);
 }
 
 static const lv_point_t divider_points[] = {{0, 0}, {239, 0}};
@@ -139,30 +142,29 @@ void display_stockmarket_init(void)
     price_int_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(price_int_label, &price_int_style, LV_STATE_DEFAULT);
     lv_label_set_text(price_int_label, "0");
-    lv_obj_align(price_int_label, LV_ALIGN_TOP_LEFT, 72, 54);
+    lv_obj_align(price_int_label, LV_ALIGN_TOP_LEFT, 58, 54);
 
     price_dec_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(price_dec_label, &price_dec_style, LV_STATE_DEFAULT);
     lv_label_set_text(price_dec_label, ".00");
-    // ibmplex_64's bounding box has noticeable descender padding below the
-    // glyph baseline; LV_ALIGN_OUT_RIGHT_BOTTOM aligns boxes, not baselines,
-    // so dec ends up visually below the integer's bottom. Negative y_offset
-    // lifts dec up so its glyph bottom matches the integer's glyph bottom.
-    lv_obj_align_to(price_dec_label, price_int_label, LV_ALIGN_OUT_RIGHT_BOTTOM, 4, -28);
+    // Big integer (bold_64) + small decimal (bold_30); both fonts have a 1px
+    // descent, so OUT_RIGHT_BOTTOM bottom-aligns the boxes and the baselines
+    // line up — ".50" sits small on the integer's baseline.
+    lv_obj_align_to(price_dec_label, price_int_label, LV_ALIGN_OUT_RIGHT_BOTTOM, 4, 0);
 
     // Change % (color set per-call) — left-aligned on the change row
     chg_pct_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(chg_pct_label, &change_style, LV_STATE_DEFAULT);
     lv_label_set_text(chg_pct_label, "+0.00%");
-    lv_obj_align(chg_pct_label, LV_ALIGN_TOP_LEFT, 52, 128);
+    lv_obj_align(chg_pct_label, LV_ALIGN_TOP_LEFT, 44, 128);
 
-    // Change absolute value — right-aligned, bottom-aligned with chg_pct.
-    // chg_pct is mont_30 (~32px tall) at y=128 -> bottom y=160; chg_value is mont_24 (~26px tall) so its top sits at y=134 to share that bottom edge.
-    // X nudged left so it visually sits closer to chg_pct.
+    // Change absolute value — right-aligned, same mont_30 size as chg_pct so
+    // both share y=128 (tops and bottoms line up). chg_pct moved to x=44 so the
+    // two mont_30 numbers don't collide on the 240px-wide row.
     chg_value_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(chg_value_label, &change_value_style, LV_STATE_DEFAULT);
     lv_label_set_text(chg_value_label, "+0.00");
-    lv_obj_align(chg_value_label, LV_ALIGN_TOP_RIGHT, -12, 134);
+    lv_obj_align(chg_value_label, LV_ALIGN_TOP_RIGHT, -12, 128);
 
     // Bottom divider (grey, y=166)
     divider_bot = lv_line_create(stockmarket_gui);
@@ -219,9 +221,11 @@ void display_stockmarket_init(void)
     datetime_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(datetime_label, &datetime_style, LV_STATE_DEFAULT);
     lv_label_set_text(datetime_label, "--");
-    // mont_14 (~16px) bottom-aligned with mont_24 close (bottom ~y=226):
-    // datetime top = 226 - 16 = 210.
-    lv_obj_align(datetime_label, LV_ALIGN_TOP_LEFT, 140, 210);
+    // ibmplex_bold_14 (line_height 11), nudged up to sit roughly centered
+    // against the mont_24 close value rather than bottom-aligned. Bold + a
+    // touch larger than the old montserrat_14; "01-01 00:00" (88px) fits the
+    // x=140 cell.
+    lv_obj_align(datetime_label, LV_ALIGN_TOP_LEFT, 140, 207);
 
     lv_scr_load(stockmarket_gui);
 }
@@ -295,11 +299,10 @@ void display_stockmarket(struct StockMarket stockInfo, lv_scr_load_anim_t anim_t
         lv_label_set_text(price_dec_label, ".00");
     }
     lv_obj_update_layout(price_int_label);
-    // ibmplex_64's bounding box has noticeable descender padding below the
-    // glyph baseline; LV_ALIGN_OUT_RIGHT_BOTTOM aligns boxes, not baselines,
-    // so dec ends up visually below the integer's bottom. Negative y_offset
-    // lifts dec up so its glyph bottom matches the integer's glyph bottom.
-    lv_obj_align_to(price_dec_label, price_int_label, LV_ALIGN_OUT_RIGHT_BOTTOM, 4, -28);
+    // Big integer (bold_64) + small decimal (bold_30); both fonts have a 1px
+    // descent, so OUT_RIGHT_BOTTOM bottom-aligns the boxes and the baselines
+    // line up — ".50" sits small on the integer's baseline.
+    lv_obj_align_to(price_dec_label, price_int_label, LV_ALIGN_OUT_RIGHT_BOTTOM, 4, 0);
     lv_label_set_text_fmt(chg_pct_label,   "%+.2f%%", stockInfo.ChgPercent);
     lv_label_set_text_fmt(chg_value_label, "%+.2f",   stockInfo.ChgValue);
     lv_label_set_text_fmt(hi_label, "#ffd000 H# %.2f", stockInfo.MaxQuo);
