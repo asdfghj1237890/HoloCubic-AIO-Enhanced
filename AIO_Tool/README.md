@@ -1,4 +1,4 @@
-# AIO_Tool (v3.1.1)
+# AIO_Tool
 
 Cross-platform GUI for the HoloCubic AIO firmware — flashing, settings, file management, image/video conversion, remote control.
 

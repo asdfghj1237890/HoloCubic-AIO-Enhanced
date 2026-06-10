@@ -119,6 +119,19 @@ jobs:
           fi
           echo "value=$version" >> $GITHUB_OUTPUT
 
+      # Stamp the Studio bundle's internal version from the release tag so the
+      # installer/app "About" matches the release (was drifting — tauri.conf.json
+      # is the source for the bundle version and was hand-maintained). Build is
+      # not --locked, so cargo regenerates the lock if the version changes.
+      - name: Sync Studio bundle version to release tag
+        working-directory: AIO_Tool/studio
+        shell: bash
+        run: |
+          v="${{ github.ref_name }}"; v="${v#v}"
+          jq --arg v "$v" '.version = $v' tauri.conf.json > tauri.conf.json.tmp
+          mv tauri.conf.json.tmp tauri.conf.json
+          echo "Studio bundle version -> $v"
+
       # `cargo tauri build` without --no-default-features picks up the
       # `custom-protocol` feature (default in studio/Cargo.toml) so the
       # frontend assets are bundled into the binary instead of fetched from
