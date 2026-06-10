@@ -76,7 +76,7 @@ Download the PC tool from the release page to flash the firmware.
 
 ### Required Files
 
-1. `bootloader_dio_40m.bin` - Bootloader
+1. `bootloader_qio_80m.bin` - Bootloader
 2. `partitions.bin` - Partition file
 3. `boot_app0.bin` - Boot app
 4. `HoloCubic_AIO_XXX.bin` - Latest firmware (updated with each version)
@@ -85,8 +85,8 @@ Download the PC tool from the release page to flash the firmware.
 
 ### Flashing Steps
 
-1. Place files 1-3 and `CubicAIO_Tool-v3.0.0-x86_64-windows.exe` in the same directory
-2. Run `CubicAIO_Tool-v3.0.0-x86_64-windows.exe`
+1. Place files 1-3 and `CubicAIO_Tool-*-x86_64-windows-setup.exe` in the same directory
+2. Run `CubicAIO_Tool-*-x86_64-windows-setup.exe`
 3. Select the latest firmware `HoloCubic_AIO_XXX.bin`
 4. Flash the firmware
 
@@ -566,10 +566,23 @@ python Script/get_font.py path/to/font_file.c
 
 ## 📝 Version History
 
-**Current Version**: `v2.5.0`
+**Current Version**: `v3.1.5`
 
 <details>
-<summary><b>v2.5.x</b> - Latest</summary>
+<summary><b>v3.1.x</b> - Latest</summary>
+
+### Firmware Changes
+- **Stock**: Ticker UI redesign — composite arrow, split price (big bold integer + small decimal), ST7789 hardware contrast tuning, real RTC datetime sync, and a bold large-price refresh in IBM Plex Mono (v3.1.2–v3.1.5)
+- **Stock**: Dropped a main-thread `delay(300)` from the process loop so LVGL + IMU no longer stall each tick
+- **Settings**: New `/api/settings` endpoint — the Studio tool reads/writes firmware settings over HTTP (B15 fix)
+- **Launcher**: Fixed a "ghost" rendering glitch with full `lvgl_mutex` coverage around shared-screen access
+
+> `v3.0.0` / `v3.0.1` carried no firmware feature changes — that release was the PC-tool Rust rewrite (see **PC Tool Updates**). Firmware and tool now share one version number.
+
+</details>
+
+<details>
+<summary><b>v2.5.x</b></summary>
 
 ### Firmware Changes
 - **Icons**: Updated app icons for screen share, media player, picture album, weather, etc.
@@ -698,7 +711,26 @@ python Script/get_font.py path/to/font_file.c
 ### PC Tool Updates
 
 <details>
-<summary><b>HoloCubic_AIO_Tool v1.6.2</b> - Latest</summary>
+<summary><b>AIO_Tool v3.1.x</b> - Latest</summary>
+
+- **Studio (Tauri 2)** is now the shipped GUI — GitHub Releases provide native installers per OS: Windows NSIS `.exe`, macOS `.dmg`, Linux `.AppImage` (replacing the raw egui binary)
+- **Settings** tab speaks HTTP to the firmware's `/api/settings` (B15 fixed Studio-side)
+- **Flasher**: single-session writes, real chip-info read on connect, and a reliable post-connect reboot so the device display restores
+- Studio polish: latest-release auto-fetch, larger default window
+
+</details>
+
+<details>
+<summary><b>AIO_Tool v3.0.x</b></summary>
+
+- **Complete Rust rewrite** of the PC tool (previously Python) — five shared backend crates (`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`)
+- Introduced **Studio** (Tauri 2 native shell + web UI prototype) alongside the legacy **egui** binary
+- egui system-CJK font fallback; file-manager subtree-cache fix; native partition-bin file picker; single-instance + Tauri bridge fixes (v3.0.1)
+
+</details>
+
+<details>
+<summary><b>HoloCubic_AIO_Tool v1.6.2</b></summary>
 
 - Fixed BGR color channel issue in photo conversion tool
 - Improved UX in photo transform tool
