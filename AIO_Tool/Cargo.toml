@@ -9,7 +9,7 @@ members = ["crates/*"]
 exclude = ["studio"]
 
 [workspace.package]
-version = "3.1.4"
+version = "3.1.5"
 edition = "2021"
 rust-version = "1.82"
 license = "MIT OR Apache-2.0"
