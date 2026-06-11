@@ -10,7 +10,7 @@ const listenConv = IS_TAURI_CONV ? window.__TAURI__.event.listen : null;
 // fetches the real version from the `app_version` command
 // (env!("CARGO_PKG_VERSION")), so only the standalone browser preview — which
 // has no backend — falls back to this constant.
-const STUDIO_VERSION = "3.2.1";
+const STUDIO_VERSION = "3.2.2";
 
 Object.assign(ICON, {
   plus: ["M12 5v14", "M5 12h14"],
