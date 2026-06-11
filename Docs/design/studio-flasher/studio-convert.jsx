@@ -6,6 +6,11 @@ const IS_TAURI_CONV = typeof window !== "undefined" && !!window.__TAURI__;
 const invokeConv = IS_TAURI_CONV ? window.__TAURI__.core.invoke : null;
 const listenConv = IS_TAURI_CONV ? window.__TAURI__.event.listen : null;
 
+// Studio tool version shown on the Help page. Bump on release alongside
+// tauri.conf.json / AIO_Tool/Cargo.toml (or wire a Tauri app_version command
+// to read env!("CARGO_PKG_VERSION") if you want it drift-free).
+const STUDIO_VERSION = "3.2.0";
+
 Object.assign(ICON, {
   plus: ["M12 5v14", "M5 12h14"],
   clock: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 7v5l3 2"],
@@ -592,7 +597,7 @@ function StudioHelp() {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
       <PageHeader title={tr("說明")} sub={tr("關於本工具與 HoloCubic 的相關資源")}
-        right={<span className="chip mono" style={{ fontSize: 12 }}>v3.0.0</span>} />
+        right={<span className="chip mono" style={{ fontSize: 12 }}>{"v" + STUDIO_VERSION}</span>} />
       <div className="scroll" style={{ overflow: "auto", padding: "var(--s6)" }}>
         <div style={{ maxWidth: 720 }}>
           <p style={{ fontSize: 13.5, lineHeight: 1.8, color: "var(--text-dim)", margin: "0 0 var(--s5)", textWrap: "pretty" }}>
@@ -614,7 +619,9 @@ function StudioHelp() {
           </HelpSection>
 
           <div style={{ fontSize: 11.5, color: "var(--text-mute)", lineHeight: 1.7, paddingTop: "var(--s2)" }}>
-            HoloCubic AIO Tool · v3.0.0 · 介面重新設計概念稿。功能流程為互動原型示意，連接、燒錄與轉換等結果均為模擬。
+            {IS_TAURI_CONV
+              ? `HoloCubic AIO Tool · v${STUDIO_VERSION}`
+              : `HoloCubic AIO Tool · v${STUDIO_VERSION} · 瀏覽器預覽模式，連接、燒錄與轉換等結果均為模擬。`}
           </div>
         </div>
       </div>
