@@ -21,7 +21,7 @@ function Step({ n, title, sub, state, children }) {
       <div style={{ flex: 1, paddingBottom: "var(--s6)", minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: "var(--s2)" }}>
           <span className="disp" style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-.01em" }}>{title}</span>
-          {done && <span style={{ fontSize: 11.5, color: "var(--ok)", fontWeight: 600 }}>已完成</span>}
+          {done && <span style={{ fontSize: 11.5, color: "var(--ok)", fontWeight: 600 }}>{tr("已完成")}</span>}
         </div>
         <div style={{ fontSize: 12.5, color: "var(--text-mute)", marginTop: 2, marginBottom: "var(--s3)" }}>{sub}</div>
         {children}
@@ -59,9 +59,9 @@ function Dpad({ fl }) {
   return (
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,54px)", gap: "var(--s2)", justifyContent: "center", justifyItems: "center", alignItems: "center" }}>
-        <span /><Key dir="up" icon="up" label="上" /><span />
-        <Key dir="left" icon="left" label="左" /><Key dir="ok" icon="ok" label="確認" big /><Key dir="right" icon="right" label="右" />
-        <span /><Key dir="home" icon="home" label="首頁" /><span />
+        <span /><Key dir="up" icon="up" label={tr("上")} /><span />
+        <Key dir="left" icon="left" label={tr("左")} /><Key dir="ok" icon="ok" label={tr("確認")} big /><Key dir="right" icon="right" label={tr("右")} />
+        <span /><Key dir="home" icon="home" label={tr("首頁")} /><span />
       </div>
       <div style={{ textAlign: "center", marginTop: "var(--s3)", fontSize: 11, color: "var(--text-mute)" }}>
         {tr("鍵盤方向鍵 / Enter 也可操作")}
@@ -79,7 +79,7 @@ function DeviceCard({ fl }) {
     <div style={{ padding: "var(--s5)", borderBottom: "1px solid var(--border)" }}>
       {connected ? (
         <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px var(--s3)", fontSize: 12 }}>
-          {[["晶片", fl.chip.model], ["版本", fl.chip.rev], ["Flash", fl.chip.flash], ["MAC", fl.chip.mac]].map(([k, v]) => (
+          {[[tr("晶片"), fl.chip.model], [tr("版本"), fl.chip.rev], ["Flash", fl.chip.flash], ["MAC", fl.chip.mac]].map(([k, v]) => (
             <React.Fragment key={k}>
               <span style={{ color: "var(--text-mute)" }}>{k}</span>
               <span className="mono" style={{ color: "var(--text-dim)", textAlign: "right" }}>{v}</span>
@@ -88,7 +88,7 @@ function DeviceCard({ fl }) {
         </div>
       ) : (
         <div style={{ textAlign: "center", fontSize: 12, color: "var(--text-mute)", lineHeight: 1.6 }}>
-          尚未連線<br />接上 USB 後於步驟 1 連接
+          {tr("尚未連線")}<br />{tr("接上 USB 後於步驟 1 連接")}
         </div>
       )}
     </div>
@@ -136,12 +136,12 @@ function StudioFlasher() {
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 360px", minHeight: 0 }}>
         {/* steps */}
         <div className="scroll" style={{ overflow: "auto", padding: "var(--s6)", maxWidth: 720 }}>
-          <Step n="1" title="連接裝置" sub="用 USB 接上 HoloCubic，選擇對應的連接埠" state={connected ? "done" : "active"}>
+          <Step n="1" title={tr("連接裝置")} sub={tr("用 USB 接上 HoloCubic，選擇對應的連接埠")} state={connected ? "done" : "active"}>
             <div style={{ display: "flex", gap: "var(--s2)", alignItems: "center", flexWrap: "wrap" }}>
               <select className="fld mono" style={{ width: 156, height: 38 }} value={fl.port} onChange={(e) => fl.setPort(e.target.value)} disabled={connected}>
                 {fl.ports.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
               </select>
-              <button className="btn ghost" style={{ width: 38, height: 38, padding: 0 }} onClick={fl.refreshPorts} title="重新整理連接埠"><Icon d={ICON.refresh} size={16} /></button>
+              <button className="btn ghost" style={{ width: 38, height: 38, padding: 0 }} onClick={fl.refreshPorts} title={tr("重新整理連接埠")}><Icon d={ICON.refresh} size={16} /></button>
               <select className="fld mono" style={{ width: 112, height: 38 }} value={fl.baud} onChange={(e) => fl.setBaud(e.target.value)} disabled={connected}>
                 {BAUD_RATES.map((b) => <option key={b} value={b}>{b}</option>)}
               </select>
@@ -151,31 +151,31 @@ function StudioFlasher() {
                     {connecting ? <><Icon d={ICON.refresh} size={15} /><span className="spin" style={{ display: "none" }} /></> : <Icon d={ICON.plug} size={15} />}
                     {connecting ? tr("連線中…") : tr("連接")}
                   </button>}
-              {connected && <button className="btn ghost" style={{ height: 38 }} onClick={fl.reboot} title="重新啟動裝置"><Icon d={ICON.refresh} size={15} />{tr("重新開機")}</button>}
+              {connected && <button className="btn ghost" style={{ height: 38 }} onClick={fl.reboot} title={tr("重新啟動裝置")}><Icon d={ICON.refresh} size={15} />{tr("重新開機")}</button>}
             </div>
             <div style={{ fontSize: 11.5, color: "var(--text-mute)", marginTop: "var(--s2)" }}>
-              提示：找不到連接埠時請安裝 CH340 / CP210x 驅動，再按 <Icon d={ICON.refresh} size={11} /> 重新整理。
+              {tr("提示：找不到連接埠時請安裝 CH340 / CP210x 驅動，再按")} <Icon d={ICON.refresh} size={11} /> {tr("重新整理。")}
             </div>
           </Step>
 
-          <Step n="2" title="選擇韌體" sub="使用推薦版本，或展開進階自訂各分割區" state={step2State}>
+          <Step n="2" title={tr("選擇韌體")} sub={tr("使用推薦版本，或展開進階自訂各分割區")} state={step2State}>
             <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", padding: "var(--s4)",
                           border: "1px solid var(--accent-line)", background: "var(--accent-weak)", borderRadius: "var(--r3)" }}>
               <div style={{ width: 42, height: 42, borderRadius: "var(--r2)", background: "var(--accent)", color: "#fff", display: "grid", placeItems: "center", flex: "none" }}>
                 <Icon d={ICON.bolt} size={20} fill />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>HoloCubic AIO 韌體 {fl.latestRelease.status === "ok" && <span className="mono" style={{ color: "var(--accent)" }}>v{fl.latestRelease.version}</span>}</div>
-                <div style={{ fontSize: 12, color: "var(--text-mute)" }}>{fl.enabledCount} 個分割區 · {fmtBytes(fl.totalBytes)} · 推薦給多數使用者</div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{tr("HoloCubic AIO 韌體")} {fl.latestRelease.status === "ok" && <span className="mono" style={{ color: "var(--accent)" }}>v{fl.latestRelease.version}</span>}</div>
+                <div style={{ fontSize: 12, color: "var(--text-mute)" }}>{trf("{count} 個分割區 · {size} · 推薦給多數使用者", { count: fl.enabledCount, size: fmtBytes(fl.totalBytes) })}</div>
               </div>
               {fl.latestRelease.status === "ok"
-                ? <span className="chip" style={{ background: "var(--panel)", color: "var(--ok)" }}><span className="dot live" />最新</span>
+                ? <span className="chip" style={{ background: "var(--panel)", color: "var(--ok)" }}><span className="dot live" />{tr("最新")}</span>
                 : fl.latestRelease.status === "loading"
-                  ? <span className="chip" style={{ background: "var(--panel)" }}><span className="dot busy" />查詢中…</span>
-                  : <span className="chip" style={{ background: "var(--panel)" }} title={`無法查詢 GitHub (${fl.latestRelease.reason})`}><span className="dot" />離線</span>}
+                  ? <span className="chip" style={{ background: "var(--panel)" }}><span className="dot busy" />{tr("查詢中…")}</span>
+                  : <span className="chip" style={{ background: "var(--panel)" }} title={`無法查詢 GitHub (${fl.latestRelease.reason})`}><span className="dot" />{tr("離線")}</span>}
             </div>
             <button onClick={() => setAdv(!adv)} className="btn ghost" style={{ marginTop: "var(--s3)", fontSize: 12, height: 32 }}>
-              {adv ? "▾ 收合進階分割區" : `▸ 進階：自訂 4 個分割區`}
+              {adv ? "▾ " + tr("收合進階分割區") : "▸ " + trf("進階：自訂 {n} 個分割區", { n: fl.parts.length })}
             </button>
             {adv && (
               <div style={{ marginTop: "var(--s2)", border: "1px solid var(--border)", borderRadius: "var(--r3)", overflow: "hidden", animation: "riseIn .2s" }}>
@@ -186,14 +186,14 @@ function StudioFlasher() {
                     <span className="mono" style={{ color: "var(--accent)", width: 62 }}>{hexAddr(p.addr)}</span>
                     <span style={{ flex: 1, color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={p.file}>{p.displayFile || p.file}</span>
                     <span className="mono" style={{ color: "var(--text-mute)", width: 64, textAlign: "right" }}>{fmtBytes(p.bytes)}</span>
-                    <button className="btn ghost" style={{ height: 27, padding: "0 var(--s2)", fontSize: 11 }} onClick={() => fl.pickFile(i)}>選擇</button>
+                    <button className="btn ghost" style={{ height: 27, padding: "0 var(--s2)", fontSize: 11 }} onClick={() => fl.pickFile(i)}>{tr("選擇")}</button>
                   </div>
                 ))}
               </div>
             )}
           </Step>
 
-          <Step n="3" title="開始燒錄" sub="過程約 30–60 秒，請保持 USB 連接、勿關閉視窗" state={step3State}>
+          <Step n="3" title={tr("開始燒錄")} sub={tr("過程約 30–60 秒，請保持 USB 連接、勿關閉視窗")} state={step3State}>
             <div style={{ display: "flex", gap: "var(--s2)", alignItems: "center" }}>
               {flashing || erasing
                 ? <button className="btn danger" style={{ height: 42, padding: "0 var(--s5)" }} onClick={fl.cancel}><Icon d={ICON.x} size={15} />{tr("取消")}</button>
@@ -238,8 +238,8 @@ function StudioFlasher() {
                   <Icon d={ICON.check} size={18} />
                 </span>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--ok)" }}>韌體燒錄成功</div>
-                  <div style={{ fontSize: 12, color: "var(--text-mute)" }}>裝置正在重新啟動，稍候即可使用。</div>
+                  <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--ok)" }}>{tr("韌體燒錄成功")}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-mute)" }}>{tr("裝置正在重新啟動，稍候即可使用。")}</div>
                 </div>
               </div>
             )}
