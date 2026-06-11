@@ -89,6 +89,8 @@
   "step3_sub": "Takes about 30–60 seconds — keep USB connected and don't close the window",
   "status_disconnected": "Not connected",
   "status_connected": "Connected",
+  "status_connected_port": "Connected · {port}",
+  "files_port_ph": "Port",
   "status_flashing": "Flashing",
   "status_erasing": "Erasing",
   "recommended_firmware": "Recommended for most users",

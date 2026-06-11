@@ -51,7 +51,7 @@ function StatusChip({ conn, port }) {
   return (
     <span className="chip" style={{ fontSize: 12.5, padding: "6px 14px" }}>
       <span className={"dot " + (live ? "live" : conn === "connecting" ? "busy" : "")} />
-      {conn === "connecting" ? "連線中" : live ? (port ? "已連線 · " + port : "已連線") : "未連線"}
+      {conn === "connecting" ? tr("連線中") : live ? (port ? trf("已連線 · {port}", { port }) : tr("已連線")) : tr("未連線")}
     </span>
   );
 }
@@ -584,9 +584,9 @@ function StudioFiles() {
       <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", padding: "var(--s3) var(--s6)",
                     borderBottom: "1px solid var(--border)", flex: "none" }}>
         <Icon d={ICON.wifi} size={16} />
-        <input className="fld mono" style={{ width: 150, height: 36 }} value={f.ip} onChange={(e) => f.setIp(e.target.value)} disabled={connected} placeholder="IP 位址" />
+        <input className="fld mono" style={{ width: 150, height: 36 }} value={f.ip} onChange={(e) => f.setIp(e.target.value)} disabled={connected} placeholder={tr("IP 位址")} />
         <span style={{ color: "var(--text-mute)" }}>:</span>
-        <input className="fld mono" style={{ width: 80, height: 36 }} value={f.port} onChange={(e) => f.setPort(e.target.value)} disabled={connected} placeholder="埠" />
+        <input className="fld mono" style={{ width: 80, height: 36 }} value={f.port} onChange={(e) => f.setPort(e.target.value)} disabled={connected} placeholder={tr("埠")} />
         {connected
           ? <button className="btn" style={{ height: 36 }} onClick={f.disconnect}>{tr("中斷")}</button>
           : <button className="btn primary" style={{ height: 36 }} onClick={f.connect}>{f.conn === "connecting" ? tr("連線中…") : tr("連線")}</button>}

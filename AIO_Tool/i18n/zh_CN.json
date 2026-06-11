@@ -89,6 +89,8 @@
   "step3_sub": "过程约 30–60 秒，请保持 USB 连接、勿关闭窗口",
   "status_disconnected": "未连接",
   "status_connected": "已连接",
+  "status_connected_port": "已连接 · {port}",
+  "files_port_ph": "端口",
   "status_flashing": "烧录中",
   "status_erasing": "清空中",
   "recommended_firmware": "推荐给多数用户",
