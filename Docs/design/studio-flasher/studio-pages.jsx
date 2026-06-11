@@ -377,6 +377,7 @@ function fileMeta(name) {
   if (ext === "bin") return { icon: "chip", color: "var(--text-dim)", kind: "二進位" };
   return { icon: "doc", color: "var(--text-mute)", kind: "文字" };
 }
+// NOTE: fileMeta().kind returns raw zh-TW strings; call tr(kind) at render time.
 
 // Absolute path of a child given the current path. Avoids the
 // `path === "/"` edge case repeating throughout the hook.
@@ -562,7 +563,7 @@ function StudioFiles() {
   const [draft, setDraft] = useState("");
   const [menu, setMenu] = useState(null); // {x,y,entry}
 
-  const crumbs = ["根目錄", ...f.path.split("/").filter(Boolean)];
+  const crumbs = [tr("根目錄"), ...f.path.split("/").filter(Boolean)];
   const crumbPath = (i) => "/" + f.path.split("/").filter(Boolean).slice(0, i).join("/");
 
   const startRename = (e) => { setEditing(e.name); setDraft(e.name); setMenu(null); };
@@ -587,15 +588,15 @@ function StudioFiles() {
         <span style={{ color: "var(--text-mute)" }}>:</span>
         <input className="fld mono" style={{ width: 80, height: 36 }} value={f.port} onChange={(e) => f.setPort(e.target.value)} disabled={connected} placeholder="埠" />
         {connected
-          ? <button className="btn" style={{ height: 36 }} onClick={f.disconnect}>中斷</button>
-          : <button className="btn primary" style={{ height: 36 }} onClick={f.connect}>{f.conn === "connecting" ? "連線中…" : "連線"}</button>}
+          ? <button className="btn" style={{ height: 36 }} onClick={f.disconnect}>{tr("中斷")}</button>
+          : <button className="btn primary" style={{ height: 36 }} onClick={f.connect}>{f.conn === "connecting" ? tr("連線中…") : tr("連線")}</button>}
       </div>
 
       {!connected ? (
         <div style={{ flex: 1, display: "grid", placeItems: "center" }}>
           <div style={{ textAlign: "center", color: "var(--text-mute)" }}>
             <Icon d={ICON.folderOpen} size={30} />
-            <div style={{ fontSize: 13.5, marginTop: "var(--s3)" }}>輸入 HoloCubic 的 IP 與連接埠後按「連線」<br />即可瀏覽記憶卡檔案</div>
+            <div style={{ fontSize: 13.5, marginTop: "var(--s3)" }}>{tr("輸入 HoloCubic 的 IP 與連接埠後按「連線」")}<br />{tr("即可瀏覽記憶卡檔案")}</div>
           </div>
         </div>
       ) : (
@@ -612,8 +613,8 @@ function StudioFiles() {
                 </React.Fragment>
               ))}
               <div style={{ flex: 1 }} />
-              <button className="btn ghost" style={{ height: 30, fontSize: 12 }} onClick={f.upload}><Icon d={ICON.upload} size={13} />上傳檔案</button>
-              <button className="btn ghost" style={{ height: 30, fontSize: 12 }} onClick={f.newFolder}><Icon d={ICON.plus || ICON.folderOpen} size={13} />新增資料夾</button>
+              <button className="btn ghost" style={{ height: 30, fontSize: 12 }} onClick={f.upload}><Icon d={ICON.upload} size={13} />{tr("上傳檔案")}</button>
+              <button className="btn ghost" style={{ height: 30, fontSize: 12 }} onClick={f.newFolder}><Icon d={ICON.plus || ICON.folderOpen} size={13} />{tr("新增資料夾")}</button>
             </div>
             <div className="scroll" style={{ overflow: "auto", padding: "var(--s3) var(--s4)" }}>
               {f.entries.map((e) => {
@@ -635,12 +636,12 @@ function StudioFiles() {
                     ) : (
                       <span style={{ flex: 1, fontSize: 13, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.name}</span>
                     )}
-                    <span className="mono" style={{ fontSize: 11.5, color: "var(--text-mute)", flex: "none" }}>{isDir ? "資料夾" : fmtBytes(e.size)}</span>
+                    <span className="mono" style={{ fontSize: 11.5, color: "var(--text-mute)", flex: "none" }}>{isDir ? tr("資料夾") : fmtBytes(e.size)}</span>
                     {isDir && <Icon d={ICON.chevR} size={15} stroke={2} />}
                   </div>
                 );
               })}
-              {f.entries.length === 0 && <div style={{ textAlign: "center", color: "var(--text-mute)", fontSize: 13, padding: "var(--s6)" }}>空的資料夾</div>}
+              {f.entries.length === 0 && <div style={{ textAlign: "center", color: "var(--text-mute)", fontSize: 13, padding: "var(--s6)" }}>{tr("空的資料夾")}</div>}
             </div>
           </div>
 
@@ -654,10 +655,10 @@ function StudioFiles() {
                 </div>
                 <div style={{ textAlign: "center", fontWeight: 600, fontSize: 14, wordBreak: "break-all", marginBottom: "var(--s4)" }}>{f.sel.name}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "6px var(--s3)", fontSize: 12.5, marginBottom: "var(--s5)" }}>
-                  {[["類型", f.sel.type === "dir" ? "資料夾" : fileMeta(f.sel.name).kind],
-                    ["大小", f.sel.type === "dir" ? "—" : fmtBytes(f.sel.size)],
-                    ["路徑", (f.path === "/" ? "" : f.path) + "/" + f.sel.name],
-                    ["修改時間", f.sel.mtime || "—"]].map(([k, v]) => (
+                  {[[tr("類型"), f.sel.type === "dir" ? tr("資料夾") : tr(fileMeta(f.sel.name).kind)],
+                    [tr("大小"), f.sel.type === "dir" ? "—" : fmtBytes(f.sel.size)],
+                    [tr("路徑"), (f.path === "/" ? "" : f.path) + "/" + f.sel.name],
+                    [tr("修改時間"), f.sel.mtime || "—"]].map(([k, v]) => (
                     <React.Fragment key={k}>
                       <span style={{ color: "var(--text-mute)" }}>{k}</span>
                       <span className="mono" style={{ color: "var(--text-dim)", textAlign: "right", wordBreak: "break-all" }}>{v}</span>
@@ -666,20 +667,20 @@ function StudioFiles() {
                 </div>
                 <div style={{ display: "grid", gap: "var(--s2)" }}>
                   {f.sel.type === "dir"
-                    ? <button className="btn primary" onClick={() => f.enter(f.sel.name)}><Icon d={ICON.folderOpen} size={15} />開啟</button>
-                    : <button className="btn primary" onClick={() => f.download(f.sel)}><Icon d={ICON.download} size={15} />下載到本機</button>}
-                  <button className="btn ghost" onClick={() => startRename(f.sel)}><Icon d={ICON.pencil} size={14} />重新命名</button>
-                  <button className="btn danger" onClick={() => f.remove(f.sel)}><Icon d={ICON.trash} size={14} />刪除</button>
+                    ? <button className="btn primary" onClick={() => f.enter(f.sel.name)}><Icon d={ICON.folderOpen} size={15} />{tr("開啟")}</button>
+                    : <button className="btn primary" onClick={() => f.download(f.sel)}><Icon d={ICON.download} size={15} />{tr("下載到本機")}</button>}
+                  <button className="btn ghost" onClick={() => startRename(f.sel)}><Icon d={ICON.pencil} size={14} />{tr("重新命名")}</button>
+                  <button className="btn danger" onClick={() => f.remove(f.sel)}><Icon d={ICON.trash} size={14} />{tr("刪除")}</button>
                 </div>
               </div>
             ) : (
               <div style={{ flex: 1, display: "grid", placeItems: "center", color: "var(--text-mute)", fontSize: 13, padding: "var(--s5)", textAlign: "center" }}>
-                點選檔案以檢視內容與操作
+                {tr("點選檔案以檢視內容與操作")}
               </div>
             )}
             {/* recent actions */}
             <div style={{ borderTop: "1px solid var(--border)", padding: "var(--s4) var(--s5)" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s2)" }}>最近操作</div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s2)" }}>{tr("最近操作")}</div>
               {f.acts.length ? f.acts.slice(0, 4).map((a, i) => (
                 <div key={i} className="mono" style={{ fontSize: 11, color: "var(--text-mute)", display: "flex", gap: 8, marginBottom: 2 }}>
                   <span style={{ opacity: .7 }}>{a.t}</span><span style={{ color: "var(--text-dim)" }}>{a.text}</span>
@@ -696,7 +697,7 @@ function StudioFiles() {
                       borderRadius: "var(--r3)", boxShadow: "var(--shadow)", padding: 4, minWidth: 150 }} onClick={(e) => e.stopPropagation()}>
           {(menu.entry.type === "dir"
             ? [["開啟", "folderOpen", () => { f.enter(menu.entry.name); setMenu(null); }]]
-            : [["下載", "download", () => { f.download(menu.entry); setMenu(null); }]]
+            : [["下載到本機", "download", () => { f.download(menu.entry); setMenu(null); }]]
           ).concat([
             ["重新命名", "pencil", () => startRename(menu.entry)],
             ["刪除", "trash", () => { f.remove(menu.entry); setMenu(null); }],
@@ -704,7 +705,7 @@ function StudioFiles() {
             <button key={label} onClick={fn} style={{ display: "flex", alignItems: "center", gap: "var(--s3)", width: "100%", border: "none", background: "transparent",
               cursor: "pointer", padding: "8px 10px", borderRadius: "var(--r2)", color: label === "刪除" ? "var(--err)" : "var(--text-dim)", fontSize: 13, fontFamily: "var(--font)" }}
               onMouseEnter={(e) => e.currentTarget.style.background = "var(--panel-2)"} onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-              <Icon d={ICON[icon]} size={15} />{label}
+              <Icon d={ICON[icon]} size={15} />{tr(label)}
             </button>
           ))}
         </div>
