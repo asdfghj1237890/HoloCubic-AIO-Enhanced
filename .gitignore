@@ -39,3 +39,8 @@ AIO_Tool/tool_config.json
 tool_config.json
 AIO_Tool/OutFile/
 OutFile/
+
+# Test harness runtime outputs — actual screenshots + diff overlays,
+# regenerated on every `native_test` run. Baselines live in test/golden/
+# and fixtures in test/fixtures/ (both tracked).
+test/results/

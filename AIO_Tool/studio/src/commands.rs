@@ -438,13 +438,71 @@ pub struct SaveField {
     pub value: String,
 }
 
+/// Build an HTTP Basic `Authorization` header value for the device web UI.
+/// The firmware fixes the username to `admin`; `password` is the per-device
+/// secret shown on the WebServer screen. An empty password yields a header
+/// the firmware rejects with 401, surfaced to the user as a fetch error.
+fn basic_auth_header(password: &str) -> String {
+    format!(
+        "Basic {}",
+        base64_encode(format!("admin:{password}").as_bytes())
+    )
+}
+
+/// Minimal RFC 4648 base64 (standard alphabet, padded). Self-contained so
+/// the short credential string needs no extra dependency.
+fn base64_encode(input: &[u8]) -> String {
+    const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(input.len().div_ceil(3) * 4);
+    for chunk in input.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = *chunk.get(1).unwrap_or(&0) as u32;
+        let b2 = *chunk.get(2).unwrap_or(&0) as u32;
+        let n = (b0 << 16) | (b1 << 8) | b2;
+        out.push(T[((n >> 18) & 63) as usize] as char);
+        out.push(T[((n >> 12) & 63) as usize] as char);
+        out.push(if chunk.len() > 1 {
+            T[((n >> 6) & 63) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            T[(n & 63) as usize] as char
+        } else {
+            '='
+        });
+    }
+    out
+}
+
+#[cfg(test)]
+mod auth_tests {
+    use super::{base64_encode, basic_auth_header};
+
+    #[test]
+    fn base64_known_vectors() {
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
+        assert_eq!(base64_encode(b"admin:ABC123"), "YWRtaW46QUJDMTIz");
+    }
+
+    #[test]
+    fn header_is_user_admin() {
+        assert_eq!(basic_auth_header("ABC123"), "Basic YWRtaW46QUJDMTIz");
+    }
+}
+
 /// Fetch the device's current settings via the firmware's `/api/settings`
-/// JSON endpoint. `host` is the bare IP / hostname without scheme. Sub-3s
-/// timeout — the payload is sub-kB and the device is on the local network.
+/// JSON endpoint. `host` is the bare IP / hostname without scheme; `password`
+/// is the device web password (HTTP Basic, user `admin`). Sub-3s timeout —
+/// the payload is sub-kB and the device is on the local network.
 #[tauri::command]
-pub fn fetch_settings_http(host: String) -> Result<SettingsResponse, String> {
+pub fn fetch_settings_http(host: String, password: String) -> Result<SettingsResponse, String> {
     let url = format!("http://{host}/api/settings");
     let resp = ureq::get(&url)
+        .set("Authorization", &basic_auth_header(&password))
         .timeout(Duration::from_secs(3))
         .call()
         .map_err(|e| format!("GET {url}: {e}"))?;
@@ -463,6 +521,7 @@ pub fn save_settings_http(
     host: String,
     category: String,
     fields: Vec<SaveField>,
+    password: String,
 ) -> Result<(), String> {
     // Category → form handler path. Only the categories whose form pages
     // are currently registered in `server.cpp` are accepted — submitting to
@@ -488,6 +547,7 @@ pub fn save_settings_http(
         .map(|f| (f.key.as_str(), f.value.as_str()))
         .collect();
     ureq::post(&url)
+        .set("Authorization", &basic_auth_header(&password))
         .timeout(Duration::from_secs(3))
         .send_form(&pairs)
         .map_err(|e| format!("POST {url}: {e}"))?;

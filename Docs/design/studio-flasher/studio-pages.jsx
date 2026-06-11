@@ -131,6 +131,7 @@ function flattenSnapshot(json) {
 function useSettings() {
   const { useState, useEffect, useCallback } = React;
   const [host, setHost]       = useState(window.__AIO_SETTINGS_HOST__ || DEFAULT_HOST);
+  const [pw, setPw]           = useState(window.__AIO_SETTINGS_PW__ || "");   // device web password (shown on its screen)
   const [rows, setRows]       = useState([]);          // flattened from snapshot
   const [edits, setEdits]     = useState({});          // {"cat:key": newValue}
   const [status, setStatus]   = useState("輸入裝置 IP 後按「讀取設定」開始。");
@@ -139,6 +140,7 @@ function useSettings() {
 
   // Persist host across tab switches.
   useEffect(() => { window.__AIO_SETTINGS_HOST__ = host; }, [host]);
+  useEffect(() => { window.__AIO_SETTINGS_PW__ = pw; }, [pw]);
 
   const fetchAll = useCallback(async () => {
     const ip = host.trim();
@@ -146,7 +148,7 @@ function useSettings() {
     setBusy(true); setStatus("從 " + ip + " 讀取中…");
     if (IS_TAURI_PAGES) {
       try {
-        const { json } = await invokePages("fetch_settings_http", { host: ip });
+        const { json } = await invokePages("fetch_settings_http", { host: ip, password: pw });
         const flat = flattenSnapshot(json);
         setRows(flat); setEdits({}); setLoaded(true);
         setStatus("已讀取 " + flat.length + " 項參數,跨 " + Object.keys(json).length + " 個分類。");
@@ -171,7 +173,7 @@ function useSettings() {
       setStatus("(瀏覽器預覽模式) 已載入 mock 資料。");
     }
     setBusy(false);
-  }, [host]);
+  }, [host, pw]);
 
   const setField = (cat, key, value) =>
     setEdits((prev) => ({ ...prev, [cat + ":" + key]: value }));
@@ -202,7 +204,7 @@ function useSettings() {
       try {
         let total = 0;
         for (const [cat, fields] of Object.entries(groups)) {
-          await invokePages("save_settings_http", { host: ip, category: cat, fields });
+          await invokePages("save_settings_http", { host: ip, category: cat, fields, password: pw });
           total += fields.length;
         }
         setStatus("已寫入 " + total + " 項修改,重新讀取以確認…");
@@ -216,7 +218,7 @@ function useSettings() {
       setEdits({});
     }
     setBusy(false);
-  }, [host, edits, fetchAll, dirtyKeys.length]);
+  }, [host, pw, edits, fetchAll, dirtyKeys.length]);
 
   // Group rows by category for rendering.
   const byCategory = () => {
@@ -234,7 +236,7 @@ function useSettings() {
   };
 
   return {
-    host, setHost, rows, edits, status, busy, loaded,
+    host, setHost, pw, setPw, rows, edits, status, busy, loaded,
     dirtyCount: dirtyKeys.length, byCategory,
     fetchAll, setField, save,
   };
@@ -290,6 +292,9 @@ function StudioParams() {
         <span style={{ fontSize: 13, color: "var(--text-mute)" }}>裝置 IP</span>
         <input className="fld mono" style={{ width: 180, height: 36 }} placeholder="192.168.x.x"
           value={s.host} onChange={(e) => s.setHost(e.target.value)} disabled={s.busy} />
+        <span style={{ fontSize: 13, color: "var(--text-mute)" }}>密碼</span>
+        <input className="fld mono" style={{ width: 120, height: 36 }} type="password" placeholder="裝置螢幕顯示"
+          value={s.pw} onChange={(e) => s.setPw(e.target.value)} disabled={s.busy} />
         <button className="btn ghost" style={{ height: 36 }} disabled={s.busy} onClick={s.fetchAll}>
           <Icon d={ICON.download} size={15} />讀取設定
         </button>

@@ -53,6 +53,12 @@ public:
     void onNotFound(THandlerFunction) {}
     void onFileUpload(THandlerFunction) {}
 
+    // HTTP Basic auth shims — the firmware's web_auth gate calls these.
+    // On host there is no real request, so authenticate() always passes
+    // (scenarios never exercise the 401 path) and the challenge is a no-op.
+    bool authenticate(const char *, const char *) { return true; }
+    void requestAuthentication() {}
+
     void send(int = 200, const char * = "text/plain", const String & = "") {}
     void send(int, const String &, const String &) {}
     void sendHeader(const String &, const String &, bool = false) {}
