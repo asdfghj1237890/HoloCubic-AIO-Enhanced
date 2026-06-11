@@ -21,6 +21,8 @@ const I18N_SUPPLEMENT = {
   "介面文字字型": { cn: "界面文字字型", en: "Interface typeface" },
   // Disambiguation pins: these zh-TW strings map to two different zh-CN values
   // across JSON keys, so the generator omits them; pin the variant Studio shows.
+  // (圖片 is the Image nav tab, rendered via the dynamic tr(it.label).)
+  "圖片": { cn: "图片", en: "Image" },
   "說明": { cn: "说明", en: "Help" },
   "燒錄韌體": { cn: "烧录固件", en: "Flash Firmware" },
   "參數設定": { cn: "参数设定", en: "Device Settings" },

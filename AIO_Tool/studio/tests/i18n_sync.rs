@@ -73,3 +73,36 @@ fn every_tr_literal_resolves() {
         missing.join("\n")
     );
 }
+
+#[test]
+fn nav_labels_resolve() {
+    // index.html builds the rail from NAV / NAV_BOTTOM object literals and renders
+    // `tr(it.label)` dynamically, so `scan_tr_literals` can't see these. Extract the
+    // `label: "…"` values straight from index.html and require each to resolve, so an
+    // ambiguous/omitted nav label (e.g. 圖片) fails CI instead of silently falling
+    // back to Traditional Chinese in en/cn mode.
+    let dir = i18n_gen::studio_flasher_dir();
+    let mut resolvable = i18n_gen::generated_keys(&i18n_gen::i18n_dir());
+    let i18n_jsx = std::fs::read_to_string(dir.join("i18n.jsx")).expect("read i18n.jsx");
+    resolvable.extend(i18n_gen::extract_supplement_keys(&i18n_jsx));
+
+    let html = std::fs::read_to_string(dir.join("index.html")).expect("read index.html");
+    let mut missing = Vec::new();
+    for part in html.split("label:").skip(1) {
+        if let Some(rest) = part.trim_start().strip_prefix('"') {
+            if let Some(idx) = rest.find('"') {
+                let label = &rest[..idx];
+                if !resolvable.contains(label) {
+                    missing.push(label.to_string());
+                }
+            }
+        }
+    }
+    missing.sort();
+    missing.dedup();
+    assert!(
+        missing.is_empty(),
+        "nav labels not resolvable (add to i18n.jsx supplement):\n{}",
+        missing.join("\n")
+    );
+}
