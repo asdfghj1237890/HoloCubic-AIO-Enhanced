@@ -11,15 +11,15 @@ wait_ms 1500
 screenshot 01_initial
 assert_no_crash
 
-# Each direction triggers showAnim + delay(700) + showNewBorn (the trailing
-# delay(300) was removed in PR-1.8b; wait_ms 1200 still gives ample slack
-# beyond the 700ms animation pacing).
+# Each direction triggers a 500ms move animation, then a non-blocking
+# showNewBorn after 700ms. The harness now drives LVGL during wait_ms, so give
+# the newborn zoom animation extra slack before screenshotting a stable board.
 action TURN_RIGHT
-wait_ms 1200
+wait_ms 1600
 screenshot 02_after_turn_right
 
 action UP
-wait_ms 1200
+wait_ms 1600
 screenshot 03_after_up
 
 action RETURN
