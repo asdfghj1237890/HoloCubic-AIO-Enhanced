@@ -278,7 +278,7 @@ function StudioParams() {
   const enabled = s.loaded;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-      <PageHeader title={tr("參數設定")} sub={tr("透過 /api/settings 讀取裝置設定,改完後 POST 到對應的 /save<Cat>Conf")}
+      <PageHeader title={tr("參數設定")} sub={tr("讀取與修改 HoloCubic 的 WiFi、系統、天氣等參數")}
         right={
           <span className="chip" style={{ fontSize: 12.5, padding: "6px 14px" }}>
             <span className={"dot " + (s.busy ? "busy" : s.loaded ? "live" : "")} />
