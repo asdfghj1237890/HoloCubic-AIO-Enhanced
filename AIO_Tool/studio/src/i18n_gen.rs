@@ -135,7 +135,9 @@ pub fn generated_keys(dir: &Path) -> BTreeSet<String> {
 }
 
 /// Extract the `I18N_SUPPLEMENT` key set from i18n.jsx source, scanning between
-/// the `I18N_SUPPLEMENT-START` / `-END` markers for lines beginning with a quote.
+/// the `I18N_SUPPLEMENT-START` / `-END` markers for lines beginning with a
+/// double quote. Supplement keys must be double-quoted (the i18n.jsx
+/// convention); single-quoted keys are not recognised.
 pub fn extract_supplement_keys(src: &str) -> BTreeSet<String> {
     let (Some(start), Some(end)) = (
         src.find("I18N_SUPPLEMENT-START"),
@@ -143,6 +145,10 @@ pub fn extract_supplement_keys(src: &str) -> BTreeSet<String> {
     ) else {
         panic!("i18n_gen: I18N_SUPPLEMENT-START/-END markers not found in i18n.jsx");
     };
+    assert!(
+        start < end,
+        "i18n_gen: I18N_SUPPLEMENT-END appears before START in i18n.jsx"
+    );
     let mut keys = BTreeSet::new();
     for line in src[start..end].lines() {
         if let Some(rest) = line.trim_start().strip_prefix('"') {
@@ -156,7 +162,9 @@ pub fn extract_supplement_keys(src: &str) -> BTreeSet<String> {
 
 /// Find all static `tr("…")` / `tr('…')` literal arguments in a source string.
 /// Dynamic calls (e.g. `tr(it.label)`) and identifier-prefixed matches
-/// (e.g. `attr(`) are ignored.
+/// (e.g. `attr(`) are ignored. No escape handling: a literal ends at the first
+/// matching quote, so keys with an embedded same-kind quote are unsupported
+/// (Studio labels never contain them).
 pub fn scan_tr_literals(src: &str) -> BTreeSet<String> {
     let bytes = src.as_bytes();
     let mut found = BTreeSet::new();
@@ -262,5 +270,16 @@ mod tests {
         assert!(lits.contains("燒錄韌體"));
         assert!(lits.contains("語言"));
         assert_eq!(lits.len(), 2);
+    }
+
+    #[test]
+    fn scan_tr_literals_ignores_unterminated_literal() {
+        assert!(scan_tr_literals("foo tr(\"missing").is_empty());
+    }
+
+    #[test]
+    #[should_panic(expected = "I18N_SUPPLEMENT-START/-END markers")]
+    fn extract_supplement_keys_panics_without_markers() {
+        let _ = extract_supplement_keys("no markers here");
     }
 }
