@@ -28,6 +28,7 @@
   "operation_log": "Operation Log",
   "serial_receive": "Serial Receive",
   "remote_control": "Remote Control",
+  "remote_baud_note": "Remote control only works at 115200 baud",
   "btn_up": "Up",
   "btn_left": "Left",
   "btn_right": "Right",

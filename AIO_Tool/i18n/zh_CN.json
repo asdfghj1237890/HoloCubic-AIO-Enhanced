@@ -28,6 +28,7 @@
   "operation_log": "操作日志",
   "serial_receive": "串口接收",
   "remote_control": "遥控",
+  "remote_baud_note": "遥控仅在 115200 可用",
   "btn_up": "上",
   "btn_left": "左",
   "btn_right": "右",

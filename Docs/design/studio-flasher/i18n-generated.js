@@ -265,6 +265,7 @@ window.__I18N_GENERATED = {
   "進階：自訂分割區": { "cn": "进阶：自定义分区", "en": "Advanced: customize partitions" },
   "過程約 30–60 秒，請保持 USB 連接、勿關閉視窗": { "cn": "过程约 30–60 秒，请保持 USB 连接、勿关闭窗口", "en": "Takes about 30–60 seconds — keep USB connected and don't close the window" },
   "遙控": { "cn": "遥控", "en": "Remote Control" },
+  "遙控僅在 115200 可用": { "cn": "遥控仅在 115200 可用", "en": "Remote control only works at 115200 baud" },
   "選擇": { "cn": "选择", "en": "Select" },
   "選擇 Bootloader 的 bin 檔案": { "cn": "选择Bootloader的bin文件", "en": "Select Bootloader bin file" },
   "選擇 boot_app0 的 bin 檔案": { "cn": "选择boot_app0的bin文件", "en": "Select boot_app0 bin file" },

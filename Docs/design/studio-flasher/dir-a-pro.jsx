@@ -250,7 +250,8 @@ function StudioFlasher() {
         <div style={{ borderLeft: "1px solid var(--border)", background: "var(--panel)", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <DeviceCard fl={fl} />
           <div style={{ padding: "var(--s5)", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s3)" }}>{tr("遙控")}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)" }}>{tr("遙控")}</div>
+            <div style={{ fontSize: 10.5, color: "var(--text-mute)", marginBottom: "var(--s3)" }}>{tr("遙控僅在 115200 可用")}</div>
             <Dpad fl={fl} />
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, padding: "var(--s5)" }}>
