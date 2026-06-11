@@ -23,6 +23,7 @@ window.__I18N_GENERATED = {
   "SSID": { "cn": "SSID", "en": "SSID" },
   "SSID 1": { "cn": "SSID 1", "en": "SSID 1" },
   "SSID 2": { "cn": "SSID 2", "en": "SSID 2" },
+  "Tool 藍": { "cn": "Tool 蓝", "en": "Tool blue" },
   "WiFi 設定": { "cn": "WIFI设置", "en": "WiFi Settings" },
   "{count} 個分割區 · {size} · 推薦給多數使用者": { "cn": "{count} 个分区 · {size} · 推荐给多数用户", "en": "{count} partitions · {size} · Recommended for most users" },
   "上": { "cn": "上", "en": "Up" },
