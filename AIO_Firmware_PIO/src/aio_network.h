@@ -27,6 +27,9 @@
 #include <WebServer.h> // https://github.com/Pedroalbuquerque/ESP32WebServer download and place in your Libraries folder
 #include <ESPmDNS.h>
 #include <HTTPClient.h>
+#ifndef ESP8266
+#include "freertos/timers.h"
+#endif
 #endif
 
 // #ifdef __cplusplus
@@ -47,7 +50,9 @@ extern IPAddress dns;      // Set your network DNS usually your Router base addr
 
 extern const char *AP_SSID; //热点名称
 
+#ifndef ESP8266
 void restCallback(TimerHandle_t xTimer);
+#endif
 
 class AioNetwork
 {
