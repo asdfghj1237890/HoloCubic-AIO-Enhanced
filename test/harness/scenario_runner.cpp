@@ -54,15 +54,25 @@ void trim(std::string &s) {
     s = s.substr(a, b - a + 1);
 }
 
-// Tick LVGL for ms_total milliseconds in 5 ms slices. SDL_Delay also
-// advances the tick thread (see test/harness/main.cpp).
-void tick_for(int ms_total) {
+// Advance the harness clock in 5 ms LVGL slices. For normal scenarios this
+// also drives the app with idle UNKNOWN actions, matching the firmware main
+// loop closely enough for non-blocking app timers/state machines.
+void tick_for(int ms_total, AppController *controller, bool drive_app) {
     int elapsed = 0;
+    int app_elapsed = 0;
     while (elapsed < ms_total) {
+        if (drive_app && controller && app_elapsed <= 0) {
+            ImuAction idle;
+            idle.active = UNKNOWN;
+            idle.isValid = false;
+            controller->main_process(&idle);
+            app_elapsed = 50;
+        }
         lv_timer_handler();
         int slice = ms_total - elapsed > 5 ? 5 : ms_total - elapsed;
         SDL_Delay(slice);
         elapsed += slice;
+        app_elapsed -= slice;
     }
 }
 
@@ -306,7 +316,7 @@ int run_scenario(const char *path,
             controller->main_process(&b);
         }
     }
-    tick_for(50);
+    tick_for(50, controller, !init_only);
 
     std::string scenario_dir, scenario_stem;
     derive_scenario_paths(path, &scenario_dir, &scenario_stem);
@@ -320,14 +330,14 @@ int run_scenario(const char *path,
         switch (s.kind) {
             case StepKind::WAIT_MS:
                 printf("[scenario] step %zu (line %d): wait_ms %d\n", i + 1, s.line_no, s.int_arg);
-                tick_for(s.int_arg);
+                tick_for(s.int_arg, controller, !init_only);
                 break;
             case StepKind::ACTION: {
                 printf("[scenario] step %zu (line %d): action %s\n",
                        i + 1, s.line_no, active_type_info[s.action]);
                 ImuAction a; a.active = s.action; a.isValid = true;
                 controller->main_process(&a);
-                tick_for(50); // let LVGL settle the screen change
+                tick_for(50, controller, !init_only); // let LVGL settle the screen change
                 break;
             }
             case StepKind::SCREENSHOT: {

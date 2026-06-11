@@ -5,7 +5,7 @@
 // Scenario format (see test/scenarios/*.scn):
 //   # comments and blank lines are ignored
 //   app <name>            (required, exactly once, before any step)
-//   wait_ms <integer>     advance LVGL N milliseconds in 5 ms ticks
+//   wait_ms <integer>     advance app + LVGL N milliseconds
 //   action <ACTIVE_TYPE>  inject one ImuAction (TURN_LEFT, TURN_RIGHT, UP,
 //                         DOWN, GO_FORWORD, RETURN, SHAKE)
 //   screenshot <name>     Phase 3 hook — currently just logs
