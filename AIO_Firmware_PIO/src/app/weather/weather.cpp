@@ -10,7 +10,7 @@
 #include "weather_gui.h"
 #include "weather_internal.h"
 #include "sys/app_controller.h"
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 
 #define WEATHER_APP_NAME "Weather"

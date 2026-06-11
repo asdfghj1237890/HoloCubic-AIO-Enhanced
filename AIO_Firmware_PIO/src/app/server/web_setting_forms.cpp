@@ -13,7 +13,7 @@
 // literals — they're hint text, not primary labels, and translating
 // them is a separate (larger) task.
 
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 #include "server.h"
 #include "web_setting.h"

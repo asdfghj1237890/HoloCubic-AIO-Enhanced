@@ -11,7 +11,7 @@
 #include "lv_port_indev.h"
 
 static void encoder_init(void);
-static bool encoder_read(lv_indev_drv_t* indev_drv, lv_indev_data_t* data);
+static void encoder_read(lv_indev_drv_t* indev_drv, lv_indev_data_t* data);
 static void encoder_handler(void);
 
 
@@ -75,15 +75,13 @@ static void encoder_init(void)
 }
 
 /* Will be called by the library to read the encoder */
-static bool encoder_read(lv_indev_drv_t* indev_drv, lv_indev_data_t* data)
+static void encoder_read(lv_indev_drv_t* indev_drv, lv_indev_data_t* data)
 {
 
 	data->enc_diff = encoder_diff;
 	data->state = encoder_state;
 
 	encoder_diff = 0;
-	/*Return `false` because we are not buffering and no more data to read*/
-	return false;
 }
 
 /*Call this function in an interrupt to process encoder events (turn, press)*/

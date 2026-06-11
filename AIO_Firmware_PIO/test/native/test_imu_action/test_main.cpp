@@ -66,6 +66,7 @@ void test_up_when_v_ax_above_5000() {
     reset_action_info();
     ImuAction *a = imu->getAction();
     TEST_ASSERT_EQUAL(ACTIVE_TYPE::UP, a->active);
+    TEST_ASSERT_FALSE(a->long_time);
 }
 
 void test_down_when_v_ax_below_neg_5000() {
@@ -73,6 +74,7 @@ void test_down_when_v_ax_below_neg_5000() {
     reset_action_info();
     ImuAction *a = imu->getAction();
     TEST_ASSERT_EQUAL(ACTIVE_TYPE::DOWN, a->active);
+    TEST_ASSERT_FALSE(a->long_time);
 }
 
 // --- below thresholds ---
@@ -82,6 +84,7 @@ void test_unknown_when_below_all_thresholds() {
     reset_action_info();
     ImuAction *a = imu->getAction();
     TEST_ASSERT_EQUAL(ACTIVE_TYPE::UNKNOWN, a->active);
+    TEST_ASSERT_FALSE(a->long_time);
 }
 
 // --- long-press promotion: 3 consecutive samples upgrade UP/DOWN ---
@@ -96,6 +99,7 @@ void test_three_consecutive_ups_promote_to_go_forword() {
     reset_action_info();
     ImuAction *a = imu->getAction();
     TEST_ASSERT_EQUAL(ACTIVE_TYPE::GO_FORWORD, a->active);
+    TEST_ASSERT_TRUE(a->long_time);
 }
 
 void test_three_consecutive_downs_promote_to_return() {
@@ -105,6 +109,7 @@ void test_three_consecutive_downs_promote_to_return() {
     reset_action_info();
     ImuAction *a = imu->getAction();
     TEST_ASSERT_EQUAL(ACTIVE_TYPE::RETURN, a->active);
+    TEST_ASSERT_TRUE(a->long_time);
 }
 
 int main(int /*argc*/, char ** /*argv*/) {

@@ -10,7 +10,7 @@ IMU::IMU()
 {
     action_info.isValid = false;
     action_info.active = ACTIVE_TYPE::UNKNOWN;
-    action_info.long_time = true;
+    action_info.long_time = false;
     // 初始化数据
     for (int pos = 0; pos < ACTION_HISTORY_BUF_LEN; ++pos)
     {
@@ -149,6 +149,7 @@ ImuAction *IMU::getAction(void)
         {
             action_info.isValid = 1;
             action_info.active = tmp_info.active;
+            action_info.long_time = false;
         }
         // 识别"长按","长按"相对"短按"高级（所以键值升级放在短按之后）
         if (act_info_history[index] == act_info_history[second] && act_info_history[second] == act_info_history[third])
@@ -159,12 +160,14 @@ ImuAction *IMU::getAction(void)
                 isHoldDown = true;
                 action_info.isValid = 1;
                 action_info.active = ACTIVE_TYPE::GO_FORWORD;
+                action_info.long_time = true;
             }
             else if (ACTIVE_TYPE::DOWN == tmp_info.active)
             {
                 isHoldDown = true;
                 action_info.isValid = 1;
                 action_info.active = ACTIVE_TYPE::RETURN;
+                action_info.long_time = true;
             }
             // 如需左右的长按可在此处添加"else if"的逻辑
 

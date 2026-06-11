@@ -4,11 +4,38 @@
 #include "lvgl.h"
 
 #define SCALE_SIZE 4
+#define TILE_SIZE 50
+#define TILE_GAP 58
+#define TILE_MARGIN 8
 
 lv_obj_t *game_2048_gui = NULL;
 lv_obj_t *img[SCALE_SIZE * SCALE_SIZE];
 
 static lv_style_t default_style;
+
+static int tile_x(int i)
+{
+    return TILE_MARGIN + i % SCALE_SIZE * TILE_GAP;
+}
+
+static int tile_y(int i)
+{
+    return TILE_MARGIN + i / SCALE_SIZE * TILE_GAP;
+}
+
+static void reset_tile_state(int i)
+{
+    if (NULL == img[i])
+    {
+        return;
+    }
+
+    lv_anim_del(img[i], NULL);
+    lv_obj_set_size(img[i], TILE_SIZE, TILE_SIZE);
+    lv_img_set_offset_x(img[i], 0);
+    lv_img_set_offset_y(img[i], 0);
+    lv_obj_set_pos(img[i], tile_x(i), tile_y(i));
+}
 
 void game_2048_gui_init(void)
 {
@@ -28,7 +55,7 @@ void game_2048_gui_init(void)
     {
         img[i] = lv_img_create(game_2048_gui);
         lv_img_set_src(img[i], &N0);
-        lv_obj_align(img[i], LV_ALIGN_TOP_LEFT, 8 + i % 4 * 58, 8 + i / 4 * 58);
+        reset_tile_state(i);
     }
     lv_scr_load(game_2048_gui);
 }
@@ -70,6 +97,8 @@ static void anim_pos_cb(void *var, int32_t v)
  */
 void born(int i)
 {
+    reset_tile_state(i);
+
     lv_anim_t a;
     lv_anim_init(&a);
     lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)anim_size_cb);
@@ -79,23 +108,23 @@ void born(int i)
     /* 在动画中设置路径 */
     lv_anim_set_path_cb(&a, lv_anim_path_linear);
 
-    lv_anim_set_values(&a, 0, 50);
+    lv_anim_set_values(&a, 0, TILE_SIZE);
     lv_anim_start(&a);
 
     lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x);
-    lv_anim_set_values(&a, lv_obj_get_x(img[i]) + 25, lv_obj_get_x(img[i]));
+    lv_anim_set_values(&a, tile_x(i) + TILE_SIZE / 2, tile_x(i));
     lv_anim_start(&a);
 
     lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_y);
-    lv_anim_set_values(&a, lv_obj_get_y(img[i]) + 25, lv_obj_get_y(img[i]));
+    lv_anim_set_values(&a, tile_y(i) + TILE_SIZE / 2, tile_y(i));
     lv_anim_start(&a);
 
     lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_img_set_offset_x);
-    lv_anim_set_values(&a, -25, 0);
+    lv_anim_set_values(&a, -TILE_SIZE / 2, 0);
     lv_anim_start(&a);
 
     lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_img_set_offset_y);
-    lv_anim_set_values(&a, -25, 0);
+    lv_anim_set_values(&a, -TILE_SIZE / 2, 0);
     lv_anim_start(&a);
 }
 
@@ -118,7 +147,7 @@ void zoom(int i)
     //线性动画
     lv_anim_set_path_cb(&a, lv_anim_path_linear);
 
-    lv_anim_set_values(&a, 50, 56);
+    lv_anim_set_values(&a, TILE_SIZE, TILE_SIZE + 6);
     lv_anim_start(&a);
 
     lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_x);
@@ -154,11 +183,11 @@ void move(int i, lv_anim_exec_xcb_t direction, int dist)
     lv_anim_set_time(&a, 500);
     if (direction == (lv_anim_exec_xcb_t)lv_obj_set_x)
     {
-        lv_anim_set_values(&a, lv_obj_get_x(img[i]), lv_obj_get_x(img[i]) + dist * 58);
+        lv_anim_set_values(&a, lv_obj_get_x(img[i]), lv_obj_get_x(img[i]) + dist * TILE_GAP);
     }
     else
     {
-        lv_anim_set_values(&a, lv_obj_get_y(img[i]), lv_obj_get_y(img[i]) + dist * 58);
+        lv_anim_set_values(&a, lv_obj_get_y(img[i]), lv_obj_get_y(img[i]) + dist * TILE_GAP);
     }
 
     // 在动画中设置路径
@@ -207,7 +236,7 @@ void showBoard(int *map)
     for (int i = 0; i < SCALE_SIZE * SCALE_SIZE; i++)
     {
         lv_img_set_src(img[i], getN(map[i]));
-        lv_obj_align(img[i], LV_ALIGN_TOP_LEFT, 8 + i % 4 * 58, 8 + i / 4 * 58);
+        reset_tile_state(i);
     }
 }
 
@@ -229,6 +258,11 @@ void showAnim(int *animMap, int direction)
     case 4:
         Normal = (lv_anim_exec_xcb_t)lv_obj_set_x;
         break;
+    }
+
+    for (int i = 0; i < SCALE_SIZE * SCALE_SIZE; i++)
+    {
+        reset_tile_state(i);
     }
 
     //移动和合并

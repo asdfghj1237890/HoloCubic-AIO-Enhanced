@@ -1,4 +1,4 @@
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 #include <esp_wifi.h>
 #include "HardwareSerial.h"
@@ -15,7 +15,7 @@ uint16_t ap_timeout = 0; // ap无连接的超时时间
 
 TimerHandle_t xTimer_ap;
 
-Network::Network()
+AioNetwork::AioNetwork()
 {
     m_preDisWifiConnInfoMillis = 0;
     m_wifiConnStartMillis = 0;
@@ -24,7 +24,7 @@ Network::Network()
     WiFi.enableAP(false);
 }
 
-void Network::search_wifi(void)
+void AioNetwork::search_wifi(void)
 {
     Serial.println("scan start");
     int wifi_num = WiFi.scanNetworks();
@@ -50,7 +50,7 @@ void Network::search_wifi(void)
     }
 }
 
-boolean Network::start_conn_wifi(const char *ssid, const char *password)
+boolean AioNetwork::start_conn_wifi(const char *ssid, const char *password)
 {
     if (WiFi.status() == WL_CONNECTED)
     {
@@ -98,7 +98,7 @@ boolean Network::start_conn_wifi(const char *ssid, const char *password)
     return true;
 }
 
-boolean Network::end_conn_wifi(void)
+boolean AioNetwork::end_conn_wifi(void)
 {
     wl_status_t status = WiFi.status();
     
@@ -168,7 +168,7 @@ boolean Network::end_conn_wifi(void)
     return CONN_SUCC;
 }
 
-boolean Network::close_wifi(void)
+boolean AioNetwork::close_wifi(void)
 {
     if (WiFi.getMode() & WIFI_MODE_AP)
     {
@@ -191,7 +191,7 @@ boolean Network::close_wifi(void)
     return true;
 }
 
-unsigned long Network::get_conn_duration(void)
+unsigned long AioNetwork::get_conn_duration(void)
 {
     if (!m_isConnecting)
     {
@@ -200,7 +200,7 @@ unsigned long Network::get_conn_duration(void)
     return GET_SYS_MILLIS() - m_wifiConnStartMillis;
 }
 
-boolean Network::open_ap(const char *ap_ssid, const char *ap_password)
+boolean AioNetwork::open_ap(const char *ap_ssid, const char *ap_password)
 {
     WiFi.enableAP(true); // 配置为AP模式
     // 修改主机名

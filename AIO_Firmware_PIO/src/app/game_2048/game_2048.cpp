@@ -7,6 +7,7 @@
 
 #define G2048_APP_NAME "2048"
 #define G2048_MOVE_ANIM_MS 700UL
+#define G2048_BORN_ANIM_MS 300UL
 
 void taskOne(void *parameter)
 {
@@ -46,6 +47,7 @@ struct Game2048AppRunData
     TaskHandle_t xHandle_task_two = NULL;
     bool pendingNewBorn;
     unsigned long newBornDueMillis;
+    unsigned long inputLockedUntilMillis;
 };
 
 static Game2048AppRunData *run_data = NULL;
@@ -59,22 +61,36 @@ static void game_2048_schedule_newborn()
 
     run_data->pendingNewBorn = true;
     run_data->newBornDueMillis = GET_SYS_MILLIS() + G2048_MOVE_ANIM_MS;
+    run_data->inputLockedUntilMillis = 0;
 }
 
 static bool game_2048_waiting_newborn()
 {
-    if (NULL == run_data || false == run_data->pendingNewBorn)
+    if (NULL == run_data)
     {
         return false;
     }
 
-    if ((long)(GET_SYS_MILLIS() - run_data->newBornDueMillis) < 0)
+    if (run_data->pendingNewBorn)
+    {
+        if ((long)(GET_SYS_MILLIS() - run_data->newBornDueMillis) < 0)
+        {
+            return true;
+        }
+
+        run_data->pendingNewBorn = false;
+        AIO_LVGL_OPERATE_LOCK(showNewBorn(game.addRandom(), run_data->pBoard);)
+        run_data->inputLockedUntilMillis = GET_SYS_MILLIS() + G2048_BORN_ANIM_MS;
+        return true;
+    }
+
+    if (run_data->inputLockedUntilMillis != 0 &&
+        (long)(GET_SYS_MILLIS() - run_data->inputLockedUntilMillis) < 0)
     {
         return true;
     }
 
-    run_data->pendingNewBorn = false;
-    AIO_LVGL_OPERATE_LOCK(showNewBorn(game.addRandom(), run_data->pBoard);)
+    run_data->inputLockedUntilMillis = 0;
     return false;
 }
 
@@ -126,7 +142,13 @@ static int game_2048_init(AppController *sys)
 static void game_2048_process(AppController *sys,
                               const ImuAction *act_info)
 {
-    if (RETURN == act_info->active)
+    ACTIVE_TYPE action = act_info->active;
+    if (RETURN == action && act_info->long_time)
+    {
+        action = DOWN;
+    }
+
+    if (RETURN == action)
     {
         sys->app_exit(); // 退出APP
         return;
@@ -138,7 +160,7 @@ static void game_2048_process(AppController *sys,
     }
 
     // 具体操作
-    if (TURN_RIGHT == act_info->active)
+    if (TURN_RIGHT == action)
     {
         game.moveRight();
         if (game.comparePre() == 0)
@@ -147,7 +169,7 @@ static void game_2048_process(AppController *sys,
             game_2048_schedule_newborn();
         }
     }
-    else if (TURN_LEFT == act_info->active)
+    else if (TURN_LEFT == action)
     {
         game.moveLeft();
         if (game.comparePre() == 0)
@@ -156,7 +178,7 @@ static void game_2048_process(AppController *sys,
             game_2048_schedule_newborn();
         }
     }
-    else if (UP == act_info->active)
+    else if (UP == action)
     {
         game.moveUp();
         if (game.comparePre() == 0)
@@ -165,7 +187,7 @@ static void game_2048_process(AppController *sys,
             game_2048_schedule_newborn();
         }
     }
-    else if (DOWN == act_info->active)
+    else if (DOWN == action)
     {
         game.moveDown();
         if (game.comparePre() == 0)

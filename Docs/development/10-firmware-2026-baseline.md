@@ -1,14 +1,16 @@
 # 10 — 2026 韌體技術基線
 
-這份專案目前不能再被描述成「現代 ESP32 韌體基線」。截至 2026-06，production firmware 仍是相容性優先的 legacy baseline：
+這份專案還不能被完整描述成「現代 ESP32 韌體基線」。截至 2026-06，production firmware 已完成第一階段 Arduino-ESP32 / ESP-IDF 基線升級，但 UI runtime 仍停在 LVGL 8：
 
 | Layer | Current | 2026 target | 狀態 |
 |---|---:|---:|---|
-| PlatformIO platform | `espressif32 @ ~3.5.0` | ESP-IDF 6.0 系列，或對應的新 Arduino-ESP32 core | 未升級 |
+| PlatformIO platform | `pioarduino/platform-espressif32 55.03.39` | Arduino-ESP32 3.x / ESP-IDF 5.5.x | 已升級，待實機驗證 |
 | UI runtime | vendored LVGL 8.3.3 | LVGL 9.5 | 未升級 |
 | JSON runtime | vendored ArduinoJson 7.4.3 | ArduinoJson 7 | 已升級 |
 
 參考來源：
+- PlatformIO espressif32 releases: <https://github.com/platformio/platform-espressif32/releases>
+- pioarduino espressif32 releases: <https://github.com/pioarduino/platform-espressif32/releases>
 - LVGL changelog: <https://lvgl.io/docs/open/CHANGELOG>
 - ESP-IDF v6.0: <https://www.espressif.com/en/news/ESP_IDF_6.0>
 - ArduinoJson v6 to v7 guide: <https://arduinojson.org/v7/how-to/upgrade-from-v6/>
@@ -16,6 +18,8 @@
 ## 為什麼不能一行升版
 
 這個 firmware 用的是 Arduino framework，不是純 ESP-IDF 專案。ESP-IDF 6.0 的存在不等於現有 `framework = arduino` 可以無痛切過去；要看 Arduino-ESP32 core 與 PlatformIO package 是否已經提供相容封裝。
+
+官方 PlatformIO `platform-espressif32` 在 6.13.0 提供 ESP-IDF 5.5.3，但 Arduino framework 仍是 Arduino-ESP32 2.0.17。要同時取得 Arduino-ESP32 3.x 與 ESP-IDF 5.5.x，目前採用 pioarduino fork 的 `55.03.39`，對應 Arduino-ESP32 3.3.9 / ESP-IDF 5.5.4。
 
 LVGL 8 → 9 也是 API migration，不是單純換資料夾。現有 app 大量使用 LVGL 8 的 object / style / font / image descriptor pattern，還有多份手工或工具產生的字型 C 檔。直接換成 LVGL 9 會造成編譯錯誤和 UI runtime 行為差異。
 
@@ -33,10 +37,10 @@ ArduinoJson 6 → 7 改了記憶體模型。這份 firmware 已改用 `JsonDocum
 
 ## 建議拆法
 
-第一階段只升 PlatformIO / Arduino-ESP32 core，保持 LVGL 8 與 ArduinoJson 7 不動，目標是先拿到較新的 toolchain、WiFi stack 和 compiler diagnostics。
+第一階段已完成：切到 pioarduino `55.03.39`，保持 LVGL 8 與 ArduinoJson 7 不動，目標是先拿到較新的 toolchain、WiFi stack 和 compiler diagnostics。
 
 第二階段已完成：ArduinoJson 升到 7.4.3，建立 JSON parser/serializer 的 host-side smoke test，並把 firmware call sites 從 `DynamicJsonDocument` / `containsKey()` 遷到 v7 idiom。
 
 第三階段升 LVGL 9。這應該是獨立 UI migration：先讓 simulator 或 host GUI harness 能編 LVGL 9，再動 firmware app。
 
-在這三階段完成前，`AIO_Firmware_PIO/platformio.ini` 的 `espressif32 @ ~3.5.0` 是明確的 legacy pin，不應再被包裝成 2026 技術基線。
+在 LVGL 9 完成前，這仍只是「部分現代化」基線，不應被包裝成完整 2026 技術基線。

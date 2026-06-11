@@ -6,7 +6,7 @@
 // file just decodes the resulting epoch into a TimeStr for the GUI.
 
 #include <Arduino.h>
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 #include "http_util.h"
 #include "weather_internal.h"

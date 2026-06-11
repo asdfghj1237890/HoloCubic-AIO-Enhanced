@@ -1,7 +1,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define AIO_VERSION "3.2.3"
+#define AIO_VERSION "3.2.4"
 #define GET_SYS_MILLIS xTaskGetTickCount // 获取系统毫秒数
 // #define GET_SYS_MILLIS millis            // 获取系统毫秒数
 
@@ -12,7 +12,7 @@
 #include "driver/display.h"
 #include "driver/ambient.h"
 #include "driver/imu.h"
-#include "network.h"
+#include "aio_network.h"
 
 // RGB
 #define RGB_LED_PIN 27
@@ -31,7 +31,7 @@ extern IMU mpu; // 原则上只提供给主程序调用
 extern SdCard tf;
 extern Pixel rgb;
 // extern Config g_cfg;       // 全局配置文件
-extern Network g_network;  // 网络连接
+extern AioNetwork g_network;  // 网络连接
 extern FlashFS g_flashCfg; // flash中的文件系统（替代原先的Preferences）
 extern Display screen;     // 屏幕对象
 extern Ambient ambLight;   // 光纤传感器对象

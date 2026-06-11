@@ -7,7 +7,7 @@
 
 #include <Arduino.h>
 #include "ArduinoJson.h"
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 #include "http_util.h"
 #include "weather_internal.h"

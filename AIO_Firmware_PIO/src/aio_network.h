@@ -1,5 +1,5 @@
-#ifndef NETWORK_H
-#define NETWORK_H
+#ifndef AIO_NETWORK_H
+#define AIO_NETWORK_H
 
 // 时区偏移(小时) 8*60*60
 #define TIMEZERO_OFFSIZE (28800000)
@@ -49,7 +49,7 @@ extern const char *AP_SSID; //热点名称
 
 void restCallback(TimerHandle_t xTimer);
 
-class Network
+class AioNetwork
 {
 private:
     unsigned long m_preDisWifiConnInfoMillis; // Timestamp of last connection status display
@@ -57,7 +57,7 @@ private:
     bool m_isConnecting;                       // Flag to track if currently attempting connection
 
 public:
-    Network();
+    AioNetwork();
     void search_wifi(void);
     boolean start_conn_wifi(const char *ssid, const char *password);
     boolean end_conn_wifi(void);

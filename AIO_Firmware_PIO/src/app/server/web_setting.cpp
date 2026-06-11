@@ -1,7 +1,7 @@
 
 // 参考代码 https://github.com/G6EJD/ESP32-8266-File-Upload
 
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 #include "server.h"
 #include "web_setting.h"

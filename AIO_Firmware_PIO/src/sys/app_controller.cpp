@@ -352,6 +352,7 @@ int AppController::main_process(ImuAction *act_info)
     }
     act_info->active = ACTIVE_TYPE::UNKNOWN;
     act_info->isValid = 0;
+    act_info->long_time = false;
     return 0;
 }
 

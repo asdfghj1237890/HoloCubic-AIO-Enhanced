@@ -9,7 +9,7 @@
 // Originally lived alongside the i18n table and page chrome inside a
 // 1257-line web_setting.cpp.
 
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 #include "server.h"
 #include "web_auth.h"

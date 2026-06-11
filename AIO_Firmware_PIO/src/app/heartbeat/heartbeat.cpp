@@ -3,7 +3,7 @@
 #include "heartbeat_config_parse.h"
 #include "sys/app_controller.h"
 #include "common.h"
-#include "network.h"
+#include "aio_network.h"
 #include <PubSubClient.h>
 #include <string.h>
 

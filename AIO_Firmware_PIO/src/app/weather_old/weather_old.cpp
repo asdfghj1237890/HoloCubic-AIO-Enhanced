@@ -2,7 +2,7 @@
 #include "weather_old_gui.h"
 #include "ESP32Time.h"
 #include "sys/app_controller.h"
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 
 #define TIME_API "https://acs.m.taobao.com/gw/mtop.common.getTimestamp/"

@@ -254,15 +254,20 @@ void loop()
             char c = (char)Serial.read();
             if (serial_remote_prev == '~')
             {
+                bool serial_remote_matched = true;
                 switch (c)
                 {
-                    case 'U': act_info->active = UP;         break;
-                    case 'D': act_info->active = DOWN;       break;
-                    case 'L': act_info->active = TURN_LEFT;  break;
-                    case 'R': act_info->active = TURN_RIGHT; break;
-                    case 'H': act_info->active = RETURN;     break;
-                    case 'F': act_info->active = GO_FORWORD; break;
-                    default: break;
+                    case 'U': act_info->active = UP;         act_info->isValid = true; break;
+                    case 'D': act_info->active = DOWN;       act_info->isValid = true; break;
+                    case 'L': act_info->active = TURN_LEFT;  act_info->isValid = true; break;
+                    case 'R': act_info->active = TURN_RIGHT; act_info->isValid = true; break;
+                    case 'H': act_info->active = RETURN;     act_info->isValid = true; break;
+                    case 'F': act_info->active = GO_FORWORD; act_info->isValid = true; break;
+                    default: serial_remote_matched = false; break;
+                }
+                if (serial_remote_matched)
+                {
+                    act_info->long_time = false;
                 }
             }
             serial_remote_prev = c;

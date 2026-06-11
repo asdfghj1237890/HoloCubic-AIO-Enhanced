@@ -1,8 +1,9 @@
 #include "display.h"
-#include "network.h"
+#include "aio_network.h"
 #include "lv_port_indev.h"
 #include "lv_demo_encoder.h"
 #include "common.h"
+#include <Arduino.h>
 
 #define LV_HOR_RES_MAX_LEN 80 // 24
 
@@ -28,8 +29,12 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 
 void Display::init(uint8_t rotation, uint8_t backLight)
 {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcAttach(LCD_BL_PIN, 5000, 8);
+#else
     ledcSetup(LCD_BL_PWM_CHANNEL, 5000, 8);
     ledcAttachPin(LCD_BL_PIN, LCD_BL_PWM_CHANNEL);
+#endif
 
     lv_init();
 
@@ -72,5 +77,9 @@ void Display::setBackLight(float duty)
 {
     duty = constrain(duty, 0, 1);
     duty = 1 - duty;
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+    ledcWrite(LCD_BL_PIN, (int)(duty * 255));
+#else
     ledcWrite(LCD_BL_PWM_CHANNEL, (int)(duty * 255));
+#endif
 }

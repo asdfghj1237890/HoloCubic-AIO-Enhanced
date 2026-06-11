@@ -1,7 +1,7 @@
 #include "web_api.h"
 #include "server.h"
 #include "common.h"
-#include "network.h"
+#include "aio_network.h"
 #include "web_setting.h"   // extern AppController *app_controller — feeds /api/settings
 #include <WiFi.h>
 

@@ -2,7 +2,7 @@
 #include "file_manager.h"
 #include "file_manager_gui.h"
 #include "sys/app_controller.h"
-#include "network.h"
+#include "aio_network.h"
 #include "common.h"
 #include "ESP32FtpServer.h"
 
