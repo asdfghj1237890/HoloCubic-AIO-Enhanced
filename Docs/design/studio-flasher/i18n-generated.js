@@ -209,6 +209,7 @@ window.__I18N_GENERATED = {
   "简体中文": { "cn": "简体中文", "en": "简体中文" },
   "節能": { "cn": "节能", "en": "Power Save" },
   "系統 / WiFi": { "cn": "系统 / WiFi", "en": "System / WiFi" },
+  "系統字體 System": { "cn": "系统字体 System", "en": "System font" },
   "系統設定": { "cn": "系统设置", "en": "System Settings" },
   "紫": { "cn": "紫", "en": "Purple" },
   "經典藍": { "cn": "经典蓝", "en": "Classic blue" },

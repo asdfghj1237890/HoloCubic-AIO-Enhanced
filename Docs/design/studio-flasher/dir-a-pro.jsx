@@ -345,7 +345,7 @@ function StudioSettings({ accent, font, onAccent, onFont, fonts, lang, onLang })
             </SettingRow>
             <SettingRow label={tr("字體")} sub={tr("介面文字字型")}>
               <select className="fld" style={{ width: 200 }} value={font} onChange={(e) => onFont(e.target.value)}>
-                {fonts.map((f) => <option key={f} value={f}>{f}</option>)}
+                {fonts.map((f) => <option key={f} value={f}>{tr(f)}</option>)}
               </select>
             </SettingRow>
           </div>
