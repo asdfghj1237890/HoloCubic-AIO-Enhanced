@@ -7,13 +7,14 @@
 app heartbeat
 
 # heartbeat_init -> read_config (defaults written), creates PubSubClient,
-# fires send_to(WIFI_CONN). First main_process renders SEND icon.
+# fires send_to(WIFI_CONN). wait_ms advances the app main loop, so the first
+# screenshot captures the SEND animation after a few deterministic frames.
 wait_ms 200
 screenshot 01_initial
 assert_no_crash
 
-# GO_FORWORD bumps send_cnt and re-renders the same SEND icon (publish
-# is a no-op since mqtt_client->connected() returns false).
+# GO_FORWORD bumps send_cnt and continues the SEND animation (publish is a
+# no-op since mqtt_client->connected() returns false).
 action GO_FORWORD
 wait_ms 200
 screenshot 02_after_go_forward
