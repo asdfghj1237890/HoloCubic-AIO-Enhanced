@@ -58,10 +58,10 @@ jobs:
           if-no-files-found: error
 
   build_tool:
-    # Studio (Tauri 2) bundle. Replaces the legacy `cargo build --bin aio-tool`
-    # egui packaging — Studio is the shipping UI as of this PR. Each OS produces
-    # the platform-native installer/image (NSIS / DMG / AppImage); the raw binary
-    # ships inside the bundle.
+    # Studio (Tauri 2) bundle — the only shipping UI. (The legacy egui
+    # `aio-tool` crate it replaced has since been removed from the repo.)
+    # Each OS produces the platform-native installer/image
+    # (NSIS / DMG / AppImage); the raw binary ships inside the bundle.
     name: build_tool (${{ matrix.target.os }})
     strategy:
       fail-fast: false
@@ -204,6 +204,15 @@ jobs:
           cp dist/partitions.bin         release/
           cp dist/boot_app0.bin          release/
 
+      # Checksums over every published asset. `sha256sum -c SHA256SUMS`
+      # lets users confirm a download wasn't corrupted/tampered before
+      # flashing (the firmware bin goes onto a board with no OTA rollback).
+      - name: Generate SHA256 checksums
+        working-directory: release
+        run: |
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v1
         with:
@@ -224,6 +233,8 @@ jobs:
             For first-time flash, place all four `.bin` files at the addresses above (the tool's Flasher tab can do this in one click).
             See [dist/README.md](https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced/blob/main/dist/README.md) for esptool CLI usage.
 
+            **Verify your downloads** before flashing: `sha256sum -c SHA256SUMS` (the `SHA256SUMS` asset lists a checksum for every file above).
+
             Internal tool version: `${{ needs.build_tool.outputs.version }}` (from `AIO_Tool/Cargo.toml`).
           files: |
             release/HoloCubic_AIO_firmware_${{ github.ref_name }}.bin
@@ -233,3 +244,4 @@ jobs:
             release/bootloader_qio_80m.bin
             release/partitions.bin
             release/boot_app0.bin
+            release/SHA256SUMS

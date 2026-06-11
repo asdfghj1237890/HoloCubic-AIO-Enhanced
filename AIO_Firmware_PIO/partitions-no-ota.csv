@@ -1,3 +1,13 @@
+# HoloCubic AIO partition table — single app slot, NO dual-bank OTA.
+#
+# Why no OTA: this board is ESP32-PICO-D4 with 4MB flash and the firmware
+# image is ~2.5MB. A/B OTA needs two app partitions each >= the image size
+# (2 x 2.5MB = 5MB), which does not fit in 4MB (max ~1.94MB per slot).
+# Evaluated 2026-06 and intentionally not adopted: firmware updates go over
+# USB, and the GUI flasher runs espflash's write-verify with a published
+# SHA256SUMS for download integrity. (otadata below is vestigial — kept
+# because changing the layout would invalidate existing flashed devices.)
+#
 # Name,   Type, SubType, Offset,  Size, Flags
 nvs,      data, nvs,     0x9000,  0x5000,
 otadata,  data, ota,     0xe000,  0x2000,

@@ -6,6 +6,7 @@
 #include "app/app_conf.h"
 #include "network.h"
 #include "common.h"
+#include "web_auth.h"
 
 #define SERVER_REFLUSH_INTERVAL 5000UL // 配置界面重新刷新时间(5s)
 #define DNS_PORT 53                    // DNS端口
@@ -22,100 +23,114 @@ struct ServerAppRunData
 
 static ServerAppRunData *run_data = NULL;
 
+// Wrap a route handler in the HTTP Basic auth gate so every endpoint
+// registered in start_web_config() rejects unauthenticated clients with a
+// 401 — without editing each handler body in web_setting_handlers.cpp /
+// web_api.cpp. Method-qualified routes (HTTP_GET / HTTP_POST) use an inline
+// lambda instead, since that overload's signature differs across cores.
+static void auth_on(const char *uri, WebServer::THandlerFunction handler)
+{
+    server.on(uri, [handler]() {
+        if (!web_require_auth())
+            return;
+        handler();
+    });
+}
+
 void start_web_config()
 {
     // 首页
-    server.on("/", HTTP_GET, HomePage);
+    server.on("/", HTTP_GET, []() { if (!web_require_auth()) return; HomePage(); });
 
     // Glass UI static assets (FU #2). Served once + cached by the
     // browser, so the main HTML pages no longer carry the ~30KB
     // CSS/JS payload inline on every navigation.
-    server.on("/static/glass.css", HTTP_GET, serve_glass_css);
-    server.on("/static/glass.js",  HTTP_GET, serve_glass_js);
+    server.on("/static/glass.css", HTTP_GET, []() { if (!web_require_auth()) return; serve_glass_css(); });
+    server.on("/static/glass.js",  HTTP_GET, []() { if (!web_require_auth()) return; serve_glass_js(); });
 
     init_page_header();
     init_page_footer();
-    server.on("/download", File_Download);
-    server.on("/upload", File_Upload);
-    server.on("/delete", File_Delete);
-    server.on("/delete_result", delete_result);
+    auth_on("/download", File_Download);
+    auth_on("/upload", File_Upload);
+    auth_on("/delete", File_Delete);
+    auth_on("/delete_result", delete_result);
 
-    server.on("/sys_setting", sys_setting);
-    server.on("/rgb_setting", rgb_setting);
+    auth_on("/sys_setting", sys_setting);
+    auth_on("/rgb_setting", rgb_setting);
 #if APP_WEATHER_USE
-    server.on("/weather_setting", weather_setting);
+    auth_on("/weather_setting", weather_setting);
 #endif
 #if APP_WEATHER_OLD_USE
-    server.on("/weather_old_setting", weather_old_setting);
+    auth_on("/weather_old_setting", weather_old_setting);
 #endif
 #if APP_BILIBILI_FANS_USE
-    server.on("/bili_setting", bili_setting);
+    auth_on("/bili_setting", bili_setting);
 #endif
 #if APP_STOCK_MARKET_USE
-    server.on("/stock_setting", stock_setting);
+    auth_on("/stock_setting", stock_setting);
 #endif
 #if APP_PICTURE_USE
-    server.on("/picture_setting", picture_setting);
+    auth_on("/picture_setting", picture_setting);
 #endif
 #if APP_MEDIA_PLAYER_USE
-    server.on("/media_setting", media_setting);
+    auth_on("/media_setting", media_setting);
 #endif
 #if APP_SCREEN_SHARE_USE
-    server.on("/screen_setting", screen_setting);
+    auth_on("/screen_setting", screen_setting);
 #endif
 #if APP_HEARTBEAT_USE
-    server.on("/heartbeat_setting", heartbeat_setting);
+    auth_on("/heartbeat_setting", heartbeat_setting);
 #endif
 #if APP_ANNIVERSARY_USE
-    server.on("/anniversary_setting", anniversary_setting);
+    auth_on("/anniversary_setting", anniversary_setting);
 #endif
 #if APP_PC_RESOURCE_USE
-    server.on("/pc_resource_setting", pc_resource_setting);
+    auth_on("/pc_resource_setting", pc_resource_setting);
 #endif
 
     server.on(
         "/fupload", HTTP_POST,
         []()
-        { server.send(200); },
+        { if (!web_require_auth()) return; server.send(200); },
         handleFileUpload);
 
     // JSON API endpoints for the Glass UI dashboard + system page.
-    server.on("/api/stats", HTTP_GET, api_stats);
-    server.on("/api/wifi-scan", HTTP_GET, api_wifi_scan);
-    server.on("/api/settings", HTTP_GET, api_settings);
+    server.on("/api/stats", HTTP_GET, []() { if (!web_require_auth()) return; api_stats(); });
+    server.on("/api/wifi-scan", HTTP_GET, []() { if (!web_require_auth()) return; api_wifi_scan(); });
+    server.on("/api/settings", HTTP_GET, []() { if (!web_require_auth()) return; api_settings(); });
 
     // 连接
-    server.on("/saveSysConf", saveSysConf);
-    server.on("/saveRgbConf", saveRgbConf);
+    auth_on("/saveSysConf", saveSysConf);
+    auth_on("/saveRgbConf", saveRgbConf);
 #if APP_WEATHER_USE
-    server.on("/saveWeatherConf", saveWeatherConf);
+    auth_on("/saveWeatherConf", saveWeatherConf);
 #endif
 #if APP_WEATHER_OLD_USE
-    server.on("/saveWeatherOldConf", saveWeatherOldConf);
+    auth_on("/saveWeatherOldConf", saveWeatherOldConf);
 #endif
 #if APP_BILIBILI_FANS_USE
-    server.on("/saveBiliConf", saveBiliConf);
+    auth_on("/saveBiliConf", saveBiliConf);
 #endif
 #if APP_STOCK_MARKET_USE
-    server.on("/saveStockConf", saveStockConf);
+    auth_on("/saveStockConf", saveStockConf);
 #endif
 #if APP_PICTURE_USE
-    server.on("/savePictureConf", savePictureConf);
+    auth_on("/savePictureConf", savePictureConf);
 #endif
 #if APP_MEDIA_PLAYER_USE
-    server.on("/saveMediaConf", saveMediaConf);
+    auth_on("/saveMediaConf", saveMediaConf);
 #endif
 #if APP_SCREEN_SHARE_USE
-    server.on("/saveScreenConf", saveScreenConf);
+    auth_on("/saveScreenConf", saveScreenConf);
 #endif
 #if APP_HEARTBEAT_USE
-    server.on("/saveHeartbeatConf", saveHeartbeatConf);
+    auth_on("/saveHeartbeatConf", saveHeartbeatConf);
 #endif
 #if APP_ANNIVERSARY_USE
-    server.on("/saveAnniversaryConf", saveAnniversaryConf);
+    auth_on("/saveAnniversaryConf", saveAnniversaryConf);
 #endif
 #if APP_PC_RESOURCE_USE
-    server.on("/savePCResourceConf", savePCResourceConf);
+    auth_on("/savePCResourceConf", savePCResourceConf);
 #endif
 
     server.begin();
@@ -159,9 +174,10 @@ static void server_process(AppController *sys,
     if (0 == run_data->web_start && 0 == run_data->req_sent)
     {
         // 预显示
+        String web_login = String("Login ") + WEB_AUTH_USER + " / " + web_auth_password();
         display_setting(
             "WebServer Start",
-            "Domain: holocubic",
+            web_login.c_str(),
             "Wait...", "Wait...",
             // "", "",
             LV_SCR_LOAD_ANIM_NONE);
@@ -180,9 +196,10 @@ static void server_process(AppController *sys,
             sys->send_to(SERVER_APP_NAME, CTRL_NAME,
                          APP_MESSAGE_WIFI_ALIVE, NULL, NULL);
 
+            String web_login = String("Login ") + WEB_AUTH_USER + " / " + web_auth_password();
             display_setting(
                 "WebServer Start",
-                "Domain: holocubic",
+                web_login.c_str(),
                 WiFi.localIP().toString().c_str(),
                 WiFi.softAPIP().toString().c_str(),
                 LV_SCR_LOAD_ANIM_NONE);
@@ -219,9 +236,10 @@ static void server_message_handle(const char *from, const char *to,
     case APP_MESSAGE_WIFI_AP:
     {
         Serial.print(F("APP_MESSAGE_WIFI_AP enable\n"));
+        String web_login = String("Login ") + WEB_AUTH_USER + " / " + web_auth_password();
         display_setting(
             "WebServer Start",
-            "Domain: holocubic",
+            web_login.c_str(),
             WiFi.localIP().toString().c_str(),
             WiFi.softAPIP().toString().c_str(),
             LV_SCR_LOAD_ANIM_NONE);

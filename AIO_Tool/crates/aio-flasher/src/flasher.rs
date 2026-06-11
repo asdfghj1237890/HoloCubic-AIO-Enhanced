@@ -96,12 +96,16 @@ impl Flasher {
             product: None,
         };
 
+        // verify = true: espflash runs its per-write MD5 check so a corrupt
+        // write is caught before reboot. The board has a single app partition
+        // (no OTA rollback / recovery), so an unverified bad flash bricks it
+        // until re-flashed over USB. The retired Python tool left this off.
         let inner = EspFlasher::connect(
             serial,
             port_info,
             Some(baud),
             true,  // use_stub — faster + supports erase_region
-            false, // verify — espflash's per-write MD5 verify, off for parity with Python tool
+            true,  // verify (see note above)
             false, // skip — don't skip identical regions
             None,  // chip — autodetect via magic register
             ResetAfterOperation::default(),

@@ -6,9 +6,9 @@ Operational notes for AI agents working in this repo. For architecture / how-to 
 
 HoloCubic AIO — a third-party firmware for the HoloCubic ESP32 toy. Two main components:
 - `AIO_Firmware_PIO/` — ESP32 firmware (PlatformIO + Arduino-core + LVGL 8.3 + ArduinoJson v6)
-- `AIO_Tool/` — Cross-platform GUI flasher + remote control. Two parallel frontends share the 5 backend crates (`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`):
-  - **Studio** (`AIO_Tool/studio/`, Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust toolchain) — the **primary dev/UI target**: recent feature work (B15 settings, single-session writes, latest-release fetch) lands here first. **When the user says "run the dev build" / "see the UI" without naming a frontend, launch Studio.**
-  - **egui binary** (`AIO_Tool/crates/aio-tool/`, Rust 1.82 + egui 0.29) — the **legacy frontend**, still actively built and tested in CI (`tool-rust.yml`) but **no longer what `release.yml` ships**. As of the Studio bundle PR, GitHub Releases get Studio installers / images (Windows NSIS, macOS DMG, Linux AppImage) instead of raw egui binaries. The egui crate stays in the repo for cross-validation of backend-crate changes and as a fallback dev surface; expect it to be removed once Studio has covered every tab.
+- `AIO_Tool/` — Cross-platform GUI flasher + remote control. A single frontend (**Studio**) on top of 5 backend crates (`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`):
+  - **Studio** (`AIO_Tool/studio/`, Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust toolchain) — the **only frontend**, and what `release.yml` ships (Windows NSIS, macOS DMG, Linux AppImage). All UI / feature work lands here. **When the user says "run the dev build" / "see the UI", launch Studio.**
+  - The legacy **egui binary** (`AIO_Tool/crates/aio-tool/`) was **removed** once Studio covered every tab — don't look for it. The main `AIO_Tool/` workspace now holds only the backend crates (still Rust-1.82-pinned for the espflash / indexmap / image MSRV line). `aio-i18n` + `AIO_Tool/i18n/*.json` remain as the canonical translation source but currently have no shipping consumer (Studio uses its own JS dict; wiring the two is a tracked follow-up).
 
 Plus `lv_simulater_platformio/` for host-side SDL2 GUI simulation, and `test/` for scenario harness.
 
@@ -47,16 +47,13 @@ cargo run --manifest-path AIO_Tool/studio/Cargo.toml --no-default-features
 # Per-OS bundle target: nsis (Win) | dmg (macOS) | appimage (Linux).
 cargo tauri build --manifest-path AIO_Tool/studio/Cargo.toml --bundles nsis,dmg,appimage
 
-# AIO_Tool — egui binary (legacy frontend; Rust 1.82 — pinned via rust-toolchain.toml)
-# Only run this when explicitly working on the egui frontend; for general "see the UI", use Studio above.
-# release.yml no longer ships this binary as of the Studio bundle switch; it still runs as
-# a sanity check via tool-rust.yml on every PR that touches AIO_Tool/.
+# AIO_Tool — backend crates (Rust 1.82 — pinned via rust-toolchain.toml).
+# The workspace now holds only the 5 backend crates (the egui `aio-tool`
+# binary was removed); tool-rust.yml runs these on every PR touching AIO_Tool/.
 cd AIO_Tool
-cargo +1.82.0 run --bin aio-tool           # launch the legacy egui GUI
-cargo +1.82.0 test --workspace             # ~199 unit + integration + golden tests (covers backend crates)
+cargo +1.82.0 test --workspace             # unit + integration + golden tests (backend crates)
 cargo +1.82.0 clippy --all-targets --workspace -- -D warnings
 cargo +1.82.0 fmt --all -- --check
-cargo +1.82.0 build --release --bin aio-tool   # produces target/release/aio-tool[.exe] for manual smoke-test
 ```
 
 Linux build requires `libudev-dev` (Debian/Ubuntu) or `systemd-devel` (Fedora) — `serialport` enumeration uses it.
@@ -106,15 +103,10 @@ These are real rules with real reasons (each cited in [`Docs/development/08-refa
 - `Send_HTML(webpage)` for web pages; build via `String webpage; webpage += F(...) + getText(key) + F(...);`.
 
 **AIO_Tool Rust (shared)**:
-- Every user-visible string MUST come from `aio_i18n::t("key", None)` (egui) or the equivalent JS-side i18n helper (Studio). New keys MUST be added to all three locale files (`AIO_Tool/i18n/{en_US,zh_CN,zh_TW}.json`); `aio-i18n/build.rs` panics at compile time if the key sets diverge.
+- Every user-visible string in Studio MUST come from the JS-side i18n helper (`tr()` in `Docs/design/studio-flasher/i18n.jsx`). The `aio-i18n` Rust crate still enforces that `AIO_Tool/i18n/{en_US,zh_CN,zh_TW}.json` have identical key sets at compile time (`aio-i18n/build.rs` panics on divergence), but the JS dict is **not yet** checked against those JSON files — keep them in sync by hand until the follow-up lands.
 - Preserved-from-Python wire-format bugs (B1 FileRename, B2 FileGetInfo) live in `aio-protocol` with explicit `// PRESERVED-BUG` comments. Don't "fix" them without a firmware-side update.
 
-**AIO_Tool Rust — egui frontend only** (the conventions below apply to `AIO_Tool/crates/aio-tool/`; Studio uses Tauri commands + events instead — see `AIO_Tool/studio/src/commands.rs`):
-- Long-running ops follow the bus + worker pattern (`AIO_Tool/crates/aio-tool/src/{flasher_worker,settings_worker,file_manager_worker,image_converter_worker,video_converter_worker}.rs`):
-  - egui frame spawns `std::thread::spawn`.
-  - Worker owns its transport / subprocess / encoder.
-  - Cancel via shared `Arc<AtomicBool>`; no `Cmd::Stop` enum, no `thread::sleep`.
-  - Bus events flow via `AppEventTx` (`mpsc::Sender<AppEvent>`); UI drains in `App::update` with `try_recv` and `ctx.request_repaint_after(100ms)` for liveness.
+**AIO_Tool Rust — Studio (Tauri)**: long-running ops are Tauri commands in `AIO_Tool/studio/src/commands.rs` that `std::thread::spawn`, own their transport / subprocess / encoder, cancel via a shared `Arc<AtomicBool>`, and emit Tauri events (`flash:event` etc.) back to the JS side (the prototype's `useFlasher` hook listens). (The old egui bus + worker pattern was removed with the egui frontend.)
 
 **Web settings (firmware)**:
 - New form fields go through helpers in `AIO_Firmware_PIO/src/app/server/web_setting_forms.cpp`: `emit_form_open` / `emit_text_field` / `emit_pwd_field` / `emit_radio2_field` / `emit_form_close`. All take an i18n key for the label, not a literal.
@@ -122,24 +114,24 @@ These are real rules with real reasons (each cited in [`Docs/development/08-refa
 
 ## Architecture in one paragraph
 
-Firmware main loop (`HoloCubic_AIO.cpp`) reads IMU once per ~50ms tick → passes `ImuAction` to `AppController->main_process()` → routes to active app's `main_process(sys, act_info)`. Each app is an `APP_OBJ` with 7 callbacks (init/process/background_task/exit/message_handle + name/icon/info). Cross-app comms via `sys->send_to(from, to, type, msg, ext)` which is async (queued) — except `GET_PARAM`/`SET_PARAM` which dispatch synchronously. Both `main_process` and `message_handle` run on main thread → no mutex needed but `delay()` is fatal. Full deep-dive in [`Docs/development/02-firmware-architecture.md`](./Docs/development/02-firmware-architecture.md). AIO_Tool's architecture is documented in `AIO_Tool/README.md` + per-crate READMEs — backend crates layered protocol → i18n → device → flasher / converter, consumed by **two parallel frontends**: Studio (Tauri 2 native shell + React/JSX UI rendered in a webview — the shipping UI; what `release.yml` packages as NSIS / DMG / AppImage for every tag) and the legacy egui binary `aio-tool` (kept in-tree for backend-crate cross-validation and as a fallback dev surface). UI changes need to land in the frontend the user is actually running — confirm which one before editing if it's not obvious.
+Firmware main loop (`HoloCubic_AIO.cpp`) reads IMU once per ~50ms tick → passes `ImuAction` to `AppController->main_process()` → routes to active app's `main_process(sys, act_info)`. Each app is an `APP_OBJ` with 7 callbacks (init/process/background_task/exit/message_handle + name/icon/info). Cross-app comms via `sys->send_to(from, to, type, msg, ext)` which is async (queued) — except `GET_PARAM`/`SET_PARAM` which dispatch synchronously. Both `main_process` and `message_handle` run on main thread → no mutex needed but `delay()` is fatal. Full deep-dive in [`Docs/development/02-firmware-architecture.md`](./Docs/development/02-firmware-architecture.md). AIO_Tool's architecture is documented in `AIO_Tool/README.md` + per-crate READMEs — backend crates layered protocol → i18n → device → flasher / converter, consumed by a single frontend: Studio (Tauri 2 native shell + React/JSX UI rendered in a webview — the shipping UI; what `release.yml` packages as NSIS / DMG / AppImage for every tag). The legacy egui binary was removed once Studio reached tab parity. UI changes land in `Docs/design/studio-flasher/` (JSX) + `AIO_Tool/studio/src/` (Tauri commands).
 
 ## Test strategy in one paragraph
 
-Four host envs cover firmware layers: `native_unit` (pure logic — parsers, state machines), `native_ftp` (one stateful protocol class), `native_test` (full GUI scenario with SDL2 + LVGL + screenshot diff), `firmware-build` (real ESP32 compile/link, no execute). Driver layer + WiFi reconnect + flash partition behaviour need real hardware. AIO_Tool has ~199 tests across 6 crates: unit, integration, wire-format goldens (hex-compared against the legacy Python tool's output), property tests (proptest), and converter parity tests (byte-identical pixel encoding vs Python). **Known gaps**: GUI smoke tests (`egui_kittest` — spec §6 Layer 5) are not yet implemented; tracked for v3.1. Long-running memory leaks are NOT tested (stock leak class — see [`Docs/development/09-test-architecture-decomposition.md`](./Docs/development/09-test-architecture-decomposition.md) §8 for the planned fix design).
+Four host envs cover firmware layers: `native_unit` (pure logic — parsers, state machines), `native_ftp` (one stateful protocol class), `native_test` (full GUI scenario with SDL2 + LVGL + screenshot diff), `firmware-build` (real ESP32 compile/link, no execute). Driver layer + WiFi reconnect + flash partition behaviour need real hardware. AIO_Tool's tests live across the 5 backend crates: unit, integration, wire-format goldens (hex-compared against the legacy Python tool's output), property tests (proptest), and converter parity tests (byte-identical pixel encoding vs Python). **Known gaps**: Studio's JS/JSX UI has no automated tests (the egui frontend and its planned `egui_kittest` smoke tests were removed with it). Long-running memory leaks are NOT tested (stock leak class — see [`Docs/development/09-test-architecture-decomposition.md`](./Docs/development/09-test-architecture-decomposition.md) §8 for the planned fix design).
 
 ## Things that LOOK like bugs but aren't
 
 - `AIO_VERSION` in `common.h` lags behind release tags sometimes — this is OK, the tag is source of truth, the constant gates cache-busting on the next bump
 - `dist/HoloCubic_AIO_firmware_v3.0.X.bin` appearing as untracked is fine — local user testing artifact, NOT to be committed
-- Studio's Settings tab speaks HTTP to the firmware's existing web flow — `GET /api/settings` reads `sys_cfg`/`rgb_cfg`/`mpu_cfg` as JSON, `POST /save<Cat>Conf` writes form-encoded fields (the same handlers browser-based settings pages use, which persist to SPIFFS `.cfg`). B15 is fixed Studio-side as of 2026-06-09; the egui tool's Settings tab still uses the legacy broken serial flow until a follow-up cleanup PR
+- Studio's Settings tab speaks HTTP to the firmware's existing web flow — `GET /api/settings` reads `sys_cfg`/`rgb_cfg`/`mpu_cfg` as JSON, `POST /save<Cat>Conf` writes form-encoded fields (the same handlers browser-based settings pages use, which persist to SPIFFS `.cfg`). As of the web-auth change these requests carry HTTP Basic credentials (user `admin`, per-device password shown on the WebServer screen — see `AIO_Firmware_PIO/src/app/server/web_auth.cpp`).
 - File Manager Rename / Properties don't actually rename / show properties — these are B1 / B2 wire-format bugs preserved verbatim from the Python tool (firmware-side handler bug; out of scope for the tool rewrite)
 - Many comments in firmware source are zh-cn from the original ClimbSnail upstream — leave them; only translate the ones we change
 
 ## When debugging
 
 - CI fail: `gh run view <id> --log-failed | grep -E "error:|FAIL"` first
-- AIO_Tool GUI bug: the bus + worker pattern means UI updates are entirely driven by `AppEvent` variants. Add a log line in the `App::update` `try_recv` arm to see what's flowing. The cancel-flag contract means an apparently-hung worker is usually a missed `cancel.load()` check at a loop boundary.
+- AIO_Tool (Studio) GUI bug: UI updates are driven by Tauri events emitted from the worker threads in `AIO_Tool/studio/src/commands.rs`. Add a log line where the event is emitted (or in the JS `useFlasher` listener) to see what's flowing. The cancel-flag contract means an apparently-hung worker is usually a missed `cancel.load()` check at a loop boundary.
 - Release fail after PR was green: probably a host-stub / Arduino-core divergence (firmware side), or a platform-specific cargo build issue (tool side). Verify `pio run -e HoloCubic_AIO_Releases` AND `pio run -e native_test` build cleanly; for tool issues, `tool-rust.yml`'s 3-OS matrix should have caught it at PR time — if not, that's the first place to add a regression.
 
 ## What to ask before destructive actions

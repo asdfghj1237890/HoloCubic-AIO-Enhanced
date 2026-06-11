@@ -12,6 +12,7 @@
 #include "network.h"
 #include "common.h"
 #include "server.h"
+#include "web_auth.h"
 #include "web_setting.h"
 #include "web_setting_internal.h"
 #include "app/app_conf.h"
@@ -451,6 +452,8 @@ void File_Upload()
 File UploadFile;
 void handleFileUpload()
 {                                                   // upload a new file to the Filing system
+    if (!web_require_auth())
+        return; // reject unauthenticated uploads before any bytes reach SPIFFS
     HTTPUpload &uploadFileStream = server.upload(); // See https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer/srcv
                                                     // For further information on 'status' structure, there are other reasons such as a failed transfer that could be used
     String filename = uploadFileStream.filename;

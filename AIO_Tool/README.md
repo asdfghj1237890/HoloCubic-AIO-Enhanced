@@ -2,20 +2,17 @@
 
 Cross-platform GUI for the HoloCubic AIO firmware — flashing, settings, file management, image/video conversion, remote control.
 
-## Two parallel frontends
+## Frontend
 
-| Frontend | Path | Role | Stack |
-|---|---|---|---|
-| **Studio** | `AIO_Tool/studio/` | **The shipping UI** — what `release.yml` packages as NSIS / DMG / AppImage for every tag. Recent feature work (B15 Settings, single-session writes, latest-release fetch) lives here. | Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust (1.85+) |
-| **egui binary** (`aio-tool`) | `AIO_Tool/crates/aio-tool/` | Legacy frontend, kept in-tree for backend-crate cross-validation and as a fallback dev surface. **Not shipped** — `tool-rust.yml` still PR-tests it but no release artefact. | Rust 1.82 + egui 0.29 + eframe |
+**Studio** (`AIO_Tool/studio/`) is the single frontend and the shipping UI — what `release.yml` packages as NSIS / DMG / AppImage for every tag. Stack: Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust (1.85+).
 
-Both share the 5 backend crates (`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`).
+It sits on the 5 backend crates (`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`). The legacy egui binary (`aio-tool`) was removed once Studio reached tab parity; the backend crates remain in the `AIO_Tool/` workspace (Rust 1.82), and `aio-i18n` keeps the canonical `AIO_Tool/i18n/*.json` translations.
 
-When the user says "run the dev build" or "see the UI" without naming a frontend, **launch Studio** (see `CLAUDE.md` → Common commands for the procedure).
+When the user says "run the dev build" or "see the UI", **launch Studio** (see `CLAUDE.md` → Common commands for the procedure).
 
 ## Build + run
 
-### Studio (Tauri — primary dev target)
+### Studio (Tauri)
 
 ```sh
 # Step 1: start the JSX frontend on :8765 (Studio's tauri.conf.json points devUrl here)
@@ -29,15 +26,6 @@ cargo run --manifest-path AIO_Tool/studio/Cargo.toml --no-default-features
 
 First Tauri build is ~5 min. Tauri dev mode has no HMR — `Ctrl+R` / `F5` in the Studio window after editing JSX.
 
-### egui binary (legacy)
-
-```sh
-cd AIO_Tool
-cargo +1.82.0 run --bin aio-tool
-```
-
-First build pulls a substantial dep graph (~10 min cold cache; ~5 s incremental).
-
 ## Test
 
 ```sh
@@ -45,7 +33,7 @@ cd AIO_Tool
 cargo +1.82.0 test --workspace
 ```
 
-~199 tests across the 6 workspace crates (unit, integration, wire-format goldens, property tests via proptest, converter parity vs the legacy Python tool's byte output). Tests cover the backend crates that both frontends share. The Studio crate is excluded from this workspace (`exclude = ["studio"]`) because it uses the stable toolchain — its tests run via `tool-studio.yml` separately.
+Tests across the 5 workspace crates (unit, integration, wire-format goldens, property tests via proptest, converter parity vs the legacy Python tool's byte output). The Studio crate is excluded from this workspace (`exclude = ["studio"]`) because it uses the stable toolchain — its tests run via `tool-studio.yml` separately.
 
 ## Lint
 
@@ -57,10 +45,10 @@ cargo +1.82.0 fmt --all -- --check
 
 ## Linux build requirements
 
-The `serialport` crate's `libudev` feature is enabled in `aio-tool` and `aio-studio` so the Flasher tab can enumerate COM ports.
+The `serialport` crate's `libudev` feature is enabled (in the backend crates and `aio-studio`) so the Flasher tab can enumerate COM ports.
 
 ```sh
-# egui binary needs only libudev:
+# Backend-crate tests need only libudev:
 sudo apt install libudev-dev   # Debian / Ubuntu
 sudo dnf install systemd-devel # Fedora
 
@@ -68,7 +56,7 @@ sudo dnf install systemd-devel # Fedora
 sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libudev-dev
 ```
 
-CI's `tool-rust.yml` (egui) and `tool-studio.yml` (Studio) install these in their Ubuntu runners.
+CI's `tool-rust.yml` (backend crates) and `tool-studio.yml` (Studio) install these in their Ubuntu runners.
 
 ## Workspace layout
 
@@ -79,8 +67,7 @@ CI's `tool-rust.yml` (egui) and `tool-studio.yml` (Studio) install these in thei
 | `aio-device` | Transport trait + Serial + TCP + Mock backends |
 | `aio-flasher` | espflash 3.3.0 wrapper (erase, write_partitions, cancel) |
 | `aio-converter` | LVGL image encoders (RGB332/565/565_SWAP/888, Alpha/Indexed 1-8 bit, C-array) |
-| `aio-tool` | egui binary — 7 tabs (Flasher / Settings / File Manager / Image Converter / Video Converter / Tool Settings / Help) |
-| `aio-studio` (separate workspace) | Tauri 2 shell — frontend in `Docs/design/studio-flasher/`; bridges to the 4 backend crates via `#[tauri::command]` + `Emitter::emit` events. See `AIO_Tool/studio/src/commands.rs`. |
+| `aio-studio` (separate workspace) | Tauri 2 shell — the single shipping frontend; UI in `Docs/design/studio-flasher/`; bridges to the 4 backend crates via `#[tauri::command]` + `Emitter::emit` events. See `AIO_Tool/studio/src/commands.rs`. (Replaced the removed egui `aio-tool` binary — 7 tabs: Flasher / Settings / File Manager / Image Converter / Video Converter / Tool Settings / Help.) |
 
 ## See also
 

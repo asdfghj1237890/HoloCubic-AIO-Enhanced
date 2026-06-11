@@ -436,7 +436,7 @@ with open(out_path, 'wb') as f:
 
 ## 🛠️ Development & Compilation
 
-> 📚 **Want to contribute code?** Read the [**developer tutorial set**](./Docs/development/README.md) first — covers firmware architecture, writing a new app from scratch, the AIO_Tool Rust workspace (6 crates: aio-protocol / aio-i18n / aio-device / aio-flasher / aio-converter / aio-tool), all three test environments, and the CI / release pipeline. ~1800 lines, ~3 hour read end-to-end.
+> 📚 **Want to contribute code?** Read the [**developer tutorial set**](./Docs/development/README.md) first — covers firmware architecture, writing a new app from scratch, the AIO_Tool Rust workspace (5 backend crates: aio-protocol / aio-i18n / aio-device / aio-flasher / aio-converter, consumed by the Studio frontend), all three test environments, and the CI / release pipeline. ~1800 lines, ~3 hour read end-to-end.
 
 ### Build Environment
 
