@@ -5,7 +5,8 @@
 # Note: tomato_process delays 750 ms on first entry plus 100 ms per
 # iteration, and TURN_LEFT/RIGHT mode-switch requires 3+ consecutive
 # directional inputs to clear the debounce counter, so smoke coverage
-# stays on simpler paths.
+# stays on simpler paths. wait_ms advances the app main loop, so the golden
+# countdown reflects elapsed timer time rather than the untouched 25:00 state.
 
 app tomato
 
