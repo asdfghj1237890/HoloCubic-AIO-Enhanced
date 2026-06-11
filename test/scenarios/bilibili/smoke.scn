@@ -1,14 +1,7 @@
-# Smoke test for bilibili_fans. Two screenshots:
-# - 01_initial: post-init / pre-action. The first process tick has
-#   already fired WIFI_CONN -> update_fans_num -> data is in run_data,
-#   but display_bilibili was called with the OLD (zero) values BEFORE
-#   the synchronous fetch returned, so the screen still shows "0/0".
-# - 02_with_data: after `action UP` re-runs process which now
-#   formats fans_num/follow_num from the fetched run_data
-#   (12345 -> "1.2w" / 520).
-#
-# Together these verify both the default-render path and the
-# post-fetch render path.
+# Smoke test for bilibili_fans. wait_ms advances the app main loop, so the
+# first screenshot asserts the stable post-fetch render from the fixture
+# (12345 -> "1.2w" / 520). The UP action then re-runs the render path with the
+# already-fetched run_data and should keep the same values on screen.
 
 app bilibili
 
