@@ -45,7 +45,9 @@ cargo run --manifest-path AIO_Tool/studio/Cargo.toml --no-default-features
 # Studio bundle — what release.yml uploads for every tag (NSIS / DMG / AppImage).
 # Needs `cargo install tauri-cli --version ^2.0` first.
 # Per-OS bundle target: nsis (Win) | dmg (macOS) | appimage (Linux).
-cargo tauri build --manifest-path AIO_Tool/studio/Cargo.toml --bundles nsis,dmg,appimage
+# cargo-tauri 2.11+ dropped --manifest-path; run from the crate dir (as CI's
+# tool-studio.yml working-directory does).
+cd AIO_Tool/studio && cargo tauri build --bundles nsis,dmg,appimage
 
 # AIO_Tool — backend crates (Rust 1.82 — pinned via rust-toolchain.toml).
 # The workspace now holds only the 5 backend crates (the egui `aio-tool`
