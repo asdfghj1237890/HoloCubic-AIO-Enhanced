@@ -174,7 +174,7 @@ static void server_process(AppController *sys,
     if (0 == run_data->web_start && 0 == run_data->req_sent)
     {
         // 预显示
-        String web_login = String("Login ") + WEB_AUTH_USER + " / " + web_auth_password();
+        String web_login = String(WEB_AUTH_USER) + "/" + web_auth_password();
         display_setting(
             "WebServer Start",
             web_login.c_str(),
@@ -196,7 +196,7 @@ static void server_process(AppController *sys,
             sys->send_to(SERVER_APP_NAME, CTRL_NAME,
                          APP_MESSAGE_WIFI_ALIVE, NULL, NULL);
 
-            String web_login = String("Login ") + WEB_AUTH_USER + " / " + web_auth_password();
+            String web_login = String(WEB_AUTH_USER) + "/" + web_auth_password();
             display_setting(
                 "WebServer Start",
                 web_login.c_str(),
@@ -236,7 +236,7 @@ static void server_message_handle(const char *from, const char *to,
     case APP_MESSAGE_WIFI_AP:
     {
         Serial.print(F("APP_MESSAGE_WIFI_AP enable\n"));
-        String web_login = String("Login ") + WEB_AUTH_USER + " / " + web_auth_password();
+        String web_login = String(WEB_AUTH_USER) + "/" + web_auth_password();
         display_setting(
             "WebServer Start",
             web_login.c_str(),
