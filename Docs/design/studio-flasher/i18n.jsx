@@ -37,5 +37,13 @@ function tr(s) {
   return e && e[window.__lang] ? e[window.__lang] : s;
 }
 
+// trf(template, vars) — like tr() but fills {name} slots after the lookup.
+// The template is the zh-TW string (the dict key); each locale value carries
+// the same {name} slots. Unknown slots are left as literal "{name}".
+function trf(template, vars) {
+  return tr(template).replace(/\{(\w+)\}/g, (_, k) => (k in vars ? String(vars[k]) : `{${k}}`));
+}
+
 window.tr = tr;
+window.trf = trf;
 window.I18N_DICT = I18N_DICT;

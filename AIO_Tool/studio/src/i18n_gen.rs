@@ -134,6 +134,33 @@ pub fn generated_keys(dir: &Path) -> BTreeSet<String> {
     build_entries(&en, &cn, &tw).0.into_keys().collect()
 }
 
+/// The generated dict as full `zh_TW -> (cn, en)` entries (for placeholder checks).
+pub fn generated_entries(dir: &Path) -> BTreeMap<String, (String, String)> {
+    let en = load_locale(&dir.join("en_US.json"));
+    let cn = load_locale(&dir.join("zh_CN.json"));
+    let tw = load_locale(&dir.join("zh_TW.json"));
+    build_entries(&en, &cn, &tw).0
+}
+
+/// The set of `{name}` placeholder slots in a template string.
+pub fn placeholder_set(s: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    let mut i = 0;
+    while let Some(rel) = s[i..].find('{') {
+        let start = i + rel + 1;
+        if let Some(end_rel) = s[start..].find('}') {
+            let name = &s[start..start + end_rel];
+            if !name.is_empty() && name.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_') {
+                out.insert(name.to_string());
+            }
+            i = start + end_rel + 1;
+        } else {
+            break;
+        }
+    }
+    out
+}
+
 /// Extract the `I18N_SUPPLEMENT` key set from i18n.jsx source, scanning between
 /// the `I18N_SUPPLEMENT-START` / `-END` markers for lines beginning with a
 /// double quote. Supplement keys must be double-quoted (the i18n.jsx
@@ -191,6 +218,38 @@ pub fn scan_tr_literals(src: &str) -> BTreeSet<String> {
             }
         }
         i = abs + 3;
+    }
+    found
+}
+
+/// Find all static `trf("…")` / `trf('…')` template literals (first argument)
+/// in a source string. Same rules as `scan_tr_literals` but for the `trf(` token.
+pub fn scan_trf_literals(src: &str) -> BTreeSet<String> {
+    let bytes = src.as_bytes();
+    let mut found = BTreeSet::new();
+    let mut i = 0usize;
+    while let Some(rel) = src[i..].find("trf(") {
+        let abs = i + rel; // byte index of 't' in "trf("
+        let prev_is_ident = abs > 0 && {
+            let p = bytes[abs - 1];
+            p.is_ascii_alphanumeric() || p == b'_' || p == b'$' || p == b'.'
+        };
+        let mut j = abs + 4; // just past "trf("
+        if !prev_is_ident {
+            while j < bytes.len() && bytes[j].is_ascii_whitespace() {
+                j += 1;
+            }
+            if j < bytes.len() && (bytes[j] == b'"' || bytes[j] == b'\'') {
+                let quote = bytes[j] as char;
+                let lit_start = j + 1;
+                if let Some(qrel) = src[lit_start..].find(quote) {
+                    found.insert(src[lit_start..lit_start + qrel].to_string());
+                    i = lit_start + qrel + 1;
+                    continue;
+                }
+            }
+        }
+        i = abs + 4;
     }
     found
 }

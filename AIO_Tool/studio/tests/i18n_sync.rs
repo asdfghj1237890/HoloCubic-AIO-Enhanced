@@ -65,6 +65,11 @@ fn every_tr_literal_resolves() {
                 missing.push(format!("{name}: tr({lit:?})"));
             }
         }
+        for lit in i18n_gen::scan_trf_literals(&src) {
+            if !resolvable.contains(&lit) {
+                missing.push(format!("{name}: trf({lit:?})"));
+            }
+        }
     }
     missing.sort();
     assert!(
@@ -104,5 +109,36 @@ fn nav_labels_resolve() {
         missing.is_empty(),
         "nav labels not resolvable (add to i18n.jsx supplement):\n{}",
         missing.join("\n")
+    );
+}
+
+#[test]
+fn trf_templates_have_consistent_placeholders() {
+    let dir = i18n_gen::studio_flasher_dir();
+    let entries = i18n_gen::generated_entries(&i18n_gen::i18n_dir());
+    let mut problems = Vec::new();
+    for path in consumer_files(&dir) {
+        let src = std::fs::read_to_string(&path).expect("read consumer file");
+        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        for tmpl in i18n_gen::scan_trf_literals(&src) {
+            let tw = i18n_gen::placeholder_set(&tmpl);
+            if let Some((cn, en)) = entries.get(&tmpl) {
+                if i18n_gen::placeholder_set(cn) != tw || i18n_gen::placeholder_set(en) != tw {
+                    problems.push(format!(
+                        "{name}: trf({tmpl:?}) placeholders differ across locales \
+                         (tw={tw:?} cn={:?} en={:?})",
+                        i18n_gen::placeholder_set(cn),
+                        i18n_gen::placeholder_set(en)
+                    ));
+                }
+            }
+            // templates resolved only via the JS supplement are not placeholder-checked
+        }
+    }
+    problems.sort();
+    assert!(
+        problems.is_empty(),
+        "trf placeholder mismatch:\n{}",
+        problems.join("\n")
     );
 }
