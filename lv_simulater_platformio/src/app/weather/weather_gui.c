@@ -1,6 +1,8 @@
 #include "weather_gui.h"
 #include "weather_image.h"
 
+#include <string.h>
+
 #include "lvgl.h"
 
 LV_FONT_DECLARE(lv_font_ibmplex_115);
@@ -121,11 +123,11 @@ void display_curve(short maxT[], short minT[], lv_scr_load_anim_t anim_type)
     display_curve_init(anim_type);
     for (int Ti = 0; Ti < 7; ++Ti)
     {
-        ser1->y_points[Ti] = maxT[Ti] + 50; // 补偿50度
+        lv_chart_set_series_value_by_id(chart, ser1, Ti, maxT[Ti] + 50); // 补偿50度
     }
     for (int Ti = 0; Ti < 7; ++Ti)
     {
-        ser2->y_points[Ti] = minT[Ti] + 50; // 补偿50度
+        lv_chart_set_series_value_by_id(chart, ser2, Ti, minT[Ti] + 50); // 补偿50度
     }
     lv_chart_refresh(chart);
 }

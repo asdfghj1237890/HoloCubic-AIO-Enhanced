@@ -1,4 +1,5 @@
 #include "pc_resource_gui.h"
+#include <string.h>
 
 LV_FONT_DECLARE(lv_font_ibmplex_24);
 LV_FONT_DECLARE(lv_font_ibmplex_18);

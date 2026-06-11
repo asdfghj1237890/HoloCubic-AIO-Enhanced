@@ -5,26 +5,22 @@
 #include "common.h"
 #include <Arduino.h>
 
-#define LV_HOR_RES_MAX_LEN 80 // 24
+#define LV_HOR_RES_MAX_LEN 40
 
-static lv_disp_draw_buf_t disp_buf;
-static lv_disp_drv_t disp_drv;
-static lv_color_t buf[SCREEN_HOR_RES * LV_HOR_RES_MAX_LEN];
+static uint8_t disp_buf[SCREEN_HOR_RES * LV_HOR_RES_MAX_LEN * 2];
+static lv_display_t *display = NULL;
 
-void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
+void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
     uint32_t w = (area->x2 - area->x1 + 1);
     uint32_t h = (area->y2 - area->y1 + 1);
 
     tft->setAddrWindow(area->x1, area->y1, w, h);
     tft->startWrite();
-    // tft->writePixels(&color_p->full, w * h);
-    tft->pushColors(&color_p->full, w * h, true);
+    tft->pushColors((uint16_t *)px_map, w * h, true);
     tft->endWrite();
-    // Initiate DMA - blocking only if last DMA is not complete
-    // tft->pushImageDMA(area->x1, area->y1, w, h, bitmap, &color_p->full);
 
-    lv_disp_flush_ready(disp);
+    lv_display_flush_ready(disp);
 }
 
 void Display::init(uint8_t rotation, uint8_t backLight)
@@ -55,17 +51,11 @@ void Display::init(uint8_t rotation, uint8_t backLight)
 
     setBackLight(backLight / 100.0); // 设置亮度
 
-    lv_disp_draw_buf_init(&disp_buf, buf, NULL, SCREEN_HOR_RES * LV_HOR_RES_MAX_LEN);
-
-    /*Initialize the display*/
-    lv_disp_drv_init(&disp_drv);
-    disp_drv.hor_res = SCREEN_HOR_RES;
-    disp_drv.ver_res = SCREEN_VER_RES;
-    disp_drv.flush_cb = my_disp_flush;
-    disp_drv.draw_buf = &disp_buf;
-    disp_drv.user_data = tft;
-    // 开启 LV_COLOR_SCREEN_TRANSP 屏幕具有透明和不透明样式
-    lv_disp_drv_register(&disp_drv);
+    display = lv_display_create(SCREEN_HOR_RES, SCREEN_VER_RES);
+    lv_display_set_color_format(display, LV_COLOR_FORMAT_RGB565);
+    lv_display_set_flush_cb(display, my_disp_flush);
+    lv_display_set_buffers(display, disp_buf, NULL, sizeof(disp_buf), LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_display_set_user_data(display, tft);
 }
 
 void Display::routine()

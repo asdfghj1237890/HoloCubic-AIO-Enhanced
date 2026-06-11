@@ -165,7 +165,7 @@ static int dateDiff(struct tm *date1, struct tm *date2)
     m2 = (date2->tm_mon + 9) % 12;
     if (date2->tm_year == 0)
     {
-        if (date2->tm_mon < date1->tm_mon || (date2->tm_mon == date1->tm_mon && date2->tm_mon < date1->tm_mon))
+        if (date2->tm_mon < date1->tm_mon || (date2->tm_mon == date1->tm_mon && date2->tm_mday < date1->tm_mday))
         {
             y2 = date1->tm_year + 1 - m2 / 10;
         }

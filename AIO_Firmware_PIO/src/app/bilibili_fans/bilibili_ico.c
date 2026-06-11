@@ -251,7 +251,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_BILIBILI 
 };
 
 const lv_img_dsc_t app_bilibili = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 128,
   .header.h = 128,
   .data_size = 8256,
@@ -260,7 +260,7 @@ const lv_img_dsc_t app_bilibili = {
 };
 
 const lv_img_dsc_t bilibili_logo_ico = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 200,
   .header.h = 62,
   .data_size = 6264,

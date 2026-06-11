@@ -192,9 +192,8 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_HEART_000
 };
 
 const lv_img_dsc_t heart_0003 = {
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.cf = LV_IMG_CF_INDEXED_4BIT,
-  .header.always_zero = 0,
-  .header.reserved = 0,
   .header.w = 202,
   .header.h = 158,
   .data_size = 16022,

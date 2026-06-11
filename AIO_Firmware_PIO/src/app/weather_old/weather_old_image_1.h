@@ -375,7 +375,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_ROCKET ui
 };
 
 const lv_img_dsc_t rocket = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 65,
   .header.h = 87,
   .data_size = 5655 * LV_IMG_PX_SIZE_ALPHA_BYTE,
@@ -548,7 +548,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t HeavyRain_map[] = 
 };
 
 const lv_img_dsc_t HeavyRain = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 145,
   .data_size = 10939,
@@ -695,7 +695,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t Cloudy_map[] = {
 };
 
 const lv_img_dsc_t Cloudy = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 118,
   .data_size = 8914,
@@ -874,7 +874,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t Clear_map[] = {
 };
 
 const lv_img_dsc_t Clear = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 150,
   .data_size = 11314,
@@ -1053,7 +1053,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t Thundershower_map[
 };
 
 const lv_img_dsc_t Thundershower = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 150,
   .data_size = 11314,
@@ -1231,7 +1231,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t Sunny_map[] = {
 };
 
 const lv_img_dsc_t Sunny = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 150,
   .data_size = 11314,
@@ -1410,7 +1410,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t SnowFlurry_map[] =
 };
 
 const lv_img_dsc_t SnowFlurry = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 150,
   .data_size = 11314,
@@ -1586,7 +1586,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t Sleet_map[] = {
 };
 
 const lv_img_dsc_t Sleet = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 147,
   .data_size = 11089,
@@ -1765,7 +1765,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t Shower_map[] = {
 };
 
 const lv_img_dsc_t Shower = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 152,
   .header.h = 150,
   .data_size = 11464,
@@ -1904,7 +1904,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t PartlyCloudy_map[]
 };
 
 const lv_img_dsc_t PartlyCloudy = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 110,
   .data_size = 8314,
@@ -2033,7 +2033,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t Overcast_map[] = {
 };
 
 const lv_img_dsc_t Overcast = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 100,
   .data_size = 7564,
@@ -2204,7 +2204,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t ModerateSnow_map[]
 };
 
 const lv_img_dsc_t ModerateSnow = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 142,
   .data_size = 10714,
@@ -2378,7 +2378,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t ModerateRain_map[]
 };
 
 const lv_img_dsc_t ModerateRain = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 145,
   .data_size = 10939,
@@ -2549,7 +2549,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t LightSnow_map[] = 
 };
 
 const lv_img_dsc_t LightSnow = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 142,
   .data_size = 10714,
@@ -2723,7 +2723,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t LightRain_map[] = 
 };
 
 const lv_img_dsc_t LightRain = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 145,
   .data_size = 10939,
@@ -2894,7 +2894,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST uint8_t HeavySnow_map[] = 
 };
 
 const lv_img_dsc_t HeavySnow = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 150,
   .header.h = 142,
   .data_size = 10714,

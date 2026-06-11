@@ -162,7 +162,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_APP_HARDW
 };
 
 const lv_img_dsc_t app_hardware_info = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 128,
   .header.h = 128,
   .data_size = 8256,

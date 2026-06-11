@@ -1,4 +1,4 @@
-﻿#if __has_include("lvgl.h")
+#if __has_include("lvgl.h")
 #include "lvgl.h"
 #else
 #include "lvgl/lvgl.h"
@@ -399,7 +399,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_APP_SCREE
 };
 
 const lv_img_dsc_t app_screen = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 128,
   .header.h = 128,
   .data_size = 17408,

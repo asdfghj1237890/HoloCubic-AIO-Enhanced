@@ -70,7 +70,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N0 uint8_t N0_map[] = {
 };
 
 const lv_img_dsc_t N0 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -145,7 +145,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N2 uint8_t N2_map[] = {
 };
 
 const lv_img_dsc_t N2 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -215,7 +215,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N4 uint8_t N4_map[] = {
 };
 
 const lv_img_dsc_t N4 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -285,7 +285,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N8 uint8_t N8_map[] = {
 };
 
 const lv_img_dsc_t N8 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -355,7 +355,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N16 uint8_t N16_map[] = {
 };
 
 const lv_img_dsc_t N16 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -426,7 +426,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N32 uint8_t N32_map[] = {
 };
 
 const lv_img_dsc_t N32 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -497,7 +497,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N64 uint8_t N64_map[] = {
 };
 
 const lv_img_dsc_t N64 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -568,7 +568,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N128 uint8_t N128_map[] = {
 };
 
 const lv_img_dsc_t N128 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -638,7 +638,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N256 uint8_t N256_map[] = {
 };
 
 const lv_img_dsc_t N256 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -709,7 +709,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N512 uint8_t N512_map[] = {
 };
 
 const lv_img_dsc_t N512 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -780,7 +780,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N1024 uint8_t N1024_map[] = {
 };
 
 const lv_img_dsc_t N1024 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,
@@ -851,7 +851,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_N2048 uint8_t N2048_map[] = {
 };
 
 const lv_img_dsc_t N2048 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 50,
   .header.h = 50,
   .data_size = 667,

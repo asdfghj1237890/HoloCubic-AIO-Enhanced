@@ -159,7 +159,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_APP_GAME_2048 uint8_t app_game_204
 };
 
 const lv_img_dsc_t app_game_2048 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 128,
   .header.h = 128,
   .data_size = 8257,

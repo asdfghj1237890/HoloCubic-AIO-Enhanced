@@ -1,6 +1,6 @@
 // HoloCubic_AIO regression-test harness — host entry point.
 //
-// Initialises LVGL + the SDL2 monitor driver from lv_drivers and either
+// Initialises LVGL + the built-in SDL2 display driver and either
 // (a) runs a scripted scenario from disk and exits, or (b) drops into an
 // interactive loop with keyboard input. Used by CI for non-interactive
 // regression and by developers locally to poke at the UI.
@@ -16,7 +16,7 @@
 #define LV_LVGL_H_INCLUDE_SIMPLE
 #define SDL_MAIN_HANDLED
 #include "lvgl.h"
-#include "sdl/sdl.h"
+#include "src/drivers/sdl/lv_sdl_window.h"
 
 #include "Arduino.h"
 #include "common.h"
@@ -90,16 +90,6 @@ static void install_crash_handler() {
 
 #define DISP_HOR_RES 240
 #define DISP_VER_RES 240
-#define DISP_BUF_LINES 80
-
-static lv_disp_draw_buf_t disp_buf;
-static lv_color_t buf1[DISP_HOR_RES * DISP_BUF_LINES];
-static lv_color_t buf2[DISP_HOR_RES * DISP_BUF_LINES];
-static lv_disp_drv_t disp_drv;
-
-static lv_indev_drv_t kb_indev_drv;
-static lv_indev_t *kb_indev;
-
 static AppController *g_controller = nullptr;
 static ImuAction g_action;
 
@@ -204,20 +194,8 @@ int main(int argc, char **argv) {
 
     lv_init();
 
-    lv_disp_draw_buf_init(&disp_buf, buf1, buf2, DISP_HOR_RES * DISP_BUF_LINES);
-    lv_disp_drv_init(&disp_drv);
-    disp_drv.draw_buf = &disp_buf;
-    disp_drv.flush_cb = sdl_display_flush;
-    disp_drv.hor_res = DISP_HOR_RES;
-    disp_drv.ver_res = DISP_VER_RES;
-    lv_disp_drv_register(&disp_drv);
-
-    lv_indev_drv_init(&kb_indev_drv);
-    kb_indev_drv.type = LV_INDEV_TYPE_KEYPAD;
-    kb_indev_drv.read_cb = sdl_keyboard_read;
-    kb_indev = lv_indev_drv_register(&kb_indev_drv);
-
-    sdl_init();
+    lv_display_t *display = lv_sdl_window_create(DISP_HOR_RES, DISP_VER_RES);
+    lv_sdl_window_set_title(display, "HoloCubic AIO Regression");
     SDL_CreateThread(tick_thread, "tick", NULL);
 
     g_controller = new AppController("AppCtrl");

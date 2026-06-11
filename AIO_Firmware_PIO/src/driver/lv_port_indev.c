@@ -11,7 +11,7 @@
 #include "lv_port_indev.h"
 
 static void encoder_init(void);
-static void encoder_read(lv_indev_drv_t* indev_drv, lv_indev_data_t* data);
+static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data);
 static void encoder_handler(void);
 
 
@@ -35,9 +35,6 @@ void lv_port_indev_init(void)
 	 */
 
 
-	lv_indev_drv_t indev_drv;
-
-
 	/*------------------
 	 * Encoder
 	 * -----------------*/
@@ -46,10 +43,9 @@ void lv_port_indev_init(void)
 	encoder_init();
 
 	/*Register a encoder input device*/
-	lv_indev_drv_init(&indev_drv);
-	indev_drv.type = LV_INDEV_TYPE_ENCODER;
-	indev_drv.read_cb = encoder_read;
-	indev_encoder = lv_indev_drv_register(&indev_drv);
+	indev_encoder = lv_indev_create();
+	lv_indev_set_type(indev_encoder, LV_INDEV_TYPE_ENCODER);
+	lv_indev_set_read_cb(indev_encoder, encoder_read);
 
 	/* Later you should create group(s) with `lv_group_t * group = lv_group_create()`,
 	 * add objects to the group with `lv_group_add_obj(group, obj)`
@@ -75,8 +71,9 @@ static void encoder_init(void)
 }
 
 /* Will be called by the library to read the encoder */
-static void encoder_read(lv_indev_drv_t* indev_drv, lv_indev_data_t* data)
+static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data)
 {
+	LV_UNUSED(indev);
 
 	data->enc_diff = encoder_diff;
 	data->state = encoder_state;

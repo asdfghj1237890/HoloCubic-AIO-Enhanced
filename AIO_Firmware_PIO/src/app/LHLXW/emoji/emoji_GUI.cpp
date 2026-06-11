@@ -15,7 +15,8 @@ void prev_emoji(void){
 
 //APP输入设备键值读取回调函数（lvgl会以LV_INDEV_DEF_READ_PERIOD为周期调用）
 //退出APP后，创建的输入设备indev_mpu6050key被删除，故系统（lvgl）不会再调用
-static void mpu6050key_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data){
+static void mpu6050key_read(lv_indev_t * indev, lv_indev_data_t * data){
+    LV_UNUSED(indev);
     // uint8_t act_key = mpu6050key_var;//由LHLXW_process函数action->active的值来改变
     if(emj_run->mpu6050key_var!=0){//mpu6050key_var由LHLXW_process函数action->active的值来改变
         data->state = LV_INDEV_STATE_PR;
@@ -54,11 +55,9 @@ void EMOJI_GUI_Init(void){
 
     lv_obj_set_style_bg_color(emj_run->EMOJI_GUI_OBJ,lv_color_hex(0),LV_STATE_DEFAULT);//将此活动页面背景颜色设置为黑色
 
-    static lv_indev_drv_t mpu6050key_driver;//创建输入设备（这里必须用static修饰，否则会导致系统重启）
-    lv_indev_drv_init(&mpu6050key_driver);//初始化输入设备
-    mpu6050key_driver.type = LV_INDEV_TYPE_KEYPAD;//输入设备类型设为键盘类
-    mpu6050key_driver.read_cb = mpu6050key_read;//键盘值读取函数（lvgl会以LV_INDEV_DEF_READ_PERIOD为周期调用）
-    emj_run->indev_mpu6050key = lv_indev_drv_register(&mpu6050key_driver);//注册驱动设备，返回指向新设备的指针
+    emj_run->indev_mpu6050key = lv_indev_create();//注册驱动设备，返回指向新设备的指针
+    lv_indev_set_type(emj_run->indev_mpu6050key, LV_INDEV_TYPE_KEYPAD);//输入设备类型设为键盘类
+    lv_indev_set_read_cb(emj_run->indev_mpu6050key, mpu6050key_read);//键盘值读取函数（lvgl会以LV_INDEV_DEF_READ_PERIOD为周期调用）
     emj_run->optionListGroup= lv_group_create();//创建一个组
     lv_indev_set_group(emj_run->indev_mpu6050key, emj_run->optionListGroup);//输入设备与组关联
     

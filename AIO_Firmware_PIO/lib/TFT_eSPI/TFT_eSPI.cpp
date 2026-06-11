@@ -364,7 +364,7 @@ TFT_eSPI::TFT_eSPI(int16_t w, int16_t h)
 // The control pins are deliberately set to the inactive state (CS high) as setup()
 // might call and initialise other SPI peripherals which would could cause conflicts
 // if CS is floating or undefined.
-#ifdef TFT_CS
+#if defined(TFT_CS) && (TFT_CS >= 0)
   pinMode(TFT_CS, OUTPUT);
   digitalWrite(TFT_CS, HIGH); // Chip select high (inactive)
 #endif
@@ -556,7 +556,7 @@ void TFT_eSPI::init(uint8_t tc)
 
 
 
-#ifdef TFT_CS
+#if defined(TFT_CS) && (TFT_CS >= 0)
   // Set to output once again in case D6 (MISO) is used for CS
   pinMode(TFT_CS, OUTPUT);
   digitalWrite(TFT_CS, HIGH); // Chip select high (inactive)

@@ -1,4 +1,4 @@
-﻿#if __has_include("lvgl.h")
+#if __has_include("lvgl.h")
 #include "lvgl.h"
 #else
 #include "lvgl/lvgl.h"
@@ -399,7 +399,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_APP_STOCK
 };
 
 const lv_img_dsc_t app_stockmarket = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 128,
   .header.h = 128,
   .data_size = 17408,
@@ -463,9 +463,8 @@ const LV_ATTRIBUTE_MEM_ALIGN uint8_t down_map[] = {
 };
 
 const lv_img_dsc_t down = {
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.cf = LV_IMG_CF_INDEXED_4BIT,
-  .header.always_zero = 0,
-  .header.reserved = 0,
   .header.w = 24,
   .header.h = 34,
   .data_size = 472,
@@ -529,9 +528,8 @@ const LV_ATTRIBUTE_MEM_ALIGN uint8_t up_map[] = {
 };
 
 const lv_img_dsc_t up = {
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.cf = LV_IMG_CF_INDEXED_4BIT,
-  .header.always_zero = 0,
-  .header.reserved = 0,
   .header.w = 24,
   .header.h = 34,
   .data_size = 472,

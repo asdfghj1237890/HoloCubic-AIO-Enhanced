@@ -94,7 +94,7 @@ void stockmarket_gui_init(void)
     lv_style_set_text_font(&datetime_style, &lv_font_ibmplex_bold_14);
 }
 
-static const lv_point_t divider_points[] = {{0, 0}, {239, 0}};
+static const lv_point_precise_t divider_points[] = {{0, 0}, {239, 0}};
 
 void display_stockmarket_init(void)
 {
@@ -177,7 +177,7 @@ void display_stockmarket_init(void)
     // so the two vertical lines stack into one continuous column rail at
     // x=128. White to match the inline `|` users expected from the prior
     // single-label H/L row.
-    static const lv_point_t col_divider_points[] = {{0, 0}, {0, 24}};
+    static const lv_point_precise_t col_divider_points[] = {{0, 0}, {0, 24}};
 
     // High row — left half of H/L row
     hi_label = lv_label_create(stockmarket_gui);

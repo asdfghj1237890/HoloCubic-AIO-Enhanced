@@ -9,6 +9,9 @@
 #include "lv_port_fs.h"
 #include "lvgl.h"
 
+#include <stdio.h>
+#include <string.h>
+
 #include "ff.h"
 #define DIR FF_DIR 
 /*********************
@@ -37,7 +40,7 @@ static lv_fs_res_t fs_write(lv_fs_drv_t * drv, void * file_p, const void * buf, 
 static lv_fs_res_t fs_seek(lv_fs_drv_t * drv, void * file_p, uint32_t pos, lv_fs_whence_t whence);
 static lv_fs_res_t fs_tell(lv_fs_drv_t * drv, void * file_p, uint32_t * pos_p);
 static void * fs_dir_open(lv_fs_drv_t * drv, const char * path);
-static lv_fs_res_t fs_dir_read(lv_fs_drv_t * drv, void * dir_p, char * fn);
+static lv_fs_res_t fs_dir_read(lv_fs_drv_t * drv, void * dir_p, char * fn, uint32_t fn_len);
 static lv_fs_res_t fs_dir_close(lv_fs_drv_t * drv, void * dir_p);
 
 /**********************
@@ -246,11 +249,12 @@ static void * fs_dir_open(lv_fs_drv_t * drv, const char * path)
  * @param fn pointer to a buffer to store the filename
  * @return LV_FS_RES_OK or any error from lv_fs_res_t enum
  */
-static lv_fs_res_t fs_dir_read(lv_fs_drv_t * drv, void * dir_p, char * fn)
+static lv_fs_res_t fs_dir_read(lv_fs_drv_t * drv, void * dir_p, char * fn, uint32_t fn_len)
 {
     LV_UNUSED(drv);
     FRESULT res;
     FILINFO fno;
+    if(fn_len == 0) return LV_FS_RES_INV_PARAM;
     fn[0] = '\0';
 
     do {
@@ -259,9 +263,9 @@ static lv_fs_res_t fs_dir_read(lv_fs_drv_t * drv, void * dir_p, char * fn)
 
         if(fno.fattrib & AM_DIR) {
             fn[0] = '/';
-            strcpy(&fn[1], fno.fname);
+            snprintf(&fn[1], fn_len - 1, "%s", fno.fname);
         }
-        else strcpy(fn, fno.fname);
+        else snprintf(fn, fn_len, "%s", fno.fname);
 
     } while(strcmp(fn, "/.") == 0 || strcmp(fn, "/..") == 0);
 
@@ -281,10 +285,4 @@ static lv_fs_res_t fs_dir_close(lv_fs_drv_t * drv, void * dir_p)
     lv_mem_free(dir_p);
     return LV_FS_RES_OK;
 }
-
-
-#if defined(LV_FS_FATFS_LETTER) && LV_FS_FATFS_LETTER != '\0'
-    #warning "LV_USE_FS_FATFS is not enabled but LV_FS_FATFS_LETTER is set"
-#endif
-
 

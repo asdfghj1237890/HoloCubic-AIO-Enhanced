@@ -34545,10 +34545,6 @@ static const lv_font_fmt_txt_cmap_t cmaps[] = {
     }
 };
 
-static lv_font_fmt_txt_glyph_cache_t glyph_cache = {
-    .last_letter = 0xff0c,
-    .last_glyph_id = 1440,   // list_length-1
-};
 
 static lv_font_fmt_txt_dsc_t font_dsc = {
     .glyph_bitmap = glyph_bitmap,
@@ -34561,7 +34557,7 @@ static lv_font_fmt_txt_dsc_t font_dsc = {
     .kern_dsc = NULL,
     .kern_classes = 0,
 
-    .cache = &glyph_cache
+    .stride = 0
 };
 
 
@@ -34583,6 +34579,7 @@ static int binsearch(const uint16_t *sortedSeq, int seqLength, uint16_t keyData)
 }
 
 
+#if LVGL_VERSION_MAJOR < 9
 static const uint8_t * __user_font_get_bitmap(const lv_font_t * font, uint32_t unicode_letter) {
     lv_font_fmt_txt_dsc_t * fdsc = (lv_font_fmt_txt_dsc_t *) font->dsc;
 
@@ -34631,6 +34628,7 @@ static bool __user_font_get_glyph_dsc(const lv_font_t * font, lv_font_glyph_dsc_
     }
     return false;
 }
+#endif
 
 
 //Microsoft YaHei,,-1
@@ -34639,8 +34637,8 @@ static bool __user_font_get_glyph_dsc(const lv_font_t * font, lv_font_glyph_dsc_
 //使用排序和二分查表
 lv_font_t ch_font20 = {
     .dsc = &font_dsc,
-    .get_glyph_bitmap = __user_font_get_bitmap,
-    .get_glyph_dsc = __user_font_get_glyph_dsc,
+    .get_glyph_bitmap = lv_font_get_bitmap_fmt_txt,
+    .get_glyph_dsc = lv_font_get_glyph_dsc_fmt_txt,
     .line_height = 26,
     .base_line = 0,
 };

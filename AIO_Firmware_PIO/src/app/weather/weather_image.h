@@ -106,7 +106,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_0_map[] = 
 };
 
 const lv_img_dsc_t weather_0 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -180,7 +180,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_5_map[] = 
 };
 
 const lv_img_dsc_t weather_5 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 57,
   .data_size = 1157,
@@ -249,7 +249,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_9_map[] = 
 };
 
 const lv_img_dsc_t weather_9 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 52,
   .data_size = 1057,
@@ -347,7 +347,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_11_map[] =
 };
 
 const lv_img_dsc_t weather_11 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -445,7 +445,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_14_map[] =
 };
 
 const lv_img_dsc_t weather_14 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 79,
   .data_size = 1597,
@@ -538,7 +538,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_23_map[] =
 };
 
 const lv_img_dsc_t weather_23 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 76,
   .data_size = 1537,
@@ -635,7 +635,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_25_map[] =
 };
 
 const lv_img_dsc_t weather_25 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -720,7 +720,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_26_map[] =
 };
 
 const lv_img_dsc_t weather_26 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 68,
   .data_size = 1377,
@@ -810,7 +810,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t weather_30_map[] =
 };
 
 const lv_img_dsc_t weather_30 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 73,
   .data_size = 1477,
@@ -994,7 +994,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t tempImg_map[] = {
 };
 
 const lv_img_dsc_t temp = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 18,
   .header.h = 40,
   .data_size = 720 * LV_COLOR_SIZE / 8,
@@ -1146,7 +1146,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_WEATHER uint8_t humiImg_map[] = {
 };
 
 const lv_img_dsc_t humi = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 32,
   .header.h = 32,
   .data_size = 1024 * LV_COLOR_SIZE / 8,
@@ -1245,7 +1245,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_0_map[] = {
 };
 
 const lv_img_dsc_t man_0 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -1343,7 +1343,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_1_map[] = {
 };
 
 const lv_img_dsc_t man_1 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -1440,7 +1440,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_2_map[] = {
 };
 
 const lv_img_dsc_t man_2 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -1537,7 +1537,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_3_map[] = {
 };
 
 const lv_img_dsc_t man_3 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -1634,7 +1634,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_4_map[] = {
 };
 
 const lv_img_dsc_t man_4 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -1731,7 +1731,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_5_map[] = {
 };
 
 const lv_img_dsc_t man_5 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -1828,7 +1828,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_6_map[] = {
 };
 
 const lv_img_dsc_t man_6 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -1925,7 +1925,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_7_map[] = {
 };
 
 const lv_img_dsc_t man_7 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -2022,7 +2022,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_8_map[] = {
 };
 
 const lv_img_dsc_t man_8 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,
@@ -2119,7 +2119,7 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_MAN uint8_t man_9_map[] = {
 };
 
 const lv_img_dsc_t man_9 = {
-  .header.always_zero = 0,
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.w = 80,
   .header.h = 80,
   .data_size = 1617,

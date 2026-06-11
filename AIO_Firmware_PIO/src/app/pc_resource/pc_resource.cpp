@@ -150,6 +150,33 @@ static void pc_resource_data_del(String line)
     run_data->rs_data.net_download_speed = data[10]; // net下行速率
 }
 
+static bool skip_http_headers(WiFiClient *client)
+{
+    bool last_was_lf = false;
+    uint32_t start = millis();
+
+    while (millis() - start < 1000)
+    {
+        while (client->available())
+        {
+            char c = (char)client->read();
+            if (c == '\n')
+            {
+                if (last_was_lf)
+                    return true;
+                last_was_lf = true;
+            }
+            else if (c != '\r')
+            {
+                last_was_lf = false;
+            }
+        }
+        delay(1);
+    }
+
+    return false;
+}
+
 /**
  * @brief 获取遥感器数据
  */
@@ -176,9 +203,7 @@ static void get_pc_resource_data(void)
     Serial.println("Get send");
     delay(10);
 
-    char endOfHeaders[] = "\n\n";
-    bool ok = run_data->client->find(endOfHeaders);
-    if (!ok)
+    if (!skip_http_headers(run_data->client))
     {
         Serial.println("No response or invalid response!");
 

@@ -159,9 +159,8 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_APP_TOMATO_ICON uint8_t app_tomato
 };
 
 const lv_img_dsc_t app_tomato_icon = {
+  .header.magic = LV_IMAGE_HEADER_MAGIC,
   .header.cf = LV_IMG_CF_INDEXED_4BIT,
-  .header.always_zero = 0,
-  .header.reserved = 0,
   .header.w = 128,
   .header.h = 128,
   .data_size = 8257,

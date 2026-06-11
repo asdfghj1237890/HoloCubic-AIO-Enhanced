@@ -57,7 +57,7 @@ bool save_screen_png(const char *path) {
         return false;
     }
 
-    lv_img_dsc_t *snap = lv_snapshot_take(scr, LV_IMG_CF_TRUE_COLOR);
+    lv_draw_buf_t *snap = lv_snapshot_take(scr, LV_COLOR_FORMAT_RGB565);
     if (!snap) {
         fprintf(stderr, "[screenshot] lv_snapshot_take failed (LV_USE_SNAPSHOT not enabled?)\n");
         return false;
@@ -66,21 +66,26 @@ bool save_screen_png(const char *path) {
     int w = snap->header.w;
     int h = snap->header.h;
     if (w <= 0 || h <= 0) {
-        lv_snapshot_free(snap);
+        lv_draw_buf_destroy(snap);
         fprintf(stderr, "[screenshot] bad snapshot dims %dx%d\n", w, h);
         return false;
     }
 
     std::vector<uint8_t> rgb((size_t)w * h * 3);
     const uint8_t *src = snap->data;
-    for (int i = 0; i < w * h; ++i) {
-        uint16_t px = (uint16_t)src[2 * i] | ((uint16_t)src[2 * i + 1] << 8);
-        rgb565_to_rgb888(px, &rgb[3 * i], &rgb[3 * i + 1], &rgb[3 * i + 2]);
+    uint32_t stride = snap->header.stride ? snap->header.stride : (uint32_t)w * 2;
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            size_t src_i = (size_t)y * stride + (size_t)x * 2;
+            size_t dst_i = ((size_t)y * w + (size_t)x) * 3;
+            uint16_t px = (uint16_t)src[src_i] | ((uint16_t)src[src_i + 1] << 8);
+            rgb565_to_rgb888(px, &rgb[dst_i], &rgb[dst_i + 1], &rgb[dst_i + 2]);
+        }
     }
 
     ensure_parent_dir(path);
     int ok = stbi_write_png(path, w, h, 3, rgb.data(), w * 3);
-    lv_snapshot_free(snap);
+    lv_draw_buf_destroy(snap);
 
     if (!ok) {
         fprintf(stderr, "[screenshot] stbi_write_png failed for %s\n", path);
