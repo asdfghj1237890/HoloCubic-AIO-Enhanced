@@ -175,32 +175,32 @@ function StudioImage() {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
       <PageHeader title={tr("圖片轉換")} sub={tr("把任意圖片轉成 LVGL 影像格式（bin / C 陣列）")}
-        right={<span className="chip" style={{ fontSize: 12.5 }}>{c.files.length} 個檔案{c.doneCount ? ` · ${c.doneCount} 完成` : ""}</span>} />
+        right={<span className="chip" style={{ fontSize: 12.5 }}>{trf("{n} 個檔案", { n: c.files.length })}{c.doneCount ? " " + trf("· {n} 完成", { n: c.doneCount }) : ""}</span>} />
 
       {/* settings toolbar */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", padding: "var(--s3) var(--s6)",
                     borderBottom: "1px solid var(--border)", flexWrap: "wrap", flex: "none" }}>
-        <span style={{ fontSize: 12, color: "var(--text-mute)" }}>輸出格式</span>
+        <span style={{ fontSize: 12, color: "var(--text-mute)" }}>{tr("輸出格式")}</span>
         <select className="fld mono" style={{ width: 158, height: 36 }} value={c.format} onChange={(e) => c.setFormat(e.target.value)} disabled={c.busy}>
           {IMG_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
         </select>
         <label style={{ display: "flex", alignItems: "center", gap: "var(--s2)", fontSize: 12.5, color: "var(--text-dim)", cursor: "pointer" }}>
-          <input type="checkbox" checked={c.carray} onChange={(e) => c.setCarray(e.target.checked)} disabled={c.busy} style={{ accentColor: "var(--accent)" }} />C 陣列
+          <input type="checkbox" checked={c.carray} onChange={(e) => c.setCarray(e.target.checked)} disabled={c.busy} style={{ accentColor: "var(--accent)" }} />{tr("C 陣列")}
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: "var(--s2)", fontSize: 12.5, color: "var(--text-dim)", cursor: "pointer" }}>
-          <input type="checkbox" checked={c.dither} onChange={(e) => c.setDither(e.target.checked)} disabled={c.busy} style={{ accentColor: "var(--accent)" }} />抖色
+          <input type="checkbox" checked={c.dither} onChange={(e) => c.setDither(e.target.checked)} disabled={c.busy} style={{ accentColor: "var(--accent)" }} />{tr("抖色")}
         </label>
         <div style={{ width: 1, height: 22, background: "var(--border)" }} />
         <label style={{ display: "flex", alignItems: "center", gap: "var(--s2)", fontSize: 12.5, color: "var(--text-dim)", cursor: "pointer" }}>
-          <input type="checkbox" checked={c.resize} onChange={(e) => c.setResize(e.target.checked)} disabled={c.busy} style={{ accentColor: "var(--accent)" }} />縮放至
+          <input type="checkbox" checked={c.resize} onChange={(e) => c.setResize(e.target.checked)} disabled={c.busy} style={{ accentColor: "var(--accent)" }} />{tr("縮放至")}
         </label>
         <input className="fld mono" style={{ width: 56, height: 32 }} value={c.outW} onChange={(e) => c.setOutW(e.target.value)} disabled={c.busy || !c.resize} />
         <span style={{ color: "var(--text-mute)" }}>×</span>
         <input className="fld mono" style={{ width: 56, height: 32 }} value={c.outH} onChange={(e) => c.setOutH(e.target.value)} disabled={c.busy || !c.resize} />
         <div style={{ flex: 1 }} />
         {c.busy
-          ? <button className="btn danger" style={{ height: 36 }} onClick={c.cancel}><Icon d={ICON.x} size={14} />取消</button>
-          : <button className="btn primary" style={{ height: 36 }} disabled={!c.files.length} onClick={c.convert}><Icon d={ICON.ext} size={14} />開始轉換</button>}
+          ? <button className="btn danger" style={{ height: 36 }} onClick={c.cancel}><Icon d={ICON.x} size={14} />{tr("取消")}</button>
+          : <button className="btn primary" style={{ height: 36 }} disabled={!c.files.length} onClick={c.convert}><Icon d={ICON.ext} size={14} />{tr("開始轉換")}</button>}
       </div>
 
       <div className="scroll" style={{ overflow: "auto", padding: "var(--s5) var(--s6)" }}>
@@ -210,12 +210,12 @@ function StudioImage() {
                 padding: "var(--s5)", display: "flex", alignItems: "center", justifyContent: "center", gap: "var(--s3)",
                 cursor: "pointer", color: "var(--text-mute)", marginBottom: "var(--s4)", background: "var(--panel)" }}>
             <Icon d={ICON.upload} size={20} />
-            <span style={{ fontSize: 13 }}>拖入或點此加入圖片（PNG / JPG / BMP）</span>
-            <span className="chip" style={{ fontSize: 11 }}>+ 範例</span>
+            <span style={{ fontSize: 13 }}>{tr("拖入或點此加入圖片（PNG / JPG / BMP）")}</span>
+            <span className="chip" style={{ fontSize: 11 }}>{tr("+ 範例")}</span>
           </div>
 
           {c.files.length === 0 ? (
-            <div style={{ textAlign: "center", color: "var(--text-mute)", fontSize: 13, padding: "var(--s6)" }}>尚未加入任何圖片</div>
+            <div style={{ textAlign: "center", color: "var(--text-mute)", fontSize: 13, padding: "var(--s6)" }}>{tr("尚未加入任何圖片")}</div>
           ) : (
             <div style={{ display: "grid", gap: "var(--s2)" }}>
               {c.files.map((f) => {
@@ -241,7 +241,7 @@ function StudioImage() {
                           <div style={{ width: pct + "%", height: "100%", background: "var(--accent)", borderRadius: 999 }} />
                         </div>
                       ) : (
-                        <span className="mono" style={{ fontSize: 11.5, color: "var(--text-mute)" }}>{c.format}{c.carray ? " · C 陣列" : ""}</span>
+                        <span className="mono" style={{ fontSize: 11.5, color: "var(--text-mute)" }}>{c.carray ? trf("{fmt} · C 陣列", { fmt: c.format }) : c.format}</span>
                       )}
                     </div>
                     <button className="btn ghost" style={{ width: 30, height: 30, padding: 0 }} onClick={() => c.remove(f.id)} disabled={c.busy}><Icon d={ICON.x} size={14} /></button>
@@ -251,7 +251,7 @@ function StudioImage() {
             </div>
           )}
           <div style={{ fontSize: 11.5, color: "var(--text-mute)", marginTop: "var(--s4)", lineHeight: 1.6 }}>
-            轉換結果會輸出到本軟體同層的 OutFile 資料夾。記憶卡 bin 圖片建議用 <span className="mono">RGB565_SWAP</span>；韌體內嵌陣列用 <span className="mono">Indexed_4bit</span> + C 陣列。
+            {tr("轉換結果會輸出到本軟體同層的 OutFile 資料夾。記憶卡 bin 圖片建議用 ")}<span className="mono">RGB565_SWAP</span>{tr("；韌體內嵌陣列用 ")}<span className="mono">Indexed_4bit</span>{tr(" + C 陣列。")}
           </div>
         </div>
       </div>
@@ -276,7 +276,7 @@ function useVideoConv() {
   const [ffmpeg, setFfmpeg] = useState(IS_TAURI_CONV ? "checking" : "ready");
   const [op, setOp] = useState("idle"); // idle|running|done
   const [progress, setProgress] = useState(null);
-  const [log, setLog] = useState([{ level: "muted", text: "選擇來源影片後即可開始轉碼。" }]);
+  const [log, setLog] = useState([{ level: "muted", text: tr("選擇來源影片後即可開始轉碼。") }]);
   const timer = useRef(null);
   const push = (text, level = "info") => setLog((L) => [...L.slice(-120), { level, text, t: new Date().toLocaleTimeString("zh-TW", { hour12: false }) }]);
 
@@ -287,7 +287,7 @@ function useVideoConv() {
       try {
         const ok = await invokeConv("video_ffmpeg_check");
         setFfmpeg(ok ? "ready" : "missing");
-        push(ok ? "ffmpeg 已就緒。" : "未在 PATH 中找到 ffmpeg。", ok ? "ok" : "warn");
+        push(ok ? tr("ffmpeg 已就緒。") : tr("未在 PATH 中找到 ffmpeg。"), ok ? "ok" : "warn");
       } catch (e) {
         setFfmpeg("missing");
       }
@@ -302,7 +302,7 @@ function useVideoConv() {
       switch (payload.kind) {
         case "phase":
           setProgress({ phase: payload.phase, percent: 0 });
-          push(payload.phase === 1 ? "第 1 步：縮放 …" : "第 2 步：編碼 …", "muted");
+          push(payload.phase === 1 ? tr("第 1 步：縮放 …") : tr("第 2 步：編碼 …"), "muted");
           break;
         case "progress":
           setProgress({ phase: payload.phase, percent: payload.percent });
@@ -314,11 +314,11 @@ function useVideoConv() {
           setProgress(null);
           if (payload.ok) {
             setOp("done");
-            push(`✓ 轉碼完成 → ${payload.out_path}`, "ok");
+            push(trf("✓ 轉碼完成 → {path}", { path: payload.out_path }), "ok");
           } else {
             setOp("idle");
-            const msg = payload.error || "未知錯誤";
-            push(msg === "cancelled" ? "已取消轉碼，子程序已結束。" : `✗ ${msg}`, "warn");
+            const msg = payload.error || tr("未知錯誤");
+            push(msg === "cancelled" ? tr("已取消轉碼，子程序已結束。") : `✗ ${msg}`, "warn");
           }
           break;
       }
@@ -332,34 +332,34 @@ function useVideoConv() {
         const picked = await invokeConv("video_pick_source");
         if (!picked) return;
         setSrc({ name: picked.name, path: picked.path, size: picked.size, dur: "—" });
-        push(`已選擇來源：${picked.name}（${fmtBytes(picked.size)}）`, "muted");
+        push(trf("已選擇來源：{name}（{info}）", { name: picked.name, info: fmtBytes(picked.size) }), "muted");
         // Suggest an output path next to the source.
         const c = mode === "default" ? VID_DEFAULT : cfg;
         try {
           const out = await invokeConv("video_pick_output", {
             srcPath: picked.path, w: +c.w, h: +c.h, format: c.format,
           });
-          if (out) { setOutPath(out); push(`輸出路徑：${out}`, "muted"); }
+          if (out) { setOutPath(out); push(trf("輸出路徑：{path}", { path: out }), "muted"); }
         } catch (_) { /* user cancelled save dialog */ }
       } catch (_) { /* user cancelled open dialog */ }
       return;
     }
     setSrc(VID_SAMPLE);
     setOutPath("C:/HoloCubic/movie/badapple.mjpeg");
-    push(`已選擇來源：${VID_SAMPLE.name}（${VID_SAMPLE.dur}, ${fmtBytes(VID_SAMPLE.size)}）`, "muted");
+    push(trf("已選擇來源：{name}（{info}）", { name: VID_SAMPLE.name, info: `${VID_SAMPLE.dur}, ${fmtBytes(VID_SAMPLE.size)}` }), "muted");
   };
 
   const recheck = async () => {
-    setFfmpeg("checking"); push("偵測 ffmpeg…", "muted");
+    setFfmpeg("checking"); push(tr("偵測 ffmpeg…"), "muted");
     if (IS_TAURI_CONV) {
       try {
         const ok = await invokeConv("video_ffmpeg_check");
         setFfmpeg(ok ? "ready" : "missing");
-        push(ok ? "ffmpeg 已就緒。" : "未在 PATH 中找到 ffmpeg。", ok ? "ok" : "warn");
+        push(ok ? tr("ffmpeg 已就緒。") : tr("未在 PATH 中找到 ffmpeg。"), ok ? "ok" : "warn");
       } catch (_) { setFfmpeg("missing"); }
       return;
     }
-    setTimeout(() => { setFfmpeg("ready"); push("ffmpeg 4.4.1 已就緒。", "ok"); }, 700);
+    setTimeout(() => { setFfmpeg("ready"); push(tr("ffmpeg 已就緒。"), "ok"); }, 700);
   };
 
   const set = (k, v) => setCfg((s) => ({ ...s, [k]: v }));
@@ -368,7 +368,7 @@ function useVideoConv() {
     if (!src || ffmpeg !== "ready" || op === "running") return;
     const c = mode === "default" ? VID_DEFAULT : cfg;
     setOp("running");
-    push(`開始轉碼 → ${c.w}×${c.h} @ ${c.fps}fps · ${c.format} · q${c.quality}`, "info");
+    push(trf("開始轉碼 → {w}×{h} @ {fps}fps · {fmt} · q{q}", { w: c.w, h: c.h, fps: c.fps, fmt: c.format, q: c.quality }), "info");
 
     if (IS_TAURI_CONV) {
       // Path-based: outPath must be a real filesystem path. If the user
@@ -382,7 +382,7 @@ function useVideoConv() {
           if (dest) setOutPath(dest);
         } catch (_) {}
       }
-      if (!dest) { setOp("idle"); push("未指定輸出路徑，轉碼取消。", "warn"); return; }
+      if (!dest) { setOp("idle"); push(tr("未指定輸出路徑，轉碼取消。"), "warn"); return; }
       try {
         await invokeConv("video_run", {
           job: { src: src.path, out: dest, w: +c.w, h: +c.h, fps: +c.fps, quality: +c.quality, format: c.format },
@@ -396,19 +396,19 @@ function useVideoConv() {
     }
 
     // Mock path — preserved for browser preview.
-    push("ffmpeg -i 來源 -vf scale,fps -f image2pipe …（第 1 步：抽取影格）", "muted");
+    push(tr("ffmpeg -i 來源 -vf scale,fps -f image2pipe …（第 1 步：抽取影格）"), "muted");
     let phase = 1, pct = 0;
     setProgress({ phase: 1, percent: 0 });
     timer.current = setInterval(() => {
       pct += 6 + Math.random() * 7;
       if (pct >= 100) {
         if (phase === 1) {
-          push("影格抽取完成，開始編碼 " + c.format + "…", "muted");
-          push("ffmpeg 第 2 步：封裝 " + (c.format === "MJPEG" ? "mjpeg" : "rgb565be") + " 串流 …", "muted");
+          push(trf("影格抽取完成，開始編碼 {fmt}…", { fmt: c.format }), "muted");
+          push(trf("ffmpeg 第 2 步：封裝 {codec} 串流 …", { codec: c.format === "MJPEG" ? "mjpeg" : "rgb565be" }), "muted");
           phase = 2; pct = 0; setProgress({ phase: 2, percent: 0 });
         } else {
           clearInterval(timer.current); setProgress(null); setOp("done");
-          push(`✓ 轉碼完成 → ${outPath}`, "ok");
+          push(trf("✓ 轉碼完成 → {path}", { path: outPath }), "ok");
         }
       } else setProgress({ phase, percent: pct });
     }, 150);
@@ -423,7 +423,7 @@ function useVideoConv() {
     }
     if (timer.current) clearInterval(timer.current);
     setProgress(null); setOp("idle");
-    push("已取消轉碼，子程序已結束。", "warn");
+    push(tr("已取消轉碼，子程序已結束。"), "warn");
   };
   useEffect(() => () => timer.current && clearInterval(timer.current), []);
   return { src, outPath, setOutPath, mode, setMode, cfg, ffmpeg, op, progress, log, pickSrc, recheck, set, run, cancel };
@@ -447,8 +447,8 @@ function StudioVideo() {
       <PageHeader title={tr("影片轉碼")} sub={tr("把影片轉成 HoloCubic 可播放的 MJPEG / RGB565 串流")}
         right={
           v.ffmpeg === "ready"
-            ? <span className="chip" style={{ color: "var(--ok)" }}><span className="dot live" />ffmpeg 已就緒</span>
-            : <span className="chip" style={{ color: "var(--warn)" }}><span className="dot busy" />{v.ffmpeg === "checking" ? "偵測中…" : "缺少 ffmpeg"}</span>} />
+            ? <span className="chip" style={{ color: "var(--ok)" }}><span className="dot live" />{tr("ffmpeg 已就緒")}</span>
+            : <span className="chip" style={{ color: "var(--warn)" }}><span className="dot busy" />{v.ffmpeg === "checking" ? tr("偵測中…") : tr("缺少 ffmpeg")}</span>} />
 
       <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 380px", minHeight: 0 }}>
         {/* left config */}
@@ -457,67 +457,67 @@ function StudioVideo() {
             {v.ffmpeg === "missing" && (
               <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", padding: "var(--s4)", marginBottom: "var(--s4)",
                             background: "var(--err-weak)", border: "1px solid color-mix(in srgb, var(--err) 35%, transparent)", borderRadius: "var(--r3)" }}>
-                <span style={{ color: "var(--err)", fontSize: 13, flex: 1 }}>未在 PATH 中找到 ffmpeg，無法轉碼。</span>
-                <a href="https://ffmpeg.org/download.html" target="_blank" rel="noreferrer" style={{ color: "var(--accent)", fontSize: 13, fontWeight: 600 }}>安裝 ffmpeg</a>
-                <button className="btn ghost" style={{ height: 30, fontSize: 12 }} onClick={v.recheck}>重新偵測</button>
+                <span style={{ color: "var(--err)", fontSize: 13, flex: 1 }}>{tr("未在 PATH 中找到 ffmpeg，無法轉碼。")}</span>
+                <a href="https://ffmpeg.org/download.html" target="_blank" rel="noreferrer" style={{ color: "var(--accent)", fontSize: 13, fontWeight: 600 }}>{tr("安裝 ffmpeg")}</a>
+                <button className="btn ghost" style={{ height: 30, fontSize: 12 }} onClick={v.recheck}>{tr("重新偵測")}</button>
               </div>
             )}
 
             {/* source */}
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s2)" }}>來源與輸出</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s2)" }}>{tr("來源與輸出")}</div>
             <div style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r4)", padding: "0 var(--s4) var(--s2)" }}>
-              <VRow label="來源影片">
+              <VRow label={tr("來源影片")}>
                 {v.src
                   ? <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)" }}>
                       <span className="chip"><Icon d={ICON.film || ICON.doc} size={13} />{v.src.name}</span>
                       <span className="mono" style={{ fontSize: 11.5, color: "var(--text-mute)" }}>{v.src.dur} · {fmtBytes(v.src.size)}</span>
                     </div>
-                  : <button className="btn ghost" style={{ height: 34 }} onClick={v.pickSrc}><Icon d={ICON.upload} size={14} />選擇影片</button>}
+                  : <button className="btn ghost" style={{ height: 34 }} onClick={v.pickSrc}><Icon d={ICON.upload} size={14} />{tr("選擇影片")}</button>}
               </VRow>
-              <VRow label="輸出路徑">
-                <input className="fld mono" style={{ maxWidth: 360 }} value={v.outPath} onChange={(e) => v.setOutPath(e.target.value)} placeholder="輸出檔案路徑" />
+              <VRow label={tr("輸出路徑")}>
+                <input className="fld mono" style={{ maxWidth: 360 }} value={v.outPath} onChange={(e) => v.setOutPath(e.target.value)} placeholder={tr("輸出檔案路徑")} />
               </VRow>
             </div>
 
             {/* output settings */}
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", margin: "var(--s5) 0 var(--s2)" }}>輸出設定</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", margin: "var(--s5) 0 var(--s2)" }}>{tr("輸出設定")}</div>
             <div style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r4)", padding: "var(--s4)" }}>
               <div style={{ display: "flex", gap: 2, background: "var(--panel-3)", borderRadius: "var(--rpill)", padding: 2, width: "fit-content", marginBottom: "var(--s2)" }}>
                 {[["default", "預設"], ["custom", "自訂"]].map(([k, l]) => (
                   <button key={k} onClick={() => v.setMode(k)} style={{ border: "none", cursor: "pointer", fontSize: 12.5, padding: "5px 18px", borderRadius: "var(--rpill)",
-                    background: v.mode === k ? "var(--accent)" : "transparent", color: v.mode === k ? "#fff" : "var(--text-mute)", fontWeight: 600 }}>{l}</button>
+                    background: v.mode === k ? "var(--accent)" : "transparent", color: v.mode === k ? "#fff" : "var(--text-mute)", fontWeight: 600 }}>{tr(l)}</button>
                 ))}
               </div>
               <div style={{ padding: "0 var(--s1)", opacity: custom ? 1 : 0.55, pointerEvents: custom ? "auto" : "none" }}>
-                <VRow label="解析度">
+                <VRow label={tr("解析度")}>
                   <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)" }}>
                     <input className="fld mono" style={{ width: 64, height: 32 }} value={cfg.w} onChange={(e) => v.set("w", e.target.value)} />
                     <span style={{ color: "var(--text-mute)" }}>×</span>
                     <input className="fld mono" style={{ width: 64, height: 32 }} value={cfg.h} onChange={(e) => v.set("h", e.target.value)} />
                   </div>
                 </VRow>
-                <VRow label="影格率 FPS"><input className="fld mono" style={{ width: 80, height: 32 }} value={cfg.fps} onChange={(e) => v.set("fps", e.target.value)} /></VRow>
-                <VRow label="品質">
+                <VRow label={tr("影格率 FPS")}><input className="fld mono" style={{ width: 80, height: 32 }} value={cfg.fps} onChange={(e) => v.set("fps", e.target.value)} /></VRow>
+                <VRow label={tr("品質")}>
                   <div style={{ display: "flex", alignItems: "center", gap: "var(--s3)", maxWidth: 320 }}>
                     <input type="range" min="1" max="100" value={cfg.quality} onChange={(e) => v.set("quality", e.target.value)} style={{ flex: 1, accentColor: "var(--accent)" }} />
                     <span className="mono" style={{ fontSize: 12, color: "var(--text-dim)", width: 28 }}>{cfg.quality}</span>
                   </div>
                 </VRow>
-                <VRow label="格式">
+                <VRow label={tr("格式")}>
                   <select className="fld mono" style={{ width: 150 }} value={cfg.format} onChange={(e) => v.set("format", e.target.value)}>
                     <option value="MJPEG">MJPEG</option>
                     <option value="rgb565be">rgb565be</option>
                   </select>
                 </VRow>
               </div>
-              {!custom && <div style={{ fontSize: 11.5, color: "var(--text-mute)", marginTop: "var(--s2)" }}>預設：240×240 · 20fps · MJPEG · q80</div>}
+              {!custom && <div style={{ fontSize: 11.5, color: "var(--text-mute)", marginTop: "var(--s2)" }}>{tr("預設：240×240 · 20fps · MJPEG · q80")}</div>}
             </div>
 
             <div style={{ display: "flex", gap: "var(--s2)", marginTop: "var(--s5)" }}>
               {v.op === "running"
-                ? <button className="btn danger" style={{ height: 42, padding: "0 var(--s5)" }} onClick={v.cancel}><Icon d={ICON.x} size={15} />取消轉碼</button>
-                : <button className="btn primary" style={{ height: 42, padding: "0 var(--s6)" }} disabled={!v.src || v.ffmpeg !== "ready"} onClick={v.run}><Icon d={ICON.ext} size={15} />開始轉碼</button>}
-              {v.ffmpeg === "ready" && <button className="btn ghost" style={{ height: 42 }} onClick={v.recheck}>重新偵測 ffmpeg</button>}
+                ? <button className="btn danger" style={{ height: 42, padding: "0 var(--s5)" }} onClick={v.cancel}><Icon d={ICON.x} size={15} />{tr("取消轉碼")}</button>
+                : <button className="btn primary" style={{ height: 42, padding: "0 var(--s6)" }} disabled={!v.src || v.ffmpeg !== "ready"} onClick={v.run}><Icon d={ICON.ext} size={15} />{tr("開始轉碼")}</button>}
+              {v.ffmpeg === "ready" && <button className="btn ghost" style={{ height: 42 }} onClick={v.recheck}>{tr("重新偵測 ffmpeg")}</button>}
             </div>
           </div>
         </div>
@@ -525,11 +525,11 @@ function StudioVideo() {
         {/* right: progress + log */}
         <div style={{ borderLeft: "1px solid var(--border)", background: "var(--panel)", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ padding: "var(--s5)", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s3)" }}>進度</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s3)" }}>{tr("進度")}</div>
             {v.progress ? (
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
-                  <span style={{ color: "var(--text-dim)", whiteSpace: "nowrap" }}>第 {v.progress.phase}/2 步 · {v.progress.phase === 1 ? "抽取影格" : "編碼封裝"}</span>
+                  <span style={{ color: "var(--text-dim)", whiteSpace: "nowrap" }}>{trf("第 {phase}/2 步 · {label}", { phase: v.progress.phase, label: v.progress.phase === 1 ? tr("抽取影格") : tr("編碼封裝") })}</span>
                   <span className="mono" style={{ color: "var(--accent)" }}>{v.progress.percent.toFixed(0)}%</span>
                 </div>
                 <div style={{ height: 8, borderRadius: 999, background: "var(--panel-3)", overflow: "hidden" }}>
@@ -538,14 +538,14 @@ function StudioVideo() {
               </div>
             ) : v.op === "done" ? (
               <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", color: "var(--ok)", fontSize: 13, fontWeight: 600 }}>
-                <Icon d={ICON.check} size={16} />轉碼完成
+                <Icon d={ICON.check} size={16} />{tr("轉碼完成")}
               </div>
             ) : (
-              <div style={{ fontSize: 12.5, color: "var(--text-mute)" }}>待命中</div>
+              <div style={{ fontSize: 12.5, color: "var(--text-mute)" }}>{tr("待命中")}</div>
             )}
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, padding: "var(--s5)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s2)" }}>記錄</div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".08em", color: "var(--text-mute)", marginBottom: "var(--s2)" }}>{tr("記錄")}</div>
             <LogView log={v.log} style={{ flex: 1, fontSize: 11.5, lineHeight: 1.7, color: "var(--text-dim)" }} />
           </div>
         </div>

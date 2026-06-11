@@ -26,6 +26,7 @@ const I18N_SUPPLEMENT = {
   "說明": { cn: "说明", en: "Help" },
   "燒錄韌體": { cn: "烧录固件", en: "Flash Firmware" },
   "參數設定": { cn: "参数设定", en: "Device Settings" },
+  "開始轉換": { cn: "开始转换", en: "Start Convert" },
 };
 // I18N_SUPPLEMENT-END
 
