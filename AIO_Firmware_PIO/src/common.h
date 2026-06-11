@@ -1,7 +1,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#define AIO_VERSION "3.2.4"
+#define AIO_VERSION "3.2.5"
 #define GET_SYS_MILLIS xTaskGetTickCount // 获取系统毫秒数
 // #define GET_SYS_MILLIS millis            // 获取系统毫秒数
 

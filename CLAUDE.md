@@ -5,7 +5,7 @@ Operational notes for AI agents working in this repo. For architecture / how-to 
 ## What this is
 
 HoloCubic AIO — a third-party firmware for the HoloCubic ESP32 toy. Two main components:
-- `AIO_Firmware_PIO/` — ESP32 firmware (PlatformIO + Arduino-core + LVGL 8.3 + ArduinoJson v6)
+- `AIO_Firmware_PIO/` — ESP32 firmware (PlatformIO + Arduino-core + LVGL 8.3 + ArduinoJson v7)
 - `AIO_Tool/` — Cross-platform GUI flasher + remote control. A single frontend (**Studio**) on top of 5 backend crates (`aio-protocol` / `aio-i18n` / `aio-device` / `aio-flasher` / `aio-converter`):
   - **Studio** (`AIO_Tool/studio/`, Tauri 2 + JSX prototype in `Docs/design/studio-flasher/`, stable Rust toolchain) — the **only frontend**, and what `release.yml` ships (Windows NSIS, macOS DMG, Linux AppImage). All UI / feature work lands here. **When the user says "run the dev build" / "see the UI", launch Studio.**
   - The legacy **egui binary** (`AIO_Tool/crates/aio-tool/`) was **removed** once Studio covered every tab — don't look for it. The main `AIO_Tool/` workspace now holds only the backend crates (still Rust-1.82-pinned for the espflash / indexmap / image MSRV line). `aio-i18n` + `AIO_Tool/i18n/*.json` are the canonical translation source. Studio consumes them: the studio crate generates `Docs/design/studio-flasher/i18n-generated.js` (committed) from the three JSON files, and `i18n.jsx` merges that with a small hand-kept `I18N_SUPPLEMENT`. The studio-crate test `tests/i18n_sync.rs` regenerates + diffs the file and asserts every `tr()` literal resolves, so the two cannot drift.
@@ -60,6 +60,36 @@ cargo +1.82.0 fmt --all -- --check
 
 Linux build requires `libudev-dev` (Debian/Ubuntu) or `systemd-devel` (Fedora) — `serialport` enumeration uses it.
 
+## Local firmware flashing / serial capture
+
+Known local test device: COM5, CH9102 (`USB VID:PID=1A86:55D4`), ESP32-PICO-D4. Prefer a slow, explicit esptool flash on this Windows machine; `platformio run -t upload` may appear hung because esptool's progress bar can crash under the default CP950 console encoding.
+
+```powershell
+cd AIO_Firmware_PIO
+uvx platformio run -e HoloCubic_AIO_Releases
+
+$env:PYTHONIOENCODING='utf-8'
+[Console]::OutputEncoding=[System.Text.Encoding]::UTF8
+& "$env:USERPROFILE\.platformio\penv\Scripts\esptool.exe" `
+  --chip esp32 --port COM5 --baud 115200 --connect-attempts 3 `
+  --before default-reset --after hard-reset write-flash -z `
+  --flash-mode dio --flash-freq 80m --flash-size detect `
+  0x1000 .pio\build\HoloCubic_AIO_Releases\bootloader.bin `
+  0x8000 .pio\build\HoloCubic_AIO_Releases\partitions.bin `
+  0xe000 "$env:USERPROFILE\.platformio\packages\framework-arduinoespressif32\tools\partitions\boot_app0.bin" `
+  0x10000 .pio\build\HoloCubic_AIO_Releases\firmware.bin
+```
+
+If COM5 is busy after a timed-out monitor/upload, look for and stop only the stale serial users:
+
+```powershell
+Get-CimInstance Win32_Process |
+  Where-Object { $_.CommandLine -match 'platformio|COM5|esptool|device monitor' } |
+  Select-Object ProcessId,Name,CommandLine
+```
+
+For boot/crash logs, use `uvx --from pyserial python` rather than `platformio device monitor`; the latter may leave a child process holding COM5 after timeout. A healthy post-flash smoke check should show `AIO (All in one) version ...`, `Initialization MPU6050 success.`, and no repeated `rst:0xc` / Guru Meditation loop for at least 45-70s.
+
 ## PR workflow
 
 The team uses **branch → PR → CI → squash-merge**. Direct push to main is unusual — only acceptable for emergency build-fix when CI itself can't catch the issue.
@@ -99,7 +129,7 @@ These are real rules with real reasons (each cited in [`Docs/development/08-refa
 
 **Firmware C/C++**:
 - ❌ `strcpy(dst, src)` → ✅ `snprintf(dst, sizeof(dst), "%s", src)`. Never `strcpy` / `sprintf` (no-`n` variants).
-- ❌ `doc["field"].as<int>()` → ✅ `doc["field"] | 0` (ArduinoJson v6 `|` fallback). `.as<T>()` crashes on missing/wrong-type; `|` doesn't.
+- ❌ `doc["field"].as<int>()` → ✅ `doc["field"] | 0` (ArduinoJson `|` fallback). `.as<T>()` crashes on missing/wrong-type; `|` doesn't.
 - ❌ `delay(N)` in `main_process` / `message_handle` / LVGL event callback → ✅ `if (millis() - last < N) return;` early return. `delay()` blocks the entire main thread (LVGL + IMU + all apps).
 - Use `F("...")` for string literals → keeps strings in flash, not SRAM.
 - `Send_HTML(webpage)` for web pages; build via `String webpage; webpage += F(...) + getText(key) + F(...);`.

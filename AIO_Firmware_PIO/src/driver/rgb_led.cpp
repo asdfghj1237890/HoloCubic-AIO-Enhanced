@@ -56,8 +56,13 @@ BaseType_t taskRgbReturned;
 TaskHandle_t handleLed = NULL;
 TimerHandle_t xTimer_rgb = NULL;
 
+static constexpr uint32_t RGB_TASK_STACK_BYTES = 4096;
+static constexpr int RGB_MIN_DELAY_MS = 10;
+static constexpr int RGB_MAX_DELAY_MS = 1000;
+
 void led_timerHandler(TimerHandle_t xTimer);
 void led_taskHandler(void *parameter);
+static TickType_t rgbDelayTicks(int delay_ms);
 static void hsvModeChange(void);
 static void rgbModeChange(void);
 static void onceChange(void);
@@ -107,7 +112,7 @@ bool set_rgb_and_run(RgbParam *rgb_setting, LED_RUN_MODE mode)
             xTimer_rgb = NULL;
         }
         xTimer_rgb = xTimerCreate("led_timerHandler",
-                                  g_rgb.time / portTICK_PERIOD_MS,
+                                  rgbDelayTicks(g_rgb.time),
                                   pdTRUE, (void *)0, led_timerHandler);
         xTimerStart(xTimer_rgb, 0); // 开启定时器
     }
@@ -118,8 +123,8 @@ bool set_rgb_and_run(RgbParam *rgb_setting, LED_RUN_MODE mode)
             taskRgbReturned = xTaskCreate(
                 led_taskHandler,
                 "led_taskHandler",
-                8 * 128, // 实际上 7*128就够用
-                (void *)&g_rgb.time,
+                RGB_TASK_STACK_BYTES,
+                NULL,
                 TASK_RGB_PRIORITY,
                 &handleLed);
             if (taskRgbReturned != pdPASS)
@@ -138,11 +143,11 @@ void led_timerHandler(TimerHandle_t xTimer)
 
 void led_taskHandler(void *parameter)
 {
-    int *ms = (int *)parameter; // 控制时间
+    (void)parameter;
     for (;;)
     {
         onceChange();
-        vTaskDelay(*ms);
+        vTaskDelay(rgbDelayTicks(g_rgb.time));
 
         // if (pdTRUE == xSemaphoreTake(lvgl_mutex, portMAX_DELAY))
         // {
@@ -150,6 +155,21 @@ void led_taskHandler(void *parameter)
         //     xSemaphoreGive(lvgl_mutex);
         // }
     }
+}
+
+static TickType_t rgbDelayTicks(int delay_ms)
+{
+    if (delay_ms < RGB_MIN_DELAY_MS)
+    {
+        delay_ms = RGB_MIN_DELAY_MS;
+    }
+    else if (delay_ms > RGB_MAX_DELAY_MS)
+    {
+        delay_ms = RGB_MAX_DELAY_MS;
+    }
+
+    TickType_t ticks = pdMS_TO_TICKS(delay_ms);
+    return ticks > 0 ? ticks : 1;
 }
 
 static void onceChange(void)
