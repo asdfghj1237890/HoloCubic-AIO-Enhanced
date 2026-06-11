@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "aio-converter"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "byteorder",
  "image",
@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "aio-device"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "bytes",
  "serialport",
@@ -37,7 +37,7 @@ dependencies = [
 
 [[package]]
 name = "aio-flasher"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "espflash",
  "serialport",
@@ -46,7 +46,7 @@ dependencies = [
 
 [[package]]
 name = "aio-protocol"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "byteorder",
  "bytes",
@@ -55,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "aio-studio"
-version = "3.2.0"
+version = "3.2.1"
 dependencies = [
  "aio-converter",
  "aio-device",

@@ -9,7 +9,7 @@ const listenConv = IS_TAURI_CONV ? window.__TAURI__.event.listen : null;
 // Studio tool version shown on the Help page. Bump on release alongside
 // tauri.conf.json / AIO_Tool/Cargo.toml (or wire a Tauri app_version command
 // to read env!("CARGO_PKG_VERSION") if you want it drift-free).
-const STUDIO_VERSION = "3.2.0";
+const STUDIO_VERSION = "3.2.1";
 
 Object.assign(ICON, {
   plus: ["M12 5v14", "M5 12h14"],
