@@ -70,40 +70,40 @@ function StatusChip({ conn, port }) {
 const FIRMWARE_FIELD_META = {
   ssid_0:               { label: "SSID（自動連線）", type: "text",     ph: "預設 WiFi 名稱" },
   password_0:           { label: "密碼（自動連線）", type: "password", ph: "預設 WiFi 密碼" },
-  ssid_1:               { label: "SSID 1",          type: "text",     ph: "備用 WiFi 名稱" },
-  password_1:           { label: "密碼 1",          type: "password" },
-  ssid_2:               { label: "SSID 2",          type: "text",     ph: "備用 WiFi 名稱" },
-  password_2:           { label: "密碼 2",          type: "password" },
-  auto_start_app:       { label: "開機自啟 App",    type: "text",     ph: "Heartbeat / Weather / …" },
-  power_mode:           { label: "功耗模式",         type: "select",
+  ssid_1:               { label: "SSID 1",           type: "text",     ph: "備用 WiFi 名稱" },
+  password_1:           { label: "密碼 1",           type: "password" },
+  ssid_2:               { label: "SSID 2",           type: "text",     ph: "備用 WiFi 名稱" },
+  password_2:           { label: "密碼 2",           type: "password" },
+  auto_start_app:       { label: "開機自啟 App",     type: "text",     ph: "Heartbeat / Weather / …" },
+  power_mode:           { label: "功耗模式",          type: "select",
                           options: [["0","節能"],["1","效能"]] },
-  backLight:            { label: "背光亮度",         type: "slider",   min: 1, max: 100 },
-  rotation:             { label: "螢幕旋轉",         type: "select",
+  backLight:            { label: "背光亮度",          type: "slider",   min: 1, max: 100 },
+  rotation:             { label: "螢幕旋轉",          type: "select",
                           options: [["0","0°"],["1","90°"],["2","180°"],["3","270°"]] },
-  auto_calibration_mpu: { label: "自動校準 MPU",    type: "toggle" },
-  mpu_order:            { label: "操作方向",         type: "text",     ph: "0-7" },
+  auto_calibration_mpu: { label: "自動校準 MPU",     type: "toggle" },
+  mpu_order:            { label: "操作方向",          type: "text",     ph: "0-7" },
   // RGB knobs — sliders so the live edit feels tangible
-  mode:                 { label: "模式",            type: "text" },
-  min_value_0:          { label: "Min R",           type: "slider", min: 0, max: 255 },
-  min_value_1:          { label: "Min G",           type: "slider", min: 0, max: 255 },
-  min_value_2:          { label: "Min B",           type: "slider", min: 0, max: 255 },
-  max_value_0:          { label: "Max R",           type: "slider", min: 0, max: 255 },
-  max_value_1:          { label: "Max G",           type: "slider", min: 0, max: 255 },
-  max_value_2:          { label: "Max B",           type: "slider", min: 0, max: 255 },
-  step_0:               { label: "Step R",          type: "text" },
-  step_1:               { label: "Step G",          type: "text" },
-  step_2:               { label: "Step B",          type: "text" },
-  min_brightness:       { label: "Min 亮度",        type: "slider", min: 0, max: 1000 },
-  max_brightness:       { label: "Max 亮度",        type: "slider", min: 0, max: 1000 },
-  brightness_step:      { label: "亮度步進",        type: "slider", min: 0, max: 100 },
-  time:                 { label: "動畫週期 (ms)",   type: "slider", min: 10, max: 1000 },
+  mode:                 { label: "模式",             type: "text" },
+  min_value_0:          { label: "Min R",            type: "slider", min: 0, max: 255 },
+  min_value_1:          { label: "Min G",            type: "slider", min: 0, max: 255 },
+  min_value_2:          { label: "Min B",            type: "slider", min: 0, max: 255 },
+  max_value_0:          { label: "Max R",            type: "slider", min: 0, max: 255 },
+  max_value_1:          { label: "Max G",            type: "slider", min: 0, max: 255 },
+  max_value_2:          { label: "Max B",            type: "slider", min: 0, max: 255 },
+  step_0:               { label: "Step R",           type: "text" },
+  step_1:               { label: "Step G",           type: "text" },
+  step_2:               { label: "Step B",           type: "text" },
+  min_brightness:       { label: "Min 亮度",         type: "slider", min: 0, max: 1000 },
+  max_brightness:       { label: "Max 亮度",         type: "slider", min: 0, max: 1000 },
+  brightness_step:      { label: "亮度步進",         type: "slider", min: 0, max: 100 },
+  time:                 { label: "動畫週期 (ms)",    type: "slider", min: 10, max: 1000 },
   // MPU offsets — informational sliders
-  x_gyro_offset:        { label: "X gyro offset",   type: "text" },
-  y_gyro_offset:        { label: "Y gyro offset",   type: "text" },
-  z_gyro_offset:        { label: "Z gyro offset",   type: "text" },
-  x_accel_offset:       { label: "X accel offset",  type: "text" },
-  y_accel_offset:       { label: "Y accel offset",  type: "text" },
-  z_accel_offset:       { label: "Z accel offset",  type: "text" },
+  x_gyro_offset:        { label: "X gyro offset",    type: "text" },
+  y_gyro_offset:        { label: "Y gyro offset",    type: "text" },
+  z_gyro_offset:        { label: "Z gyro offset",    type: "text" },
+  x_accel_offset:       { label: "X accel offset",   type: "text" },
+  y_accel_offset:       { label: "Y accel offset",   type: "text" },
+  z_accel_offset:       { label: "Z accel offset",   type: "text" },
 };
 const CATEGORY_META = {
   sys: { label: "系統 / WiFi", icon: "wifi", saveable: true },
@@ -134,7 +134,7 @@ function useSettings() {
   const [pw, setPw]           = useState(window.__AIO_SETTINGS_PW__ || "");   // device web password (shown on its screen)
   const [rows, setRows]       = useState([]);          // flattened from snapshot
   const [edits, setEdits]     = useState({});          // {"cat:key": newValue}
-  const [status, setStatus]   = useState("輸入裝置 IP 後按「讀取設定」開始。");
+  const [status, setStatus]   = useState(() => tr("輸入裝置 IP 後按「讀取設定」開始。"));
   const [busy, setBusy]       = useState(false);
   const [loaded, setLoaded]   = useState(false);
 
@@ -144,16 +144,16 @@ function useSettings() {
 
   const fetchAll = useCallback(async () => {
     const ip = host.trim();
-    if (!ip) { setStatus("✗ 請先輸入裝置 IP。"); return; }
-    setBusy(true); setStatus("從 " + ip + " 讀取中…");
+    if (!ip) { setStatus(tr("✗ 請先輸入裝置 IP。")); return; }
+    setBusy(true); setStatus(trf("從 {ip} 讀取中…", { ip }));
     if (IS_TAURI_PAGES) {
       try {
         const { json } = await invokePages("fetch_settings_http", { host: ip, password: pw });
         const flat = flattenSnapshot(json);
         setRows(flat); setEdits({}); setLoaded(true);
-        setStatus("已讀取 " + flat.length + " 項參數,跨 " + Object.keys(json).length + " 個分類。");
+        setStatus(trf("已讀取 {n} 項參數，跨 {c} 個分類。", { n: flat.length, c: Object.keys(json).length }));
       } catch (e) {
-        setStatus("✗ 讀取失敗:" + (e && e.toString ? e.toString() : e));
+        setStatus(trf("✗ 讀取失敗：{e}", { e: e && e.toString ? e.toString() : e }));
       }
     } else {
       // Browser-preview mock — emits a sample shape matching the firmware.
@@ -199,7 +199,7 @@ function useSettings() {
       setStatus("⚠ 已修改的欄位都在唯讀分類(例如 IMU);無 /save handler。");
       return;
     }
-    setBusy(true); setStatus("寫入中…");
+    setBusy(true); setStatus(tr("寫入中…"));
     if (IS_TAURI_PAGES) {
       try {
         let total = 0;
@@ -207,10 +207,10 @@ function useSettings() {
           await invokePages("save_settings_http", { host: ip, category: cat, fields, password: pw });
           total += fields.length;
         }
-        setStatus("已寫入 " + total + " 項修改,重新讀取以確認…");
+        setStatus(trf("已寫入 {n} 項修改，重新讀取以確認…", { n: total }));
         await fetchAll();
       } catch (e) {
-        setStatus("✗ 寫入失敗:" + (e && e.toString ? e.toString() : e));
+        setStatus(trf("✗ 寫入失敗：{e}", { e: e && e.toString ? e.toString() : e }));
       }
     } else {
       const total = Object.values(groups).reduce((a, fs) => a + fs.length, 0);
@@ -247,8 +247,8 @@ function ParamField({ f, value, changed, disabled, onChange }) {
     <div style={{ display: "grid", gridTemplateColumns: "150px 1fr", alignItems: "center", gap: "var(--s4)",
                   padding: "var(--s3) 0", borderTop: "1px solid var(--border)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)" }}>
-        <span style={{ fontSize: 13, color: disabled ? "var(--text-mute)" : "var(--text-dim)", whiteSpace: "nowrap" }}>{f.label}</span>
-        {changed && <span title="已修改，尚未寫入" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--warn)", flex: "none" }} />}
+        <span style={{ fontSize: 13, color: disabled ? "var(--text-mute)" : "var(--text-dim)", whiteSpace: "nowrap" }}>{tr(f.label)}</span>
+        {changed && <span title={tr("已修改，尚未寫入")} style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--warn)", flex: "none" }} />}
       </div>
       <div>
         {f.type === "slider" ? (
@@ -261,10 +261,10 @@ function ParamField({ f, value, changed, disabled, onChange }) {
           <Switch on={value === "1"} disabled={disabled} onToggle={(v) => onChange(v ? "1" : "0")} />
         ) : f.type === "select" ? (
           <select className="fld" style={{ width: 160 }} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
-            {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {f.options.map(([v, l]) => <option key={v} value={v}>{tr(l)}</option>)}
           </select>
         ) : (
-          <input className="fld" type={f.type} placeholder={f.ph} value={value} disabled={disabled}
+          <input className="fld" type={f.type} placeholder={f.ph ? tr(f.ph) : undefined} value={value} disabled={disabled}
             onChange={(e) => onChange(e.target.value)} style={{ maxWidth: 320 }} />
         )}
       </div>
@@ -282,25 +282,25 @@ function StudioParams() {
         right={
           <span className="chip" style={{ fontSize: 12.5, padding: "6px 14px" }}>
             <span className={"dot " + (s.busy ? "busy" : s.loaded ? "live" : "")} />
-            {s.busy ? "處理中…" : s.loaded ? "已載入" : "待讀取"}
+            {s.busy ? tr("處理中…") : s.loaded ? tr("已載入") : tr("待讀取")}
           </span>
         } />
 
       {/* toolbar — IP input + read + write */}
       <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", padding: "var(--s3) var(--s6)",
                     borderBottom: "1px solid var(--border)", flexWrap: "wrap", flex: "none" }}>
-        <span style={{ fontSize: 13, color: "var(--text-mute)" }}>裝置 IP</span>
+        <span style={{ fontSize: 13, color: "var(--text-mute)" }}>{tr("裝置 IP")}</span>
         <input className="fld mono" style={{ width: 180, height: 36 }} placeholder="192.168.x.x"
           value={s.host} onChange={(e) => s.setHost(e.target.value)} disabled={s.busy} />
-        <span style={{ fontSize: 13, color: "var(--text-mute)" }}>密碼</span>
-        <input className="fld mono" style={{ width: 120, height: 36 }} type="password" placeholder="裝置螢幕顯示"
+        <span style={{ fontSize: 13, color: "var(--text-mute)" }}>{tr("密碼")}</span>
+        <input className="fld mono" style={{ width: 120, height: 36 }} type="password" placeholder={tr("裝置螢幕顯示")}
           value={s.pw} onChange={(e) => s.setPw(e.target.value)} disabled={s.busy} />
         <button className="btn ghost" style={{ height: 36 }} disabled={s.busy} onClick={s.fetchAll}>
-          <Icon d={ICON.download} size={15} />讀取設定
+          <Icon d={ICON.download} size={15} />{tr("讀取設定")}
         </button>
         <div style={{ flex: 1 }} />
         <button className="btn primary" style={{ height: 36 }} disabled={s.busy || !s.dirtyCount} onClick={s.save}>
-          <Icon d={ICON.check} size={15} />寫入修改{s.dirtyCount ? ` (${s.dirtyCount})` : ""}
+          <Icon d={ICON.check} size={15} />{tr("寫入修改")}{s.dirtyCount ? ` (${s.dirtyCount})` : ""}
         </button>
       </div>
 
@@ -314,8 +314,8 @@ function StudioParams() {
               <div key={g.cat} style={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: "var(--r4)", overflow: "hidden" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "var(--s2)", padding: "var(--s3) var(--s4)", color: "var(--text-dim)" }}>
                   <Icon d={ICON[g.icon] || ICON.braces} size={15} />
-                  <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".05em", whiteSpace: "nowrap" }}>{g.label}</span>
-                  {!g.saveable && <span style={{ fontSize: 11, color: "var(--text-mute)" }}>(唯讀)</span>}
+                  <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".05em", whiteSpace: "nowrap" }}>{tr(g.label)}</span>
+                  {!g.saveable && <span style={{ fontSize: 11, color: "var(--text-mute)" }}>{tr("(唯讀)")}</span>}
                 </div>
                 <div style={{ padding: "0 var(--s4) var(--s2)" }}>
                   {g.fields.map((row) => {
