@@ -596,22 +596,21 @@ function StudioHelp() {
       <div className="scroll" style={{ overflow: "auto", padding: "var(--s6)" }}>
         <div style={{ maxWidth: 720 }}>
           <p style={{ fontSize: 13.5, lineHeight: 1.8, color: "var(--text-dim)", margin: "0 0 var(--s5)", textWrap: "pretty" }}>
-            本電腦端工具專為 <strong style={{ color: "var(--text)" }}>HoloCubic AIO</strong> 韌體開發，韌體燒錄功能同時相容其他第三方韌體。
-            透過上方分頁可進行韌體燒錄、參數設定、記憶卡檔案管理，以及圖片與影片的格式轉換。
+            {tr("本電腦端工具專為 HoloCubic AIO 韌體開發，韌體燒錄功能同時相容其他第三方韌體。透過上方分頁可進行韌體燒錄、參數設定、記憶卡檔案管理，以及圖片與影片的格式轉換。")}
           </p>
 
-          <HelpSection label="韌體與工具">
-            <HelpLink icon={ICON.bolt} title="HoloCubic AIO Enhanced（本工具增強版）" sub="github.com/asdfghj1237890/HoloCubic-AIO-Enhanced" url="https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced" />
-            <HelpLink icon={ICON.film} color="#a78bfa" title="觀看示範影片" sub="bilibili.com/video/BV1wS4y1R7YF" url="https://www.bilibili.com/video/BV1wS4y1R7YF?p=1" />
+          <HelpSection label={tr("韌體與工具")}>
+            <HelpLink icon={ICON.bolt} title={tr("HoloCubic AIO Enhanced（本工具增強版）")} sub="github.com/asdfghj1237890/HoloCubic-AIO-Enhanced" url="https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced" />
+            <HelpLink icon={ICON.film} color="#a78bfa" title={tr("觀看示範影片")} sub="bilibili.com/video/BV1wS4y1R7YF" url="https://www.bilibili.com/video/BV1wS4y1R7YF?p=1" />
           </HelpSection>
 
-          <HelpSection label="AIO 韌體原始專案">
-            <HelpLink icon={ICON.braces} color="var(--warn)" title="HoloCubic AIO 原始版本" sub="github.com/ClimbSnail/HoloCubic_AIO" url="https://github.com/ClimbSnail/HoloCubic_AIO" />
-            <HelpLink icon={ICON.braces} color="var(--warn)" title="HoloCubic AIO（Gitee 鏡像）" sub="gitee.com/ClimbSnailQ/HoloCubic_AIO" url="https://gitee.com/ClimbSnailQ/HoloCubic_AIO" />
+          <HelpSection label={tr("AIO 韌體原始專案")}>
+            <HelpLink icon={ICON.braces} color="var(--warn)" title={tr("HoloCubic AIO 原始版本")} sub="github.com/ClimbSnail/HoloCubic_AIO" url="https://github.com/ClimbSnail/HoloCubic_AIO" />
+            <HelpLink icon={ICON.braces} color="var(--warn)" title={tr("HoloCubic AIO（Gitee 鏡像）")} sub="gitee.com/ClimbSnailQ/HoloCubic_AIO" url="https://gitee.com/ClimbSnailQ/HoloCubic_AIO" />
           </HelpSection>
 
-          <HelpSection label="硬體開源方案">
-            <HelpLink icon={ICON.chip} title="HoloCubic 硬體開源專案" sub="github.com/peng-zhihui/HoloCubic" url="https://github.com/peng-zhihui/HoloCubic" />
+          <HelpSection label={tr("硬體開源方案")}>
+            <HelpLink icon={ICON.chip} title={tr("HoloCubic 硬體開源專案")} sub="github.com/peng-zhihui/HoloCubic" url="https://github.com/peng-zhihui/HoloCubic" />
           </HelpSection>
 
           <div style={{ fontSize: 11.5, color: "var(--text-mute)", lineHeight: 1.7, paddingTop: "var(--s2)" }}>
