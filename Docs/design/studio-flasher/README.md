@@ -53,7 +53,8 @@ studio-flasher/
 ├── theme.css           Design tokens (dark theme, radius/spacing ramps, .btn / .chip primitives)
 ├── flash-sim.jsx       useFlasher() hook — port list, connect, flash queue, espflash-style log
 ├── fl-shared.jsx       <LogView>, <Icon>, ICON path dictionary
-├── i18n.jsx            tr() + dictionary for 繁中 / 简中 / English
+├── i18n-generated.js   GENERATED dict (window.__I18N_GENERATED) from AIO_Tool/i18n/*.json — do not edit
+├── i18n.jsx            tr() + I18N_SUPPLEMENT (hand-kept Studio-only strings); merges the generated dict
 ├── dir-a-pro.jsx       <StudioFlasher>, <StudioSettings>, <StudioEmpty>
 ├── studio-pages.jsx    <StudioParams>, <StudioFiles>
 └── studio-convert.jsx  <StudioImage>, <StudioVideo>, <StudioHelp>

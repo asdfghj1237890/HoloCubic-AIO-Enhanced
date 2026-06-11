@@ -1,0 +1,3 @@
+# Keep the generated i18n dict LF so the studio crate's i18n_sync test
+# (byte-compared after newline-normalization) stays stable across platforms.
+i18n-generated.js text eol=lf

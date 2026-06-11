@@ -54,7 +54,12 @@ Three layers:
    runtime parse falls back to an empty translation table for that locale
    (D5), so every key returns its key name instead of a translation —
    silent on Windows, very visible on the screen. Don't ship `"key": null`.
-3. Optionally add a golden snapshot test for the new key if it has
+3. **Regenerate the Studio dict.** Studio's `tr()` reads a generated
+   `Docs/design/studio-flasher/i18n-generated.js` built from these JSON files.
+   Run `UPDATE_I18N=1 cargo test --manifest-path AIO_Tool/studio/Cargo.toml
+   --test i18n_sync` and commit the result, or `tool-studio.yml` CI fails on the
+   stale file.
+4. Optionally add a golden snapshot test for the new key if it has
    structurally interesting shape (multi-line, format characters, etc.).
 
 ## Stability

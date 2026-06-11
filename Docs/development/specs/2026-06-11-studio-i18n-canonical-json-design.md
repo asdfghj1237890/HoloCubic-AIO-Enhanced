@@ -101,7 +101,7 @@ structurally cannot express (Studio-only strings + zh-CN disambiguations).
 
 ## Component 2 — supplement (inline in `i18n.jsx`)
 
-A marker-delimited `I18N_SUPPLEMENT` object — **10 entries**, all copied verbatim from
+A marker-delimited `I18N_SUPPLEMENT` object — **11 entries**, all copied verbatim from
 today's dict (no new translation work), so behavior is preserved exactly.
 
 **Group A — Studio-only strings the JSON lacks (7):**
@@ -116,12 +116,15 @@ today's dict (no new translation work), so behavior is preserved exactly.
 | `按鈕、進度、強調元素的顏色` | `按钮、进度、强调元素的颜色` | `Color for buttons, progress and accents` |
 | `介面文字字型` | `界面文字字型` | `Interface typeface` |
 
-**Group B — disambiguation pins (3):** these strings exist in the JSON but under two
+**Group B — disambiguation pins (4):** these strings exist in the JSON but under two
 keys with *different* zh-CN, so the generator skips them as ambiguous. The supplement
-pins each to the variant Studio shows today:
+pins each to the variant Studio shows today. (`圖片` was found during implementation —
+it's the Image nav tab, rendered via the dynamic `tr(it.label)`, so the static scanner
+never saw it; the `nav_labels_resolve` test now guards this class.)
 
 | key (zh-TW) | pinned cn | en | ambiguous because |
 |---|---|---|---|
+| `圖片` | `图片` | `Image` | `tab_image_converter_short` cn=`图片` vs `image_files` cn=`Image` |
 | `說明` | `说明` | `Help` | `tab_help` cn=`帮助` vs `tab_help_short` cn=`说明` |
 | `燒錄韌體` | `烧录固件` | `Flash Firmware` | `flasher_title` cn=`烧录固件` vs `flash_firmware` cn=`刷写固件` |
 | `參數設定` | `参数设定` | `Device Settings` | `params_title` cn=`参数设定` vs `tab_setting` cn=`参数设置` |
@@ -178,9 +181,11 @@ using the **snapshot-update pattern** — no separate binary:
 - **Supplement keys** are extracted from `i18n.jsx` by slicing between
   `I18N_SUPPLEMENT-START` / `-END` markers and matching `"<key>":` at line starts.
 
-**Known limitation (documented):** dynamic `tr(it.label)` nav calls are not statically
-scanned; their strings resolve via the generated `tab_*_short` values and are verified
-manually. Any static checker has this gap.
+**Dynamic nav labels:** the rail's `tr(it.label)` calls aren't visible to the static
+`tr("…")` scanner, so a dedicated `nav_labels_resolve` test extracts the `label: "…"`
+literals from `index.html` and asserts each resolves — closing the gap that would
+otherwise let an ambiguous nav label (e.g. `圖片`) silently fall back to Traditional
+Chinese in en/cn mode.
 
 ## Component 5 — CI & cross-platform
 
