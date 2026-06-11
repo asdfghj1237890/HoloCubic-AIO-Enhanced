@@ -1,11 +1,7 @@
-# Smoke test for pc_resource. Two screenshots:
-# - 01_initial: post-init / pre-action. The first process tick has
-#   already fetched (via the socket fixture in
-#   test/fixtures/socket/0.0.0.0.txt) but display_pc_resource was
-#   called with the all-zero defaults BEFORE the synchronous handler
-#   updated run_data, so gauges show 0%/0°C/etc.
-# - 02_with_data: after `action UP` re-runs process which now reads
-#   the parsed CPU 45 / 65°C / GPU 35 / RAM 50 / NET 100/500 KB/s.
+# Smoke test for pc_resource. wait_ms advances the app main loop, so the first
+# screenshot captures the stable dashboard after the socket fixture has been
+# parsed: CPU 45 / 65°C / GPU 35 / RAM 50 / NET 100/500 KB/s. The UP action
+# then exercises a re-render with the same parsed data.
 #
 # wait_ms 400 between action UP and screenshot 02_with_data: the
 # default tick_for(50) the harness applies after each action step
