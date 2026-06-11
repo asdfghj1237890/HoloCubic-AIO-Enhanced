@@ -35,6 +35,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(commands::ConnState::default())
         .invoke_handler(tauri::generate_handler![
+            commands::app_version,
             commands::list_ports,
             commands::pick_partition_bin,
             commands::connect_device,

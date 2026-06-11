@@ -6,9 +6,10 @@ const IS_TAURI_CONV = typeof window !== "undefined" && !!window.__TAURI__;
 const invokeConv = IS_TAURI_CONV ? window.__TAURI__.core.invoke : null;
 const listenConv = IS_TAURI_CONV ? window.__TAURI__.event.listen : null;
 
-// Studio tool version shown on the Help page. Bump on release alongside
-// tauri.conf.json / AIO_Tool/Cargo.toml (or wire a Tauri app_version command
-// to read env!("CARGO_PKG_VERSION") if you want it drift-free).
+// Browser-preview fallback for the Help-page version. The shipping Tauri app
+// fetches the real version from the `app_version` command
+// (env!("CARGO_PKG_VERSION")), so only the standalone browser preview — which
+// has no backend — falls back to this constant.
 const STUDIO_VERSION = "3.2.1";
 
 Object.assign(ICON, {
@@ -594,10 +595,17 @@ function HelpSection({ label, children }) {
 }
 
 function StudioHelp() {
+  const { useState, useEffect } = React;
+  const [ver, setVer] = useState(STUDIO_VERSION);
+  useEffect(() => {
+    if (IS_TAURI_CONV && invokeConv) {
+      invokeConv("app_version").then((v) => { if (v) setVer(v); }).catch(() => {});
+    }
+  }, []);
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
       <PageHeader title={tr("說明")} sub={tr("關於本工具與 HoloCubic 的相關資源")}
-        right={<span className="chip mono" style={{ fontSize: 12 }}>{"v" + STUDIO_VERSION}</span>} />
+        right={<span className="chip mono" style={{ fontSize: 12 }}>{"v" + ver}</span>} />
       <div className="scroll" style={{ overflow: "auto", padding: "var(--s6)" }}>
         <div style={{ maxWidth: 720 }}>
           <p style={{ fontSize: 13.5, lineHeight: 1.8, color: "var(--text-dim)", margin: "0 0 var(--s5)", textWrap: "pretty" }}>
@@ -620,8 +628,8 @@ function StudioHelp() {
 
           <div style={{ fontSize: 11.5, color: "var(--text-mute)", lineHeight: 1.7, paddingTop: "var(--s2)" }}>
             {IS_TAURI_CONV
-              ? `HoloCubic AIO Tool · v${STUDIO_VERSION}`
-              : `HoloCubic AIO Tool · v${STUDIO_VERSION} · 瀏覽器預覽模式，連接、燒錄與轉換等結果均為模擬。`}
+              ? `HoloCubic AIO Tool · v${ver}`
+              : `HoloCubic AIO Tool · v${ver} · 瀏覽器預覽模式，連接、燒錄與轉換等結果均為模擬。`}
           </div>
         </div>
       </div>

@@ -27,6 +27,14 @@ use serde::{Deserialize, Serialize};
 use serialport::SerialPortInfo as RawPortInfo;
 use tauri::{AppHandle, Emitter, State};
 
+/// The Studio tool version, baked in from `Cargo.toml` at compile time
+/// (`env!("CARGO_PKG_VERSION")`) so the Help page never shows a stale
+/// hardcoded version. Invoked from JS as `app_version`.
+#[tauri::command]
+pub fn app_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
+
 /// A serial port name surfaced to JS via the `list_ports` command.
 #[derive(Serialize)]
 pub struct SerialPortInfo {
