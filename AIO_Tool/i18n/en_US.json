@@ -210,5 +210,8 @@
   "ffmpeg_missing": "ffmpeg not found in PATH.",
   "install_ffmpeg": "Install ffmpeg",
   "recheck": "Re-check",
+  "swatch_classic_blue": "Classic blue",
+  "swatch_teal": "Teal",
+  "swatch_purple": "Purple",
   "help_info": "\n        This PC tool is specifically developed for HoloCubic AIO firmware, with firmware flashing functionality compatible with other third-party firmwares.\n\n        [Latest firmware / Enhanced fork of this tool]\n            https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced\n\n        Watch demonstration video:\n            https://www.bilibili.com/video/BV1wS4y1R7YF?p=1\n\n        Learn about Holocubic AIO firmware\n            Original repo  https://github.com/ClimbSnail/HoloCubic_AIO\n            Or             https://gitee.com/ClimbSnailQ/HoloCubic_AIO\n\n        Learn about Holocubic hardware open source solution\n            Visit https://github.com/peng-zhihui/HoloCubic\n        "
 }

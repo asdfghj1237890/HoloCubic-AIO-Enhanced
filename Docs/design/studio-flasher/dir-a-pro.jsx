@@ -292,14 +292,14 @@ function SwatchRow({ value, onChange }) {
       {opts.map(([c, name]) => {
         const on = value === c;
         return (
-          <button key={c} onClick={() => onChange(c)} title={name}
+          <button key={c} onClick={() => onChange(c)} title={tr(name)}
             style={{ display: "flex", alignItems: "center", gap: "var(--s2)", cursor: "pointer",
                      padding: "6px 12px 6px 8px", borderRadius: "var(--rpill)", transition: "all .14s",
                      border: "1px solid " + (on ? "var(--accent-line)" : "var(--border)"),
                      background: on ? "var(--accent-weak)" : "var(--panel-2)", color: on ? "var(--text)" : "var(--text-dim)" }}>
             <span style={{ width: 18, height: 18, borderRadius: "50%", background: c, flex: "none",
                            boxShadow: on ? "0 0 0 2px var(--panel), 0 0 0 4px " + c : "none" }} />
-            <span style={{ fontSize: 12.5, fontWeight: 600 }}>{name}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 600 }}>{tr(name)}</span>
           </button>
         );
       })}
@@ -350,7 +350,7 @@ function StudioSettings({ accent, font, onAccent, onFont, fonts, lang, onLang })
             </SettingRow>
           </div>
           <div style={{ fontSize: 11.5, color: "var(--text-mute)", marginTop: "var(--s4)", lineHeight: 1.6 }}>
-            介面固定為深色主題。語言切換即時套用於導覽與各頁標題等主要介面文字。
+            {tr("介面固定為深色主題。語言切換即時套用於導覽與各頁標題等主要介面文字。")}
           </div>
         </div>
       </div>
