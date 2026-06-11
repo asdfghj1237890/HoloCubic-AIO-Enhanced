@@ -14,8 +14,8 @@
 
 mod commands;
 mod fm;
-mod img;
 pub mod i18n_gen;
+mod img;
 mod video;
 
 /// Entry point — set up Tauri and run the desktop event loop.

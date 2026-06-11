@@ -8,10 +8,9 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Build the zh-TW-value-keyed dict, applying the skip rules. Returns
 /// `(entries, skipped)`; `skipped` lists zh-TW values omitted and why.
 ///
-/// Skip rules:
-/// - multi-line values (the help/info blobs) — never UI labels;
-/// - a zh-TW value that maps to differing `(cn, en)` across keys (ambiguous);
-/// benign collisions (all keys agree) are emitted once.
+/// Skip rules: drop multi-line values (the help/info blobs — never UI labels)
+/// and ambiguous values (a zh-TW value mapping to differing `(cn, en)` pairs
+/// across keys). Benign collisions (all keys agree) are emitted once.
 pub fn build_entries(
     en: &BTreeMap<String, String>,
     cn: &BTreeMap<String, String>,
@@ -30,6 +29,9 @@ pub fn build_entries(
     let mut entries = BTreeMap::new();
     let mut skipped = Vec::new();
     for (twv, pairs) in grouped {
+        // Keys are the zh-TW values; multi-line ones are the big help/info
+        // blobs we don't want as keys. Any cn/en newlines are escaped by
+        // js_str, so only the key axis needs this check.
         if twv.contains('\n') {
             skipped.push(format!("{twv:?} (multi-line)"));
             continue;
@@ -77,7 +79,10 @@ mod tests {
     use super::*;
 
     fn map(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     #[test]
@@ -86,7 +91,10 @@ mod tests {
         let cn = map(&[("a", "取消"), ("b", "取消")]);
         let tw = map(&[("a", "取消"), ("b", "取消")]);
         let (e, skipped) = build_entries(&en, &cn, &tw);
-        assert_eq!(e.get("取消"), Some(&("取消".to_string(), "Cancel".to_string())));
+        assert_eq!(
+            e.get("取消"),
+            Some(&("取消".to_string(), "Cancel".to_string()))
+        );
         assert!(skipped.is_empty());
     }
 
