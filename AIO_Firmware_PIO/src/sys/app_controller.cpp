@@ -34,6 +34,7 @@ AppController::AppController(const char *name)
     // appList = new APP_OBJ[APP_MAX_NUM];
     m_wifi_status = false;
     m_preWifiReqMillis = GET_SYS_MILLIS();
+    m_preBackgroundTaskMillis = GET_SYS_MILLIS();
 
     // 定义一个事件处理定时器
     xTimerEventDeal = xTimerCreate("Event Deal",
@@ -110,13 +111,137 @@ int AppController::app_install(APP_OBJ *app, APP_TYPE app_type)
 // 将APP的后台任务从任务队列中移除(自能通过APP退出的时候，移除自身的后台任务)
 int AppController::remove_backgroud_task(void)
 {
-    return 0; // 安装成功
+    if (cur_app_index < 0 || cur_app_index >= (int)app_num || NULL == appList[cur_app_index])
+    {
+        return 1;
+    }
+
+    appList[cur_app_index]->background_task = NULL;
+    return 0;
 }
 
 // 将APP从app_controller中卸载（删除）
 int AppController::app_uninstall(const APP_OBJ *app)
 {
-    // todo
+    if (NULL == app)
+    {
+        return 1;
+    }
+
+    int app_index = -1;
+    for (int pos = 0; pos < (int)app_num; ++pos)
+    {
+        if (appList[pos] == app)
+        {
+            app_index = pos;
+            break;
+        }
+    }
+
+    if (app_index < 0)
+    {
+        return 2;
+    }
+
+    if (1 == app_exit_flag && cur_app_index == app_index)
+    {
+        app_exit();
+    }
+
+    for (int pos = app_index; pos < (int)app_num - 1; ++pos)
+    {
+        appList[pos] = appList[pos + 1];
+        appTypeList[pos] = appTypeList[pos + 1];
+    }
+
+    appList[app_num - 1] = NULL;
+    appTypeList[app_num - 1] = APP_TYPE_NONE;
+    --app_num;
+
+    if (0 == app_num)
+    {
+        cur_app_index = 0;
+        pre_app_index = 0;
+        app_exit_flag = 0;
+        return 0;
+    }
+
+    if (cur_app_index > app_index)
+    {
+        --cur_app_index;
+    }
+    if (pre_app_index > app_index)
+    {
+        --pre_app_index;
+    }
+    if (cur_app_index >= (int)app_num)
+    {
+        cur_app_index = app_num - 1;
+    }
+    if (pre_app_index >= (int)app_num)
+    {
+        pre_app_index = cur_app_index;
+    }
+
+    if (0 == app_exit_flag && false == app_is_launchable(cur_app_index))
+    {
+        int next_app_index = get_next_launchable_app_idx(cur_app_index, 1);
+        if (next_app_index >= 0)
+        {
+            cur_app_index = next_app_index;
+        }
+    }
+
+    return 0;
+}
+
+bool AppController::app_is_launchable(int app_index) const
+{
+    if (app_index < 0 || app_index >= (int)app_num)
+    {
+        return false;
+    }
+
+    return NULL != appList[app_index] && APP_TYPE_REAL_TIME == appTypeList[app_index];
+}
+
+int AppController::get_next_launchable_app_idx(int start_index, int step)
+{
+    if (0 == app_num)
+    {
+        return -1;
+    }
+
+    int app_index = start_index;
+    for (unsigned int count = 0; count < app_num; ++count)
+    {
+        app_index = (app_index + step + app_num) % app_num;
+        if (app_is_launchable(app_index))
+        {
+            return app_index;
+        }
+    }
+
+    return -1;
+}
+
+int AppController::run_background_tasks(const ImuAction *act_info)
+{
+    for (unsigned int pos = 0; pos < app_num; ++pos)
+    {
+        if (NULL == appList[pos] || NULL == appList[pos]->background_task)
+        {
+            continue;
+        }
+
+        if (APP_TYPE_REAL_TIME == appTypeList[pos] && 1 == app_exit_flag && (int)pos == cur_app_index)
+        {
+            continue;
+        }
+
+        (*(appList[pos]->background_task))(this, act_info);
+    }
+
     return 0;
 }
 
@@ -124,7 +249,7 @@ int AppController::app_auto_start()
 {
     // APP自启动
     int index = this->getAppIdxByName(sys_cfg.auto_start_app.c_str());
-    if (index < 0)
+    if (index < 0 || false == app_is_launchable(index))
     {
         // 没找到相关的APP
         return 0;
@@ -157,32 +282,55 @@ int AppController::main_process(ImuAction *act_info)
         send_to(CTRL_NAME, CTRL_NAME, APP_MESSAGE_WIFI_DISCONN, 0, NULL);
     }
 
+    if (doDelayMillisTime(BACKGROUND_TASK_CYCLE, &m_preBackgroundTaskMillis, false))
+    {
+        run_background_tasks(act_info);
+    }
+
     if (0 == app_exit_flag)
     {
+        if (false == app_is_launchable(cur_app_index))
+        {
+            int next_app_index = get_next_launchable_app_idx(cur_app_index, 1);
+            if (next_app_index >= 0)
+            {
+                cur_app_index = next_app_index;
+            }
+        }
+
         // 当前没有进入任何app
         lv_scr_load_anim_t anim_type = LV_SCR_LOAD_ANIM_NONE;
         if (ACTIVE_TYPE::TURN_LEFT == act_info->active)
         {
             anim_type = LV_SCR_LOAD_ANIM_MOVE_RIGHT;
             pre_app_index = cur_app_index;
-            cur_app_index = (cur_app_index + 1) % app_num;
+            int next_app_index = get_next_launchable_app_idx(cur_app_index, 1);
+            if (next_app_index >= 0)
+            {
+                cur_app_index = next_app_index;
+            }
             Serial.println(String("Current App: ") + appList[cur_app_index]->app_name);
         }
         else if (ACTIVE_TYPE::TURN_RIGHT == act_info->active)
         {
             anim_type = LV_SCR_LOAD_ANIM_MOVE_LEFT;
             pre_app_index = cur_app_index;
-            // 以下等效与 processId = (processId - 1 + APP_NUM) % 4;
-            // +3为了不让数据溢出成负数，而导致取模逻辑错误
-            cur_app_index = (cur_app_index - 1 + app_num) % app_num; // 此处的3与p_processList的长度一致
+            int next_app_index = get_next_launchable_app_idx(cur_app_index, -1);
+            if (next_app_index >= 0)
+            {
+                cur_app_index = next_app_index;
+            }
             Serial.println(String("Current App: ") + appList[cur_app_index]->app_name);
         }
         else if (ACTIVE_TYPE::GO_FORWORD == act_info->active)
         {
-            app_exit_flag = 1; // 进入app
-            if (NULL != appList[cur_app_index]->app_init)
+            if (app_is_launchable(cur_app_index))
             {
-                (*(appList[cur_app_index]->app_init))(this); // 执行APP初始化
+                app_exit_flag = 1; // 进入app
+                if (NULL != appList[cur_app_index]->app_init)
+                {
+                    (*(appList[cur_app_index]->app_init))(this); // 执行APP初始化
+                }
             }
         }
 

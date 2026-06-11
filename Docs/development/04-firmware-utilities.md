@@ -12,7 +12,7 @@
 
 void my_fetch_weather(void)
 {
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
     int httpCode = 0;
 
     // GET https://api.example.com/weather → 解析成 JSON
@@ -28,7 +28,7 @@ void my_fetch_weather(void)
         return;
     }
 
-    // 用 ArduinoJson v6 的 `| fallback` 安全取值
+    // 用 ArduinoJson 的 `| fallback` 安全取值
     int temp = doc["temperature"] | 0;
     const char *city = doc["city"] | "Unknown";
     Serial.printf("[Weather] %s %d°C\n", city, temp);
@@ -51,9 +51,9 @@ void my_fetch_weather(void)
 
 ## 2. JSON 解析 — 防止 crash
 
-[`AIO_Firmware_PIO/src/json_util.h`](../../AIO_Firmware_PIO/src/json_util.h)（雖然 PR-1.5 後大部分地方直接用 ArduinoJson v6 的 `| fallback` 就夠了）。
+[`AIO_Firmware_PIO/src/json_util.h`](../../AIO_Firmware_PIO/src/json_util.h)（雖然 PR-1.5 後大部分地方直接用 ArduinoJson 的 `| fallback` 就夠了）。
 
-ArduinoJson v6 的安全 idiom：
+ArduinoJson 7 的安全 idiom：
 
 ```cpp
 // ❌ 危險 — 如果 "name" 不存在或型別不對，crash

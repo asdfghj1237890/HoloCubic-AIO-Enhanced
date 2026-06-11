@@ -6,6 +6,7 @@
 #include "freertos/semphr.h"
 
 #define G2048_APP_NAME "2048"
+#define G2048_MOVE_ANIM_MS 700UL
 
 void taskOne(void *parameter)
 {
@@ -43,9 +44,39 @@ struct Game2048AppRunData
     TaskHandle_t xHandle_task_one = NULL;
     BaseType_t xReturned_task_two = pdFALSE;
     TaskHandle_t xHandle_task_two = NULL;
+    bool pendingNewBorn;
+    unsigned long newBornDueMillis;
 };
 
 static Game2048AppRunData *run_data = NULL;
+
+static void game_2048_schedule_newborn()
+{
+    if (NULL == run_data)
+    {
+        return;
+    }
+
+    run_data->pendingNewBorn = true;
+    run_data->newBornDueMillis = GET_SYS_MILLIS() + G2048_MOVE_ANIM_MS;
+}
+
+static bool game_2048_waiting_newborn()
+{
+    if (NULL == run_data || false == run_data->pendingNewBorn)
+    {
+        return false;
+    }
+
+    if ((long)(GET_SYS_MILLIS() - run_data->newBornDueMillis) < 0)
+    {
+        return true;
+    }
+
+    run_data->pendingNewBorn = false;
+    AIO_LVGL_OPERATE_LOCK(showNewBorn(game.addRandom(), run_data->pBoard);)
+    return false;
+}
 
 static int game_2048_init(AppController *sys)
 {
@@ -101,6 +132,11 @@ static void game_2048_process(AppController *sys,
         return;
     }
 
+    if (game_2048_waiting_newborn())
+    {
+        return;
+    }
+
     // 具体操作
     if (TURN_RIGHT == act_info->active)
     {
@@ -108,8 +144,7 @@ static void game_2048_process(AppController *sys,
         if (game.comparePre() == 0)
         {
             AIO_LVGL_OPERATE_LOCK(showAnim(run_data->moveRecord, 4);)
-            delay(700);
-            AIO_LVGL_OPERATE_LOCK(showNewBorn(game.addRandom(), run_data->pBoard);)
+            game_2048_schedule_newborn();
         }
     }
     else if (TURN_LEFT == act_info->active)
@@ -118,8 +153,7 @@ static void game_2048_process(AppController *sys,
         if (game.comparePre() == 0)
         {
             AIO_LVGL_OPERATE_LOCK(showAnim(run_data->moveRecord, 3);)
-            delay(700);
-            AIO_LVGL_OPERATE_LOCK(showNewBorn(game.addRandom(), run_data->pBoard);)
+            game_2048_schedule_newborn();
         }
     }
     else if (UP == act_info->active)
@@ -128,8 +162,7 @@ static void game_2048_process(AppController *sys,
         if (game.comparePre() == 0)
         {
             AIO_LVGL_OPERATE_LOCK(showAnim(run_data->moveRecord, 1);)
-            delay(700);
-            AIO_LVGL_OPERATE_LOCK(showNewBorn(game.addRandom(), run_data->pBoard);)
+            game_2048_schedule_newborn();
         }
     }
     else if (DOWN == act_info->active)
@@ -138,8 +171,7 @@ static void game_2048_process(AppController *sys,
         if (game.comparePre() == 0)
         {
             AIO_LVGL_OPERATE_LOCK(showAnim(run_data->moveRecord, 2);)
-            delay(700);
-            AIO_LVGL_OPERATE_LOCK(showNewBorn(game.addRandom(), run_data->pBoard);)
+            game_2048_schedule_newborn();
         }
     }
 
@@ -154,12 +186,8 @@ static void game_2048_process(AppController *sys,
         Serial.println("you lose!");
     }
 
-    // (was: delay(300) — pure throttle removed; AppController already
-    //  rate-limits main_process via its 200ms loop timer.)
-    // The earlier delay(700) calls inside the move branches stay because they
-    // pace the LVGL move-animation completion before showNewBorn fires;
-    // converting those to a real animation-state machine is filed as a
-    // follow-up.
+    // Movement animation completion is handled by game_2048_waiting_newborn()
+    // on later loop ticks instead of blocking the whole controller here.
 }
 
 static void game_2048_background_task(AppController *sys,

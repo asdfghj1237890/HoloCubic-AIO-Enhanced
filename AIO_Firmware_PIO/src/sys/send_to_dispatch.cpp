@@ -10,7 +10,7 @@ int send_to_dispatch(APP_OBJ *fromApp, APP_OBJ *toApp,
 {
     if (type <= APP_MESSAGE_MQTT_DATA)
     {
-        if (eventList->size() > EVENT_LIST_MAX_LENGTH) {
+        if (eventList->size() >= EVENT_LIST_MAX_LENGTH) {
             return 1;
         }
         // retryMaxNum=5: ~20 s of retries (matches the original

@@ -11,6 +11,7 @@
 #define APP_MAX_NUM 20             // 最大的可运行的APP数量
 #define WIFI_LIFE_CYCLE 60000      // wifi的生命周期（60s）
 #define MQTT_ALIVE_CYCLE 1000      // mqtt重连周期
+#define BACKGROUND_TASK_CYCLE 60000 // 后台任务调度周期（60s）
 #define EVENT_LIST_MAX_LENGTH 10   // 消息队列的容量
 #define APP_CONTROLLER_NAME_LEN 16 // app控制器的名字长度
 
@@ -70,6 +71,9 @@ private:
     APP_OBJ *getAppByName(const char *name);
     int getAppIdxByName(const char *name);
     int app_is_legal(const APP_OBJ *app_obj);
+    bool app_is_launchable(int app_index) const;
+    int get_next_launchable_app_idx(int start_index, int step);
+    int run_background_tasks(const ImuAction *act_info);
 
 private:
     char name[APP_CONTROLLER_NAME_LEN]; // app控制器的名字
@@ -79,6 +83,7 @@ private:
     std::list<EVENT_OBJ> eventList;   // 用来储存事件
     boolean m_wifi_status;            // 表示是wifi状态 true开启 false关闭
     unsigned long m_preWifiReqMillis; // 保存上一回请求的时间戳
+    unsigned long m_preBackgroundTaskMillis; // 保存上一回运行后台任务的时间戳
     unsigned int app_num;
     boolean app_exit_flag; // 表示是否退出APP应用
     int cur_app_index;     // 当前运行的APP下标

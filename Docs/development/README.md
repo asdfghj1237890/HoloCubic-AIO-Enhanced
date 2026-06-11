@@ -15,6 +15,7 @@
 | 07 | [CI + Release](./07-ci-and-release.md) | GitHub Actions 三個 workflow、tag 怎麼觸發 release、PR 流程 | 20 min |
 | 08 | [重構與優化案例集](./08-refactoring-case-studies.md) | **Part A**：10 個主動優化的「舊長什麼樣 → 為什麼不好 → 新的怎麼解 → 為什麼這樣解」(strcpy/JSON/MQTT/delay()/HTTPClient/CTkButton/PyInstaller/WiFi/cache/test design)。**Part B**：4 個寫測試框架時被動翻出來的 latent bug (stockmarket lv_obj_del、game_2048 judge() off-by-one、media_player calloc-of-File UB、FlashFS mkdir) | 1.5 hr |
 | 09 | [測試架構解構（從上到下）](./09-test-architecture-decomposition.md) | 整個測試系統的架構視角：7 層（silicon → GUI render）對應到 4 個 env，bug class 分流，coverage map，跑 trace 從 user action 貫穿全 stack，**長時間 leak detection 設計**（stock leak case + 4 個解法選項），coverage gap 跟 mock 設計常見誤解 | 1 hr |
+| 10 | [2026 韌體技術基線](./10-firmware-2026-baseline.md) | 明確標記目前 production firmware 是 legacy baseline，列出 ESP-IDF / LVGL / ArduinoJson 的 2026 遷移契約 | 20 min |
 
 ## 路徑慣例
 

@@ -255,7 +255,7 @@ static bool parse_yahoo_data(const String& payload)
 {
     Serial.println("[HTTP] Parsing Yahoo Finance data");
     
-    DynamicJsonDocument doc(4096);
+    JsonDocument doc;
     
     DeserializationError error = deserializeJson(doc, payload);
     
@@ -266,7 +266,7 @@ static bool parse_yahoo_data(const String& payload)
         return false;
     }
     
-    JsonObject chart = doc["chart"]["result"][0];
+    JsonObject chart = doc["chart"]["result"][0].as<JsonObject>();
     if (chart.isNull())
     {
         Serial.println("[JSON] Invalid data structure");
@@ -279,7 +279,7 @@ static bool parse_yahoo_data(const String& payload)
              "%s", yahoo_symbol);
 
     // Company name: shortName → longName → symbol fallback chain.
-    // ArduinoJson v6 `|` returns the right operand on missing key OR explicit null.
+    // ArduinoJson `|` returns the right operand on missing key OR explicit null.
     const char* yahoo_short = chart["meta"]["shortName"] | (const char*)nullptr;
     const char* yahoo_long  = chart["meta"]["longName"]  | (const char*)nullptr;
     const char* yahoo_company = yahoo_short ? yahoo_short
@@ -289,27 +289,27 @@ static bool parse_yahoo_data(const String& payload)
              "%s", yahoo_company);
     
     // Get current price and previous close from meta
-    JsonObject meta = chart["meta"];
+    JsonObject meta = chart["meta"].as<JsonObject>();
     float currentPrice = 0;
     float previousClose = 0;
     
     // Get current price
-    if (meta.containsKey("regularMarketPrice")) {
-        currentPrice = meta["regularMarketPrice"];
+    if (meta["regularMarketPrice"].is<float>()) {
+        currentPrice = meta["regularMarketPrice"].as<float>();
     }
     
     // Get previous close - try chartPreviousClose first, then previousClose
-    if (meta.containsKey("chartPreviousClose")) {
-        previousClose = meta["chartPreviousClose"];
-    } else if (meta.containsKey("previousClose")) {
-        previousClose = meta["previousClose"];
+    if (meta["chartPreviousClose"].is<float>()) {
+        previousClose = meta["chartPreviousClose"].as<float>();
+    } else if (meta["previousClose"].is<float>()) {
+        previousClose = meta["previousClose"].as<float>();
     }
     
     // Get OHLC data from quotes
-    JsonArray high = chart["indicators"]["quote"][0]["high"];
-    JsonArray low = chart["indicators"]["quote"][0]["low"];
-    JsonArray open = chart["indicators"]["quote"][0]["open"];
-    JsonArray volume = chart["indicators"]["quote"][0]["volume"];
+    JsonArray high = chart["indicators"]["quote"][0]["high"].as<JsonArray>();
+    JsonArray low = chart["indicators"]["quote"][0]["low"].as<JsonArray>();
+    JsonArray open = chart["indicators"]["quote"][0]["open"].as<JsonArray>();
+    JsonArray volume = chart["indicators"]["quote"][0]["volume"].as<JsonArray>();
     
     run_data->stockdata.NowQuo = currentPrice;
     run_data->stockdata.CloseQuo = previousClose;

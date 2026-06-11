@@ -17,7 +17,7 @@ struct EVENT_OBJ;
 // Behavior contract:
 //   - type <= APP_MESSAGE_MQTT_DATA:
 //       queue an EVENT_OBJ into *eventList. Returns 1 if the queue
-//       is full (size > EVENT_LIST_MAX_LENGTH), else 0.
+//       is full (size >= EVENT_LIST_MAX_LENGTH), else 0.
 //   - type >  APP_MESSAGE_MQTT_DATA:
 //       if toApp != nullptr and toApp->message_handle is set, invoke
 //       it. Returns 0 either way.

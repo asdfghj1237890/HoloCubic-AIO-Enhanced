@@ -8,6 +8,7 @@
 #define ANNIVERSARY_APP_NAME "Anniversary"
 #define MAX_ANNIVERSARY_CNT 2
 #define TIME_API "https://acs.m.taobao.com/gw/mtop.common.getTimestamp/"
+#define ANNIVERSARY_DISPLAY_INTERVAL 300UL
 
 bool tmfromString(const char *date_str, struct tm *date);
 
@@ -95,6 +96,7 @@ struct AnniversaryAppRunData
     int anniversary_day_count;
     unsigned long preWeatherMillis; // 上一回更新天气时的毫秒数
     unsigned long preTimeMillis;    // 更新时间计数器
+    unsigned long preDisplayMillis; // 上一回刷新显示的毫秒数
     long long preNetTimestamp;      // 上一次的网络时间戳
     long long errorNetTimestamp;    // 网络到显示过程中的时间误差
     long long preLocalTimestamp;    // 上一次的本地机器时间戳
@@ -255,6 +257,7 @@ static int anniversary_init(AppController *sys)
     run_data->preLocalTimestamp = GET_SYS_MILLIS(); // 上一次的本地机器时间戳
     run_data->preWeatherMillis = 0;
     run_data->preTimeMillis = 0;
+    run_data->preDisplayMillis = 0;
     run_data->coactusUpdateFlag = 0x01;
     Serial.printf("anniversary init successful\n");
     return 0;
@@ -264,6 +267,9 @@ static void anniversary_process(AppController *sys,
                                 const ImuAction *act_info)
 {
     lv_scr_load_anim_t anim_type = LV_SCR_LOAD_ANIM_NONE;
+    bool display_dirty = false;
+    bool anniversary_changed = false;
+
     if (RETURN == act_info->active)
     {
         sys->app_exit(); // 退出APP
@@ -273,12 +279,17 @@ static void anniversary_process(AppController *sys,
     {
         anim_type = LV_SCR_LOAD_ANIM_MOVE_RIGHT;
         run_data->cur_anniversary = (run_data->cur_anniversary + 1) % MAX_ANNIVERSARY_CNT;
+        anniversary_changed = true;
+        display_dirty = true;
     }
     else if (TURN_LEFT == act_info->active)
     {
         anim_type = LV_SCR_LOAD_ANIM_MOVE_LEFT;
         run_data->cur_anniversary = (run_data->cur_anniversary + MAX_ANNIVERSARY_CNT - 1) % MAX_ANNIVERSARY_CNT;
+        anniversary_changed = true;
+        display_dirty = true;
     }
+
     if (0x01 == run_data->coactusUpdateFlag || doDelayMillisTime(900000, &run_data->preTimeMillis, false))
     {
         // 启动时先用持久化配置中的日期
@@ -288,25 +299,28 @@ static void anniversary_process(AppController *sys,
                      APP_MESSAGE_WIFI_CONN, NULL, NULL);
         run_data->coactusUpdateFlag = 0x00;
         write_config(&cfg_data);
+        display_dirty = true;
     }
-    else
+    else if (anniversary_changed || doDelayMillisTime(ANNIVERSARY_DISPLAY_INTERVAL, &run_data->preDisplayMillis, false))
     {
         get_date_diff();
+        display_dirty = true;
     }
+
     // tm *cur_target = &(cfg_data.target_date[run_data->cur_anniversary]);
     // Serial.printf("%d %d %d %d", cur_target->tm_year,  cur_target->tm_mon,  cur_target->tm_mday,  cur_target->tm_wday);
     // Serial.println(F(""));
     // Serial.printf("%d %d %d %d", cfg_data.target_date[run_data->cur_anniversary].tm_year,  cfg_data.target_date[run_data->cur_anniversary].tm_mon,  cfg_data.target_date[run_data->cur_anniversary].tm_mday,  cfg_data.target_date[run_data->cur_anniversary].tm_wday);
     // Serial.println(F(""));
     // Serial.println(F(cfg_data.event_name[run_data->cur_anniversary].c_str()));
-    display_anniversary("anniversary", anim_type, &(cfg_data.target_date[run_data->cur_anniversary]), run_data->anniversary_day_count, cfg_data.event_name[run_data->cur_anniversary].c_str());
-    anniversary_gui_display_date(&(cfg_data.target_date[run_data->cur_anniversary]), run_data->anniversary_day_count, cfg_data.event_name[run_data->cur_anniversary].c_str());
+    if (display_dirty)
+    {
+        display_anniversary("anniversary", anim_type, &(cfg_data.target_date[run_data->cur_anniversary]), run_data->anniversary_day_count, cfg_data.event_name[run_data->cur_anniversary].c_str());
+        anniversary_gui_display_date(&(cfg_data.target_date[run_data->cur_anniversary]), run_data->anniversary_day_count, cfg_data.event_name[run_data->cur_anniversary].c_str());
+    }
     // 发送请求。如果是wifi相关的消息，当请求完成后自动会调用 anniversary_message_handle 函数
     // sys->send_to(ANNIVERSARY_APP_NAME, CTRL_NAME,
     //              APP_MESSAGE_WIFI_CONN, (void *)run_data->val1, NULL);
-
-    // 程序需要时可以适当加延时
-    delay(300);
 }
 
 static void anniversary_background_task(AppController *sys,

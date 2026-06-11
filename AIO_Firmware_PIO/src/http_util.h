@@ -53,10 +53,9 @@ int http_fetch_string(const char *url, String &out, uint32_t timeout_ms = 5000,
 // (-1) from server error (5xx) from parse failure (200 but garbage)
 // can do so.
 //
-// `doc` is caller-owned (DynamicJsonDocument or StaticJsonDocument);
-// pick its capacity to fit the expected payload — this helper does not
-// re-allocate. On failure, `doc`'s contents are unspecified (caller
-// should not read fields without checking the return value).
+// `doc` is caller-owned. ArduinoJson 7 grows JsonDocument capacity on
+// demand; callers should still keep payload sizes bounded and check the
+// return value before reading fields.
 //
 // Optional extra header passed through to http_fetch_string; see that
 // function's doc for usage.

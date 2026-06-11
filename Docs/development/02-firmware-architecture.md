@@ -40,12 +40,16 @@ void loop()
 |   1. 處理 event queue（其他 app 排隊送來的訊息）       |
 |        → req_event_deal()                            |
 |                                                      |
-|   2. 如果現在沒 app 在跑（app_exit_flag == 0）：       |
+|   2. 每 ~60s 跑一次 background_task                    |
+|      - APP_TYPE_BACKGROUND：永遠可被排程               |
+|      - APP_TYPE_REAL_TIME：只在該 app 未運行時排程      |
+|                                                      |
+|   3. 如果現在沒 app 在跑（app_exit_flag == 0）：       |
 |       a. TURN_LEFT/RIGHT  → 切換 app icon            |
 |       b. GO_FORWORD       → 啟動目前選中的 app         |
 |       c. 顯示 launcher menu UI                       |
 |                                                      |
-|   3. 如果有 app 在跑：                                 |
+|   4. 如果有 app 在跑：                                 |
 |       直接呼叫 active app 的 main_process(this, act) |
 |                                                      |
 +------------------------------------------------------+
@@ -165,8 +169,8 @@ User 開機 → 在 launcher 選 Weather → 進去 → 退出：
 ## 7. AppType — 一般 app vs 背景 app
 
 `app_install()` 接受第二個 optional 參數 `APP_TYPE`：
-- `APP_TYPE_REAL`（預設）— 一般 app，會出現在 launcher icon list
-- `APP_TYPE_BACKGROUND` — 背景 app，**不會**出現在 launcher，只跑 `background_task`
+- `APP_TYPE_REAL_TIME`（預設）— 一般 app，會出現在 launcher icon list；未運行時可被 `background_task` 排程
+- `APP_TYPE_BACKGROUND` — 背景 app，**不會**出現在 launcher；每次背景任務週期只跑 `background_task`
 
 `heartbeat` app 就用 `APP_TYPE_BACKGROUND`，因為它沒 UI、只在背景監聽 MQTT。
 

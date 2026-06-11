@@ -89,24 +89,26 @@ static int file_maneger_exit_callback(void *param)
 {
     file_manager_gui_del();
 
-    if (NULL == run_data->recvBuf)
+    if (NULL == run_data)
+    {
+        return 0;
+    }
+
+    if (NULL != run_data->recvBuf)
     {
         free(run_data->recvBuf);
         run_data->recvBuf = NULL;
     }
 
-    if (NULL == run_data->sendBuf)
+    if (NULL != run_data->sendBuf)
     {
         free(run_data->sendBuf);
         run_data->sendBuf = NULL;
     }
 
     // 释放运行数据
-    if (NULL != run_data)
-    {
-        free(run_data);
-        run_data = NULL;
-    }
+    free(run_data);
+    run_data = NULL;
     return 0;
 }
 
@@ -154,4 +156,3 @@ static void file_maneger_message_handle(const char *from, const char *to,
 APP_OBJ file_manager_app = {FILE_MANAGER_APP_NAME, &app_file_manager, "",
                             file_maneger_init, file_maneger_process, file_maneger_background_task,
                             file_maneger_exit_callback, file_maneger_message_handle};
-                            

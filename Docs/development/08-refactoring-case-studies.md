@@ -86,7 +86,7 @@ snprintf(run_data->wea.weather, sizeof(run_data->wea.weather), "%s", weatherText
 
 ### 為什麼這樣解
 
-- ArduinoJson v6 的 `| fallback` operator：欄位 missing / 型別不對 → 走 fallback；否則回實際值
+- ArduinoJson 的 `| fallback` operator：欄位 missing / 型別不對 → 走 fallback；否則回實際值
 - 巢狀路徑（`["Temperature"]["Metric"]["Value"]`）中**任何**一層 missing 都會 propagate 到最尾的 `|`
 - fallback 給 `0` / `""` 之類的 sentinel，UI 顯示「0°C」「unknown」遠遠比 crash 好
 - 配合 `snprintf` 確保 `weatherText` 即使是 `nullptr` 也不會炸（雖然這個版本回的是 `""` 不是 `nullptr`，但雙保險）
@@ -222,7 +222,7 @@ int httpCode = http.GET();
 if (httpCode > 0) {
     if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
         String payload = http.getString();
-        DynamicJsonDocument doc(2048);
+        JsonDocument doc;
         DeserializationError err = deserializeJson(doc, payload);
         if (err) {
             Serial.println("[JSON] parse error");
@@ -266,7 +266,7 @@ int  http_fetch_string(const char *url, String &out,
 呼叫端從 25 行降到 3 行：
 
 ```cpp
-DynamicJsonDocument doc(2048);
+JsonDocument doc;
 int httpCode = 0;
 if (!http_fetch_json(api, doc, 3000, &httpCode,
                      "User-Agent", "ESP32-Weather-Station")) {

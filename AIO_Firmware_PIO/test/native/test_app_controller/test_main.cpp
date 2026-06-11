@@ -56,11 +56,11 @@ void test_queue_path_pushes_event_and_returns_zero() {
 }
 
 void test_queue_path_returns_one_when_full() {
-    // The cap is `eventList.size() > EVENT_LIST_MAX_LENGTH`, so the
-    // 11th item still fits; the 12th call should be rejected.
+    // EVENT_LIST_MAX_LENGTH is the hard queue capacity. Once the queue
+    // already holds 10 events, the next enqueue must be rejected.
     std::list<EVENT_OBJ> ev;
     APP_OBJ from_app = make_app("sender");
-    for (int i = 0; i < EVENT_LIST_MAX_LENGTH + 1; ++i) {
+    for (int i = 0; i < EVENT_LIST_MAX_LENGTH; ++i) {
         int rc = send_to_dispatch(&from_app, nullptr, "sender", "AppCtrl",
                                   APP_MESSAGE_WIFI_ALIVE, nullptr, nullptr, &ev);
         TEST_ASSERT_EQUAL(0, rc);
@@ -68,7 +68,7 @@ void test_queue_path_returns_one_when_full() {
     int rc = send_to_dispatch(&from_app, nullptr, "sender", "AppCtrl",
                               APP_MESSAGE_WIFI_ALIVE, nullptr, nullptr, &ev);
     TEST_ASSERT_EQUAL(1, rc);
-    TEST_ASSERT_EQUAL_size_t(EVENT_LIST_MAX_LENGTH + 1, ev.size());
+    TEST_ASSERT_EQUAL_size_t(EVENT_LIST_MAX_LENGTH, ev.size());
 }
 
 void test_queue_path_at_boundary_type_mqtt_data() {

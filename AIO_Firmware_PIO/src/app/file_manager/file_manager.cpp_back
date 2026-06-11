@@ -154,13 +154,18 @@ void file_maneger_exit_callback(void)
 {
     file_manager_gui_del();
 
-    if (NULL == run_data->recvBuf)
+    if (NULL == run_data)
+    {
+        return;
+    }
+
+    if (NULL != run_data->recvBuf)
     {
         free(run_data->recvBuf);
         run_data->recvBuf = NULL;
     }
 
-    if (NULL == run_data->sendBuf)
+    if (NULL != run_data->sendBuf)
     {
         free(run_data->sendBuf);
         run_data->sendBuf = NULL;

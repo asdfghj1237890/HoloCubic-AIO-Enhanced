@@ -98,8 +98,7 @@ bool get_location_key(void)
     Serial.print("Location API = ");
     Serial.println(api);
 
-    // Search results may include multiple cities -> 4096-byte doc.
-    DynamicJsonDocument doc(4096);
+    JsonDocument doc;
     int httpCode = 0;
     // ESP32-Weather-Station UA was set on this site by the original code
     // (PR-2.2a dropped it because the helper had no header support yet);
@@ -120,13 +119,13 @@ bool get_location_key(void)
         else
         {
             Serial.println("[JSON] Parse error");
-            Serial.println("[Info] Try increasing DynamicJsonDocument size or simplifying query");
+            Serial.println("[Info] Try checking free heap or simplifying query");
         }
         return false;
     }
 
     // API error envelope
-    if (doc.containsKey("Code"))
+    if (doc["Code"].is<const char *>())
     {
         String errorCode = doc["Code"].as<String>();
         String errorMsg = doc["Message"].as<String>();
@@ -142,10 +141,10 @@ bool get_location_key(void)
     }
     else if (doc.is<JsonArray>() && doc.size() > 0)
     {
-        location = doc[0];
+        location = doc[0].as<JsonObject>();
     }
 
-    if (!location.isNull() && location.containsKey("Key"))
+    if (!location.isNull() && location["Key"].is<const char *>())
     {
         cfg_data.location_key = location["Key"].as<String>();
         String cityName = location["LocalizedName"].as<String>();
@@ -171,14 +170,14 @@ bool get_location_key(void)
         Serial.print("Location API (IP fallback) = ");
         Serial.println(api);
 
-        DynamicJsonDocument doc2(2048);
+        JsonDocument doc2;
         int httpCode2 = 0;
         // Same UA restore as the primary fetch above.
         if (http_fetch_json(api, doc2, 3000, &httpCode2,
                             "User-Agent", "ESP32-Weather-Station") && doc2.is<JsonObject>())
         {
-            JsonObject location2 = doc2.as<JsonObject>();
-            if (!location2.isNull() && location2.containsKey("Key"))
+                JsonObject location2 = doc2.as<JsonObject>();
+            if (!location2.isNull() && location2["Key"].is<const char *>())
             {
                 cfg_data.location_key = location2["Key"].as<String>();
                 String cityName = location2["LocalizedName"].as<String>();
@@ -226,7 +225,7 @@ void get_weather(void)
     Serial.print("Current Weather API = ");
     Serial.println(api);
 
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
     int httpCode = 0;
     bool ok = http_fetch_json(api, doc, 2000, &httpCode);
     if (!ok)
@@ -266,9 +265,9 @@ void get_weather(void)
                     "UVIndexText": "Moderate"
                 }]
                 */
-                JsonObject current = doc[0];
+                JsonObject current = doc[0].as<JsonObject>();
 
-                // Each field uses ArduinoJson 6.18's `| fallback` operator so a
+                // Each field uses ArduinoJson's `| fallback` operator so a
                 // missing or wrong-type value yields the sentinel instead of
                 // crashing on undefined .as<T>() conversion. Nested keys
                 // (Temperature.Metric.Value, Wind.Direction.Localized, etc) are
@@ -345,7 +344,7 @@ void get_daliyWeather(short maxT[], short minT[])
     Serial.print("Forecast API = ");
     Serial.println(api);
 
-    DynamicJsonDocument doc2(8192);
+    JsonDocument doc2;
     int httpCode = 0;
     bool ok = http_fetch_json(api, doc2, 2000, &httpCode);
     Serial.printf("[HTTP] Forecast response code: %d\n", httpCode);
@@ -371,7 +370,7 @@ void get_daliyWeather(short maxT[], short minT[])
     }
 
     // Check for API error envelope
-    if (doc2.containsKey("Code"))
+    if (doc2["Code"].is<const char *>())
     {
         String errorCode = doc2["Code"].as<String>();
         String errorMsg = doc2["Message"].as<String>();
@@ -379,7 +378,7 @@ void get_daliyWeather(short maxT[], short minT[])
         return;
     }
 
-    if (doc2.containsKey("DailyForecasts"))
+    if (doc2["DailyForecasts"].is<JsonArray>())
     {
                 /*
                 AccuWeather 5-Day Forecast Response Example:
@@ -398,12 +397,12 @@ void get_daliyWeather(short maxT[], short minT[])
                     ]
                 }
                 */
-                JsonArray forecasts = doc2["DailyForecasts"];
+                JsonArray forecasts = doc2["DailyForecasts"].as<JsonArray>();
                 int numDays = min((int)forecasts.size(), FORECAST_DAYS);
 
                 for (int i = 0; i < numDays; i++)
                 {
-                    JsonObject day = forecasts[i];
+                    JsonObject day = forecasts[i].as<JsonObject>();
                     maxT[i] = day["Temperature"]["Maximum"]["Value"] | 0;
                     minT[i] = day["Temperature"]["Minimum"]["Value"] | 0;
                 }
