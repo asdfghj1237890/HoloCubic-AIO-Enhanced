@@ -319,5 +319,20 @@
   "video_log_frames_done": "帧抽取完成，开始编码 {fmt}…",
   "video_log_mock_phase1": "ffmpeg -i 来源 -vf scale,fps -f image2pipe …（第 1 步：抽取帧）",
   "video_log_mock_phase2": "ffmpeg 第 2 步：封装 {codec} 流 …",
-  "video_progress_step": "第 {phase}/2 步 · {label}"
+  "video_progress_step": "第 {phase}/2 步 · {label}",
+  "fmlog_connected": "已连接 {ip}:{port}",
+  "fmlog_downloaded": "已下载 {name}（{n} bytes）",
+  "fmlog_download_fail": "✗ 下载失败：{e}",
+  "fmlog_properties": "属性 {path}：{n} bytes (b64)",
+  "fmlog_disconnected": "已断开连接",
+  "fmlog_conn_error": "连接错误",
+  "fmlog_deleted": "已删除 {name}",
+  "fmlog_rename_b1_warn": "⚠ 重命名 {from} → {to}（固件 B1 未实现）",
+  "fmlog_renamed": "已重命名 {from} → {to}",
+  "fmlog_downloading": "下载 {path}…",
+  "fmlog_download_local": "下载 {path}/{name} → 本机",
+  "fmlog_newfolder_unsupported": "⚠ 新建文件夹尚未支持（DirCreate 待补）",
+  "fmlog_folder_created": "已创建文件夹 {name}",
+  "fmlog_upload_unsupported": "⚠ 上传尚未支持（FileWrite 待补）",
+  "fmlog_uploaded": "已上传 {name}（{size}）"
 }

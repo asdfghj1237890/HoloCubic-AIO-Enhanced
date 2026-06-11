@@ -319,5 +319,20 @@
   "video_log_frames_done": "Frames extracted, encoding {fmt}…",
   "video_log_mock_phase1": "ffmpeg -i source -vf scale,fps -f image2pipe … (Step 1: extract frames)",
   "video_log_mock_phase2": "ffmpeg step 2: pack {codec} stream …",
-  "video_progress_step": "Step {phase}/2 · {label}"
+  "video_progress_step": "Step {phase}/2 · {label}",
+  "fmlog_connected": "Connected {ip}:{port}",
+  "fmlog_downloaded": "Downloaded {name} ({n} bytes)",
+  "fmlog_download_fail": "✗ Download failed: {e}",
+  "fmlog_properties": "Properties {path}: {n} bytes (b64)",
+  "fmlog_disconnected": "Disconnected",
+  "fmlog_conn_error": "Connection error",
+  "fmlog_deleted": "Deleted {name}",
+  "fmlog_rename_b1_warn": "⚠ Rename {from} → {to} (firmware B1 not implemented)",
+  "fmlog_renamed": "Renamed {from} → {to}",
+  "fmlog_downloading": "Downloading {path}…",
+  "fmlog_download_local": "Download {path}/{name} → PC",
+  "fmlog_newfolder_unsupported": "⚠ New folder not yet supported (DirCreate pending)",
+  "fmlog_folder_created": "Folder created: {name}",
+  "fmlog_upload_unsupported": "⚠ Upload not yet supported (FileWrite pending)",
+  "fmlog_uploaded": "Uploaded {name} ({size})"
 }

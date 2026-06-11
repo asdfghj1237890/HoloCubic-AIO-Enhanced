@@ -404,7 +404,7 @@ function useFiles() {
       if (!payload || !payload.kind) return;
       switch (payload.kind) {
         case "connected":
-          setConn("connected"); log(`已連線 ${ip}:${port}`);
+          setConn("connected"); log(trf("已連線 {ip}:{port}", { ip, port }));
           break;
         case "dir-listed": {
           const names = payload.entries || [];
@@ -430,12 +430,12 @@ function useFiles() {
             a.href = url; a.download = filename;
             document.body.appendChild(a); a.click();
             setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
-            log(`已下載 ${filename}（${arr.length} bytes）`);
-          } catch (e) { log("✗ 下載失敗: " + e); }
+            log(trf("已下載 {name}（{n} bytes）", { name: filename, n: arr.length }));
+          } catch (e) { log(trf("✗ 下載失敗：{e}", { e })); }
           break;
         }
         case "properties":
-          log(`屬性 ${payload.path}: ${(payload.raw_b64 || "").length} bytes (b64)`);
+          log(trf("屬性 {path}：{n} bytes (b64)", { path: payload.path, n: (payload.raw_b64 || "").length }));
           break;
         case "log":
           if (payload.message) log(payload.message);
@@ -445,7 +445,7 @@ function useFiles() {
           break;
         case "finished":
           setConn("disconnected");
-          log(payload.ok ? "已中斷連線" : "✗ " + (payload.error || "連線錯誤"));
+          log(payload.ok ? tr("已中斷連線") : "✗ " + (payload.error || tr("連線錯誤")));
           break;
       }
     }).then((fn) => { unlisten = fn; });
@@ -465,12 +465,12 @@ function useFiles() {
       }
       return;
     }
-    setTimeout(() => { setConn("connected"); setPath("/"); log(`已連線 ${ip}:${port}`); }, 800);
+    setTimeout(() => { setConn("connected"); setPath("/"); log(trf("已連線 {ip}:{port}", { ip, port })); }, 800);
   };
 
   const disconnect = async () => {
     if (IS_TAURI_PAGES) { try { await invokePages("fm_disconnect"); } catch (_) {} }
-    setConn("disconnected"); setSel(null); log("已中斷連線");
+    setConn("disconnected"); setSel(null); log(tr("已中斷連線"));
   };
 
   const entries = (fs[path] || []).slice().sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
@@ -490,14 +490,14 @@ function useFiles() {
       const abs = joinPath(path, e.name);
       invokePages("fm_remove", { name: abs }).catch((err) => log("✗ " + err));
       setFs((F) => ({ ...F, [path]: (F[path] || []).filter((x) => x.name !== e.name) }));
-      setSel(null); log(`已刪除 ${e.name}`);
+      setSel(null); log(trf("已刪除 {name}", { name: e.name }));
       // Firmware sends no response — re-request the listing after a
       // short delay so we surface any divergence (e.g. delete denied).
       setTimeout(() => invokePages("fm_list_dir", { path }).catch(() => {}), 400);
       return;
     }
     setFs((F) => ({ ...F, [path]: F[path].filter((x) => x.name !== e.name) }));
-    setSel(null); log(`已刪除 ${e.name}`);
+    setSel(null); log(trf("已刪除 {name}", { name: e.name }));
   };
 
   const rename = (e, newName) => {
@@ -508,48 +508,48 @@ function useFiles() {
       // the legacy tool and surface the limitation in the log.
       const abs = joinPath(path, e.name);
       invokePages("fm_rename", { name: abs }).catch((err) => log("✗ " + err));
-      log(`⚠ 重新命名 ${e.name} → ${newName}（韌體 B1 未實作）`);
+      log(trf("⚠ 重新命名 {from} → {to}（韌體 B1 未實作）", { from: e.name, to: newName }));
       return;
     }
     setFs((F) => ({ ...F, [path]: F[path].map((x) => (x.name === e.name ? { ...x, name: newName } : x)) }));
     setSel((s) => (s && s.name === e.name ? { ...s, name: newName } : s));
-    log(`已重新命名 ${e.name} → ${newName}`);
+    log(trf("已重新命名 {from} → {to}", { from: e.name, to: newName }));
   };
 
   const download = (e) => {
     if (IS_TAURI_PAGES) {
       const abs = joinPath(path, e.name);
-      log(`下載 ${abs}…`);
+      log(trf("下載 {path}…", { path: abs }));
       invokePages("fm_read_file", { path: abs }).catch((err) => log("✗ " + err));
       return;
     }
-    log(`下載 ${path === "/" ? "" : path}/${e.name} → 本機`);
+    log(trf("下載 {path}/{name} → 本機", { path: (path === "/" ? "" : path), name: e.name }));
   };
 
   const newFolder = () => {
     if (IS_TAURI_PAGES) {
-      log("⚠ 新增資料夾尚未支援（DirCreate 待補）");
+      log(tr("⚠ 新增資料夾尚未支援（DirCreate 待補）"));
       return "";
     }
     const existing = new Set((fs[path] || []).map((x) => x.name));
-    let name = "新增資料夾", i = 2;
-    while (existing.has(name)) name = `新增資料夾 ${i++}`;
+    let name = tr("新增資料夾"), i = 2;
+    while (existing.has(name)) name = `${tr("新增資料夾")} ${i++}`;
     const childPath = joinPath(path, name);
     setFs((F) => ({ ...F, [path]: [...F[path], { name, type: "dir" }], [childPath]: [] }));
-    log(`已建立資料夾 ${name}`);
+    log(trf("已建立資料夾 {name}", { name }));
     return name;
   };
 
   const upload = () => {
     if (IS_TAURI_PAGES) {
-      log("⚠ 上傳尚未支援（FileWrite 待補）");
+      log(tr("⚠ 上傳尚未支援（FileWrite 待補）"));
       return;
     }
     const n = (fs[path] || []).filter((x) => /upload_/.test(x.name)).length + 1;
     const name = `upload_${String(n).padStart(2, "0")}.bin`;
     const ent = { name, type: "file", size: 4096 + Math.floor(Math.random() * 120000), mtime: new Date().toLocaleString("zh-TW", { hour12: false }).slice(0, 16) };
     setFs((F) => ({ ...F, [path]: [...F[path], ent] }));
-    setSel(ent); log(`已上傳 ${name}（${fmtBytes(ent.size)}）`);
+    setSel(ent); log(trf("已上傳 {name}（{size}）", { name, size: fmtBytes(ent.size) }));
   };
 
   return { conn, ip, setIp, port, setPort, path, entries, sel, setSel, acts, connect, disconnect, enter, goPath, remove, rename, download, newFolder, upload };
