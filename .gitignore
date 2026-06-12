@@ -32,6 +32,10 @@ __pycache__/
 AIO_Tool/.venv/
 AIO_Tool/build/
 AIO_Tool/dist/
+
+# Root release artifacts are uploaded to GitHub Releases, not source control.
+/dist/*.exe
+/dist/HoloCubic_AIO_firmware_*.bin
 # User-specific runtime state (language preference, log file)
 # Catch both AIO_Tool/OutFile/ (when launched from AIO_Tool dir)
 # and root OutFile/ (when launched from repo root)
