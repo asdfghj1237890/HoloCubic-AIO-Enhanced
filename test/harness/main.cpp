@@ -51,6 +51,7 @@
 #include <signal.h>
 #include <execinfo.h>
 #include <unistd.h>
+#include <time.h>
 
 static int tick_thread(void *) {
     while (1) {
@@ -86,6 +87,18 @@ static void install_crash_handler() {
     sigaction(SIGABRT, &sa, nullptr);
     sigaction(SIGBUS,  &sa, nullptr);
     sigaction(SIGFPE,  &sa, nullptr);
+}
+
+static void force_deterministic_timezone() {
+    // Firmware UI goldens assume the device's default UTC+8 clock semantics.
+    // POSIX TZ syntax uses the inverse sign: CST-8 means UTC+8.
+#ifdef _WIN32
+    _putenv_s("TZ", "CST-8");
+    _tzset();
+#else
+    setenv("TZ", "CST-8", 1);
+    tzset();
+#endif
 }
 
 #define DISP_HOR_RES 240
@@ -182,6 +195,7 @@ static const int kRegisteredAppCount =
     sizeof(kRegisteredApps) / sizeof(kRegisteredApps[0]);
 
 int main(int argc, char **argv) {
+    force_deterministic_timezone();
     install_crash_handler();
     // Line-buffer stdout so diagnostic printfs in firmware code aren't
     // lost in the pipe buffer when a downstream SIGSEGV kills us.
