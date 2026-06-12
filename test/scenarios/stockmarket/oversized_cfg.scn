@@ -1,0 +1,13 @@
+# Stockmarket must tolerate an oversized /stockmarket.cfg and repair it
+# to defaults instead of overflowing the 128-byte config buffer during
+# app_init.
+
+app stockmarket
+flash_seed /stockmarket.cfg "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\nUS\n10000\n"
+
+wait_ms 400
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

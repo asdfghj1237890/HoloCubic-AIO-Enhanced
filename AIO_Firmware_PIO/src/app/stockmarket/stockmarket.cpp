@@ -1,4 +1,5 @@
 #include "stockmarket.h"
+#include "stockmarket_config_parse.h"
 #include "stockmarket_gui.h"
 #include "sys/app_controller.h"
 #include "../../common.h"
@@ -40,24 +41,19 @@ static void read_config(B_Config *cfg)
     // Read persistent configuration from flash
     // Config filename should start with APP name and end with ".cfg" to avoid conflicts
     char info[128] = {0};
-    uint16_t size = g_flashCfg.readFile(B_CONFIG_PATH, (uint8_t *)info);
-    info[size] = 0;
-    if (size == 0)
+    uint16_t size = g_flashCfg.readFile(B_CONFIG_PATH, (uint8_t *)info, sizeof(info));
+    bool truncated = size >= sizeof(info) - 1;
+
+    StockmarketRawConfig raw_cfg;
+    bool valid = stockmarket_parse_config(info, size, truncated, &raw_cfg);
+    cfg->stock_symbol = raw_cfg.stock_symbol;
+    cfg->market_type = raw_cfg.market_type;
+    cfg->updataInterval = raw_cfg.updataInterval;
+
+    if (!valid)
     {
-        // Default values
-        cfg->stock_symbol = "AAPL";    // Default: Apple Inc.
-        cfg->market_type = "US";       // Default: US market
-        cfg->updataInterval = 10000;   // Update interval: 10000ms (10s)
+        Serial.println("[Stock] Invalid config, rewriting defaults");
         write_config(cfg);
-    }
-    else
-    {
-        // Parse data
-        char *param[3] = {0};
-        analyseParam(info, 3, param);
-        cfg->stock_symbol = param[0];
-        cfg->market_type = param[1];
-        cfg->updataInterval = atol(param[2]);
     }
 }
 
@@ -497,7 +493,7 @@ static void stockmarket_message_handle(const char *from, const char *to,
         }
         else if (!strcmp(param_key, "updataInterval"))
         {
-            snprintf((char *)ext_info, 32, "%u", cfg_data.updataInterval);
+            snprintf((char *)ext_info, 32, "%lu", cfg_data.updataInterval);
         }
         // Legacy support for old parameter name
         else if (!strcmp(param_key, "stock_id"))

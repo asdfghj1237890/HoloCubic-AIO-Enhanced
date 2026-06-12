@@ -82,7 +82,7 @@ static void read_config(PCS_Config *cfg)
     // 如果有需要持久化配置文件 可以调用此函数将数据存在flash中
     // 配置文件名最好以APP名为开头 以".cfg"结尾，以免多个APP读取混乱
     char info[64] = {0};
-    uint16_t size = g_flashCfg.readFile(PC_RESOURCE_CONFIG_PATH, (uint8_t *)info);
+    uint16_t size = g_flashCfg.readFile(PC_RESOURCE_CONFIG_PATH, (uint8_t *)info, sizeof(info));
     info[size] = 0;
     if (size == 0)
     {

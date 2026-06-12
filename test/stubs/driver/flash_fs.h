@@ -11,6 +11,7 @@ public:
     ~FlashFS() {}
     void listDir(const char *, uint8_t) {}
     uint16_t readFile(const char *path, uint8_t *info);
+    uint16_t readFile(const char *path, uint8_t *info, size_t info_len);
     void writeFile(const char *path, const char *message);
     void appendFile(const char *path, const char *message);
     void renameFile(const char *, const char *) {}

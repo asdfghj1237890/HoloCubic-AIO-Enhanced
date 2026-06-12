@@ -122,22 +122,54 @@ void FlashFS::listDir(const char *dirname, uint8_t levels)
 
 uint16_t FlashFS::readFile(const char *path, uint8_t *info)
 {
+    return readFile(path, info, UINT16_MAX);
+}
+
+uint16_t FlashFS::readFile(const char *path, uint8_t *info, size_t info_len)
+{
     Serial.printf("Reading file: %s\r\n", path);
 
-    File file = SPIFFS.open(path);
     uint16_t ret_len = 0;
+    if (NULL == info || 0 == info_len)
+    {
+        Serial.println("- invalid read buffer");
+        return ret_len;
+    }
+
+    File file = SPIFFS.open(path);
     if (!file || file.isDirectory())
     {
         Serial.println("- failed to open file for reading");
         return ret_len;
     }
 
-    // Serial.println("- read from file:");
-    while (file.available())
+    size_t max_read = info_len - 1;
+    if (max_read > UINT16_MAX)
     {
-        ret_len += file.read(info + ret_len, 15);
+        max_read = UINT16_MAX;
+    }
+
+    // Serial.println("- read from file:");
+    while (ret_len < max_read && file.available())
+    {
+        size_t chunk = max_read - ret_len;
+        if (chunk > 15)
+        {
+            chunk = 15;
+        }
+        size_t read_len = file.read(info + ret_len, chunk);
+        if (0 == read_len)
+        {
+            break;
+        }
+        ret_len += read_len;
         // Serial.write(file.read());
     }
+    if (file.available())
+    {
+        Serial.printf("- read truncated at %u bytes\r\n", ret_len);
+    }
+    info[ret_len] = 0;
     file.close();
     return ret_len;
 }

@@ -45,6 +45,28 @@ static lv_style_t app_name_style;
 
 LV_FONT_DECLARE(lv_font_montserrat_24);
 
+static void clear_launcher_widget_refs(void)
+{
+    pre_app_image = NULL;
+    pre_app_name  = NULL;
+    now_app_image = NULL;
+    now_app_name  = NULL;
+}
+
+static void delete_launcher_obj_if_valid(lv_obj_t **obj)
+{
+    if (NULL == obj || NULL == *obj)
+    {
+        return;
+    }
+
+    if (lv_obj_is_valid(*obj))
+    {
+        lv_obj_del(*obj);
+    }
+    *obj = NULL;
+}
+
 void app_control_gui_init(void)
 {
     // All LVGL state mutation here happens under the global mutex — the
@@ -57,6 +79,8 @@ void app_control_gui_init(void)
     {
         lv_obj_clean(app_scr);
         app_scr = NULL;
+        app_scr_t = NULL;
+        clear_launcher_widget_refs();
     }
 
     lv_style_init(&default_style);
@@ -96,6 +120,8 @@ void app_control_gui_release(void)
     {
         lv_obj_clean(app_scr);
         app_scr = NULL;
+        app_scr_t = NULL;
+        clear_launcher_widget_refs();
     }
     LVGL_UNLOCK();
 }
@@ -139,12 +165,9 @@ void display_app_scr_init(const void *src_img_path, const char *app_name)
     // (the slide animation does `pre_app_image = now_app_image`), so we
     // only delete via the pre_* pointers and NULL all four to clear any
     // dangling now_* alias.
-    if (NULL != pre_app_image) lv_obj_del(pre_app_image);
-    if (NULL != pre_app_name)  lv_obj_del(pre_app_name);
-    pre_app_image = NULL;
-    pre_app_name  = NULL;
-    now_app_image = NULL;
-    now_app_name  = NULL;
+    delete_launcher_obj_if_valid(&pre_app_image);
+    delete_launcher_obj_if_valid(&pre_app_name);
+    clear_launcher_widget_refs();
 
     pre_app_image = lv_img_create(app_scr);
     pre_img_path = src_img_path; // 保存历史
@@ -215,7 +238,7 @@ void app_control_display_scr(const void *src_img, const char *app_name, lv_scr_l
     // lv_label_set_recolor(now_app_name, true); //先得使能文本重绘色功能
     lv_label_set_text(now_app_name, app_name);
     // 删除原先的APP name
-    lv_obj_del(pre_app_name);
+    delete_launcher_obj_if_valid(&pre_app_name);
     pre_app_name = now_app_name;
     lv_obj_align_to(now_app_name, now_app_image, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
@@ -252,7 +275,7 @@ void app_control_display_scr(const void *src_img, const char *app_name, lv_scr_l
     // accounted for before the next iteration of the Display task.
     LVGL_LOCK();
     lv_task_handler(); // 消除 ANIEND_WAIT 执行完后依然"卡顿一下"的问题
-    lv_obj_del(pre_app_image); // 删除原先的图像
+    delete_launcher_obj_if_valid(&pre_app_image); // 删除原先的图像
     pre_app_image = now_app_image;
     LVGL_UNLOCK();
 }

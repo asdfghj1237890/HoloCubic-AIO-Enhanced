@@ -115,10 +115,21 @@ static String flash_path(const char *path) {
 }
 
 uint16_t FlashFS::readFile(const char *path, uint8_t *info) {
+    return readFile(path, info, UINT16_MAX);
+}
+
+uint16_t FlashFS::readFile(const char *path, uint8_t *info, size_t info_len) {
     String full = flash_path(path);
     FILE *f = fopen(full.c_str(), "rb");
     if (!f) return 0;
-    size_t n = fread(info, 1, 1024, f);
+    if (!info || info_len == 0) {
+        fclose(f);
+        return 0;
+    }
+    size_t max_read = info_len - 1;
+    if (max_read > UINT16_MAX) max_read = UINT16_MAX;
+    size_t n = fread(info, 1, max_read, f);
+    info[n] = 0;
     fclose(f);
     return (uint16_t)n;
 }
