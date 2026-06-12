@@ -1,0 +1,24 @@
+{
+  "chart": {
+    "result": [
+      {
+        "meta": {
+          "symbol": "LONG",
+          "shortName": "Very Long Company Name",
+          "regularMarketPrice": 88.88,
+          "chartPreviousClose": 80.00
+        },
+        "indicators": {
+          "quote": [
+            {
+              "open":   [82.00],
+              "high":   [90.12],
+              "low":    [78.34],
+              "volume": [1234567]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

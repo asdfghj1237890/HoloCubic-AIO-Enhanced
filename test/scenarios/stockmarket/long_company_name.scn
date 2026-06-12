@@ -1,0 +1,18 @@
+# Regression for long Yahoo company names. The header must stay inside the
+# 216x26 top row and not overlap the divider / price UI below it.
+
+app stockmarket
+flash_seed /stockmarket.cfg "LONG\nUS\n10000\n"
+
+wait_ms 400
+screenshot 01_initial
+assert_no_crash
+
+action UP
+wait_ms 400
+screenshot 02_with_data
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash

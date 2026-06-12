@@ -6,6 +6,7 @@
 #include "server.h"
 #include "web_setting.h"
 #include "web_setting_internal.h"
+#include "web_responsive_css.h"
 #include "app/app_conf.h"
 #include "FS.h"
 #include "HardwareSerial.h"
@@ -527,10 +528,12 @@ void serve_glass_css(void)
 {
     server.sendHeader("Cache-Control", "public, max-age=86400");
     server.sendHeader("Content-Type", "text/css; charset=utf-8");
-    // Stream from PROGMEM via FPSTR -> String conversion. ~9KB blob;
-    // single send() call is fine for this size.
+    // Stream from PROGMEM via FPSTR -> String conversion. The RWD
+    // override is kept separate so it can be unit-tested without
+    // compiling the whole WebServer page generator.
     String body;
     body += FPSTR(GLASS_CSS);
+    body += FPSTR(web_responsive_css());
     server.send(200, "text/css", body);
 }
 

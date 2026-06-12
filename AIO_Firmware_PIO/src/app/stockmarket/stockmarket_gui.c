@@ -1,4 +1,5 @@
 #include "stockmarket_gui.h"
+#include "stockmarket_header.h"
 
 #include "lvgl.h"
 
@@ -47,6 +48,9 @@ static lv_style_t datetime_style;
 #else
 #define STOCKMARKET_ARROW_FONT LV_FONT_DEFAULT
 #endif
+
+#define STOCKMARKET_HEADER_WIDTH  216
+#define STOCKMARKET_HEADER_HEIGHT 26
 
 void stockmarket_gui_init(void)
 {
@@ -115,7 +119,7 @@ void display_stockmarket_init(void)
     header_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(header_label, &header_style, LV_STATE_DEFAULT);
     lv_label_set_long_mode(header_label, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(header_label, 216);
+    lv_obj_set_size(header_label, STOCKMARKET_HEADER_WIDTH, STOCKMARKET_HEADER_HEIGHT);
     lv_label_set_text(header_label, "--");
     lv_obj_align(header_label, LV_ALIGN_TOP_LEFT, 12, 8);
 
@@ -241,20 +245,10 @@ void display_stockmarket(struct StockMarket stockInfo, lv_scr_load_anim_t anim_t
         display_stockmarket_init();
     }
 
-    // Header
-    if (stockInfo.symbol[0] == '\0')
-    {
-        lv_label_set_text(header_label, "--");
-    }
-    else if (stockInfo.company[0] == '\0')
-    {
-        lv_label_set_text(header_label, stockInfo.symbol);
-    }
-    else
-    {
-        lv_label_set_text_fmt(header_label, "%s - %s",
+    char header_buf[64];
+    stockmarket_format_header(header_buf, sizeof(header_buf),
                               stockInfo.symbol, stockInfo.company);
-    }
+    lv_label_set_text(header_label, header_buf);
 
     // Direction color (Taiwan/HK convention: green = up, red = down)
     lv_color_t dir_color = (stockInfo.updownflag == 1)
