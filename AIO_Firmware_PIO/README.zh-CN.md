@@ -7,8 +7,25 @@
 ## 构建要求
 
 - [PlatformIO Core](https://platformio.org/) 或 [PlatformIO IDE](https://platformio.org/platformio-ide)
-- 平台：ESP32 (espressif32 @ ~3.5.0)
-- 框架：Arduino
+- 平台：pioarduino `platform-espressif32 55.03.39`
+- 框架：Arduino-ESP32 `3.3.9` on ESP-IDF `5.5.4`
+- UI runtime：LVGL `9.5.0`
+- JSON runtime：ArduinoJson `7.4.3`
+
+## 当前固件基线（2026-06）
+
+固件已经脱离旧的 PlatformIO espressif32 `~3.5.0` / LVGL 8 / ArduinoJson 6 基线。现在 release path 使用 pioarduino ESP32 platform，因为官方 PlatformIO espressif32 当前包线尚未同时提供 Arduino-ESP32 3.x 与 ESP-IDF 5.5.x。
+
+| 层级 | 当前版本 |
+|---|---|
+| 板卡 | ESP32-PICO-D4 (`pico32`) |
+| PlatformIO platform | `pioarduino/platform-espressif32 55.03.39` |
+| Arduino core | `framework-arduinoespressif32 3.3.9` |
+| ESP-IDF libs | `5.5.4` |
+| LVGL | `9.5.0` |
+| ArduinoJson | `7.4.3` |
+
+近期固件加固包括 LVGL 9 开机 tick 修复、ESP32 core 3.x RGB 启动修复、Stock 配置解析边界检查、Stock 长公司名 header 截断、2048 输入/渲染修复，以及 WebServer Glass UI 的 RWD CSS。
 
 ## 构建说明
 
@@ -20,6 +37,8 @@ cd AIO_Firmware_PIO
 
 # 构建发布版本（默认）
 pio run
+# 或不安装全局 PlatformIO：
+uvx platformio run
 
 # 使用特定环境构建
 pio run -e HoloCubic_AIO_Releases
@@ -92,27 +111,34 @@ pio run -t upload --upload-port COM5
 ### 使用 esptool 烧录
 
 ```bash
-# Windows (PowerShell)
-python ../AIO_Tool/esptool_v41/esptool.py --port COM5 --baud 921600 write_flash -fm qio -fs 4MB `
-  0x1000 .pio/build/HoloCubic_AIO_Releases/bootloader.bin `
-  0x8000 .pio/build/HoloCubic_AIO_Releases/partitions.bin `
-  0xe000 boot_app0.bin `
-  0x10000 .pio/build/HoloCubic_AIO_Releases/firmware.bin
+# Windows (PowerShell, esptool v5)
+$env:PYTHONIOENCODING='utf-8'
+[Console]::OutputEncoding=[System.Text.Encoding]::UTF8
+& "$env:USERPROFILE\.platformio\penv\Scripts\esptool.exe" `
+  --chip esp32 --port COM5 --baud 115200 --connect-attempts 3 `
+  --before default-reset --after hard-reset write-flash -z `
+  --flash-mode dio --flash-freq 80m --flash-size detect `
+  0x1000 .pio\build\HoloCubic_AIO_Releases\bootloader.bin `
+  0x8000 .pio\build\HoloCubic_AIO_Releases\partitions.bin `
+  0xe000 "$env:USERPROFILE\.platformio\packages\framework-arduinoespressif32\tools\partitions\boot_app0.bin" `
+  0x10000 .pio\build\HoloCubic_AIO_Releases\firmware.bin
 
-# Linux/macOS
-python ../AIO_Tool/esptool_v41/esptool.py --port /dev/ttyUSB0 --baud 921600 write_flash -fm qio -fs 4MB \
+# Linux/macOS（按实际串口和 boot_app0 路径调整）
+esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 115200 --connect-attempts 3 \
+  --before default-reset --after hard-reset write-flash -z \
+  --flash-mode dio --flash-freq 80m --flash-size detect \
   0x1000 .pio/build/HoloCubic_AIO_Releases/bootloader.bin \
   0x8000 .pio/build/HoloCubic_AIO_Releases/partitions.bin \
-  0xe000 boot_app0.bin \
+  0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
   0x10000 .pio/build/HoloCubic_AIO_Releases/firmware.bin
 ```
 
-**注意：** 将 `COM5` 更改为你实际的串口（例如 `COM3`、`/dev/ttyUSB0`、`/dev/cu.usbserial-*`）
+**注意：** 将 `COM5` 更改为你实际的串口（例如 `COM3`、`/dev/ttyUSB0`、`/dev/cu.usbserial-*`）。Windows 使用 esptool v5 前请先设置 UTF-8 输出，否则默认 CP950 控制台可能让进度条输出失败。
 
 ### 擦除闪存（如有需要）
 
 ```bash
-python ../AIO_Tool/esptool_v41/esptool.py --port COM5 erase_flash
+esptool.py --chip esp32 --port COM5 erase-flash
 ```
 
 ## 串口监视器
@@ -127,6 +153,8 @@ pio device monitor
 pio device monitor -b 115200
 ```
 
+Windows 长时间抓开机/崩溃 log 时，建议使用 `uvx --from pyserial python`，因为超时的 PlatformIO monitor 有机会留下占用 COM port 的子进程。健康的刷机后 smoke log 应该在 45-70 秒内看到 `AIO (All in one) version ...`、`Initialization MPU6050 success.`，且没有反复 `rst:0xc` / Guru Meditation 重启循环。
+
 默认监视器设置：
 - 波特率：115200
 - 过滤器：esp32_exception_decoder
@@ -136,9 +164,26 @@ pio device monitor -b 115200
 - **板卡：** ESP32 PICO-D4 (`pico32`)
 - **CPU 频率：** 240 MHz
 - **闪存频率：** 80 MHz
-- **闪存模式：** QIO
+- **闪存模式：** PlatformIO 板卡配置为 QIO；上方保守手动 esptool 指令使用 DIO，已在 ESP32-PICO-D4 + CH9102 实机验证
 - **上传速度：** 921600 波特率
 - **分区方案：** `partitions-no-ota.csv`（无 OTA 更新）
+
+## 主机端测试
+
+```bash
+# 轻量固件逻辑测试
+pio test -e native_unit
+
+# ESP32FtpServer 指令/登录/传输 harness
+pio test -e native_ftp
+
+# SDL2 + LVGL GUI regression harness
+cd ../lv_simulater_platformio
+pio run -e native_test
+./.pio/build/native_test/program --scenario ../test/scenarios/stockmarket/long_company_name.scn --headless
+```
+
+共用同一个 `.pio/build` 的 PlatformIO 测试请顺序执行；在 Windows/WSL 上并行跑多个 PlatformIO test/build 可能破坏 build cache。
 
 ## 项目结构
 

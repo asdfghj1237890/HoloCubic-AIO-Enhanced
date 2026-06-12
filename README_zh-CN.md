@@ -16,7 +16,7 @@
 
 * **原作者项目**: https://github.com/peng-zhihui/HoloCubic
 * **原AIO项目**: https://github.com/ClimbSnail/HoloCubic_AIO
-* **本项目（最新版）**: https://github.com/asdfghj1237890/HoloCubic_AIO
+* **本项目（最新版）**: https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced
 
 ---
 
@@ -59,13 +59,23 @@
 6. **远程文件管理**：通过网页界面上传/删除SD卡文件，无需物理拔插
 7. **完整的PC工具**：提供全套上位机软件及开源代码：https://github.com/asdfghj1237890/HoloCubic_AIO/tree/v2.0.2/AIO_Tool
 
+## 🧭 当前技术基线与近期大改动（2026-06）
+
+- **固件基线**：pioarduino `platform-espressif32 55.03.39`、Arduino-ESP32 `3.3.9`、ESP-IDF `5.5.4`、LVGL `9.5.0`、ArduinoJson `7.4.3`。
+- **LVGL 9 迁移**：正式固件与 SDL 场景测试已切到 LVGL 9.5，并通过兼容层承接旧应用代码。
+- **ArduinoJson 7 迁移**：固件 JSON 代码已改用 v7 写法（`JsonDocument`、fallback operator），并补上主机端解析测试。
+- **ESP32 core 3.x 加固**：升级过程中修复 RGB 任务启动、LVGL 开机 tick、股票配置解析、2048 输入与渲染回归问题。
+- **股票应用 UI**：公司名过长时会以 UTF-8 安全方式截断为单行省略号，不再压到价格区 UI。
+- **网页设置**：Glass UI 增加手机/平板宽度断点，避免小屏浏览器横向溢出。
+- **实机 smoke**：近期固件已在 ESP32-PICO-D4 + CH9102/COM5 上刷机验证，开机 log 可见 `AIO (All in one) version 3.3.2`、`Initialization MPU6050 success.`，并连续刷新 Stock/Yahoo 数据，无重启循环。
+
 ### 📺 演示视频
 
 **功能操作演示**: https://www.bilibili.com/video/BV1wS4y1R7YF/
 
 ### 🎨 网页配置界面（Glass 重构版）
 
-网页配置界面用「Glass」设计语言重做了一遍 — 毛玻璃面板、深色底、完整 i18n 支援（English / 简体中文 / 繁體中文）、首页即时设备状态卡片、表单栏位悬停提示。**首页仪表盘**、**设置表单**、**文件上传 / 下载 / 删除**、**系统页的 WiFi 扫描卡片** 全部统一风格。
+网页配置界面用「Glass」设计语言重做了一遍 — 毛玻璃面板、深色底、完整 i18n 支援（English / 简体中文 / 繁體中文）、首页即时设备状态卡片、表单栏位悬停提示。**首页仪表盘**、**设置表单**、**文件上传 / 下载 / 删除**、**系统页的 WiFi 扫描卡片** 全部统一风格。最新 RWD 调整加入了窄手机和中等平板断点，小屏浏览器不再横向溢出。
 
 | 首页（即时 KPI） | 设置表单（i18n + 提示） |
 |---|---|
@@ -90,7 +100,7 @@
 
 ### 所需文件
 
-1. `bootloader_dio_40m.bin` - 引导加载程序
+1. `bootloader.bin` - 引导加载程序
 2. `partitions.bin` - 分区文件
 3. `boot_app0.bin` - 启动应用
 4. `HoloCubic_AIO_XXX.bin` - 最新固件（随版本更新）
@@ -179,6 +189,7 @@ Windows 桌面工具一次烧录 firmware/bootloader/partitions，开启序列�
   - 相册参数
   - 播放器设置
   - 自启动应用配置
+  - Glass UI 手机/平板响应式布局
 - **开发者**：ClimbSnail, asdfghj1237890
 
 **首次设置**：连接电脑到HoloCubic的WiFi热点，然后通过网页界面进行配置。
@@ -289,6 +300,7 @@ Windows 桌面工具一次烧录 firmware/bootloader/partitions，开启序列�
 - **操作说明**：
   - 上/下：快速倾斜
   - 进入/退出：保持倾斜1秒
+- **近期修复**：针对 Arduino-ESP32 3.x 调整输入处理，RETURN/home 手势不再吃掉游戏方向，并刷新 GUI golden 以覆盖方块渲染回归。
 - **开发者**：[AndyXFuture](https://github.com/AndyXFuture/HoloCubic-2048-anim)
 
 </details>
@@ -358,6 +370,7 @@ Windows 桌面工具一次烧录 firmware/bootloader/partitions，开启序列�
   2. 选择**市场类型**：US/CN/HK
   3. 设置**更新间隔**（默认10秒）
 - **显示信息**：实时价格、涨跌幅、成交量等
+- **UI说明**：公司名过长会以 UTF-8 安全方式截断为单行省略号，避免压到分隔线和价格区域。
 - **开发者**：redwolf, asdfghj1237890
 
 > 详细配置说明请参见`AIO_Firmware_PIO\src\app\stockmarket\INTERNATIONAL_STOCK_SUPPORT.md`
@@ -580,10 +593,32 @@ python Script/get_font.py 字模文件路径.c
 
 ## 📝 版本历史
 
-**当前版本**：`v2.5.0`
+**当前版本**：`v3.3.2`（main 分支可能包含 tag 之后的文档与回归测试更新）
+
+<details open>
+<summary><b>v3.3.x</b> - 最新版本</summary>
+
+### 固件更新
+- **LVGL**：正式固件与 SDL 模拟器路径升级到 LVGL 9.5，并加入兼容 helper 承接既有应用代码。
+- **稳定性**：修复 LVGL 9 开机 tick 路径，并加固股票配置解析；异常或超长 `/stockmarket.cfg` 会重写默认值而不是污染运行状态。
+- **股票**：新增单行 UTF-8 安全公司名 header formatter，并加入长公司名 golden 场景。
+- **Web设置**：Glass UI 增加手机/平板宽度响应式 CSS。
+
+</details>
 
 <details>
-<summary><b>v2.5.x</b> - 最新版本</summary>
+<summary><b>v3.2.x</b></summary>
+
+### 固件更新
+- **ESP32 Core**：通过 pioarduino `platform-espressif32 55.03.39` 升到 Arduino-ESP32 3.x / ESP-IDF 5.5.x 基线。
+- **JSON**：迁移到 ArduinoJson 7.4.3，并补上主机端 JSON smoke 测试。
+- **2048**：修复 ESP32 core 升级后的输入路由问题，并刷新 GUI regression goldens。
+- **RGB**：修复 ESP32 core 3.x 上观察到的启动崩溃问题。
+
+</details>
+
+<details>
+<summary><b>v2.5.x</b></summary>
 
 ### 固件更新
 - **图标**：更新屏幕分享、媒体播放器、相册和天气应用等APP的图标

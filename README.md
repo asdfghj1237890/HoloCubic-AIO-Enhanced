@@ -16,7 +16,7 @@ This firmware is fully open-source for learning and experimentation. If you use 
 
 * **Original project**: https://github.com/peng-zhihui/HoloCubic
 * **Original AIO project**: https://github.com/ClimbSnail/HoloCubic_AIO
-* **This project (Latest)**: https://github.com/asdfghj1237890/HoloCubic_AIO
+* **This project (Latest)**: https://github.com/asdfghj1237890/HoloCubic-AIO-Enhanced
 
 ---
 
@@ -44,13 +44,23 @@ This firmware is fully open-source for learning and experimentation. If you use 
 6. **Remote File Management**: Upload/delete files on SD card via web interface without physical access
 7. **Complete PC Tools**: Full host software suite with open-source code: https://github.com/asdfghj1237890/HoloCubic_AIO/tree/v2.0.2/AIO_Tool
 
+## 🧭 Current Baseline & Recent Changes (2026-06)
+
+- **Firmware baseline**: pioarduino `platform-espressif32 55.03.39`, Arduino-ESP32 `3.3.9`, ESP-IDF `5.5.4`, LVGL `9.5.0`, ArduinoJson `7.4.3`.
+- **LVGL 9 migration**: firmware and SDL scenario harness now build against LVGL 9.5, with compatibility shims for legacy app code and refreshed golden screenshots.
+- **ArduinoJson 7 migration**: firmware JSON code now uses v7 idioms (`JsonDocument`, fallback operator) and host-side parser tests.
+- **ESP32 core 3.x hardening**: RGB task startup, LVGL boot tick, stock config parsing, and 2048 input/rendering regressions were fixed during the core/toolchain upgrade.
+- **Stock app UI**: long company names are clamped to a single header line with UTF-8-safe ellipsis so they do not overlap the price UI.
+- **Web settings**: the Glass UI now includes responsive breakpoints for phone/tablet widths instead of desktop-only layout assumptions.
+- **Hardware smoke**: recent firmware was flashed on ESP32-PICO-D4 via CH9102/COM5 and observed booting through `AIO (All in one) version 3.3.2`, `Initialization MPU6050 success.`, and repeated Stock/Yahoo refreshes without a reset loop.
+
 ### 📺 Demo
 
 **Video Tutorial**: https://www.bilibili.com/video/BV1wS4y1R7YF/
 
 ### 🎨 Web UI (Glass redesign)
 
-The web configuration interface was rebuilt around a "Glass" design language — frosted panels, dark navy backdrop, full i18n (English / 简体中文 / 繁體中文), live device-stats hero, and per-field tooltips on the configuration forms. Pages match in look-and-feel across the **Home dashboard**, **Settings forms**, **File upload / download / delete**, and the **WiFi-scan card** on the System page.
+The web configuration interface was rebuilt around a "Glass" design language — frosted panels, dark navy backdrop, full i18n (English / 简体中文 / 繁體中文), live device-stats hero, and per-field tooltips on the configuration forms. Pages match in look-and-feel across the **Home dashboard**, **Settings forms**, **File upload / download / delete**, and the **WiFi-scan card** on the System page. The latest responsive pass adds mobile breakpoints for narrow phone screens and medium tablet widths, so the settings pages no longer overflow horizontally on small browsers.
 
 | Home (live KPIs) | Settings form (i18n + tooltips) |
 |---|---|
@@ -76,7 +86,7 @@ Download the PC tool from the release page to flash the firmware.
 
 ### Required Files
 
-1. `bootloader_qio_80m.bin` - Bootloader
+1. `bootloader.bin` - Bootloader
 2. `partitions.bin` - Partition file
 3. `boot_app0.bin` - Boot app
 4. `HoloCubic_AIO_XXX.bin` - Latest firmware (updated with each version)
@@ -164,6 +174,7 @@ The device uses an MPU6050 gyroscope/accelerometer. For proper initialization:
   - Photo album parameters
   - Player settings
   - Auto-start APP configuration
+  - Responsive phone/tablet layout for the Glass UI
 - **Developer**: ClimbSnail, asdfghj1237890
 
 **First-time setup**: Connect PC to HoloCubic's WiFi hotspot, then configure via web interface.
@@ -274,6 +285,7 @@ The device uses an MPU6050 gyroscope/accelerometer. For proper initialization:
 - **Controls**: 
   - Up/Down: Quick tilt
   - Enter/Exit: Hold tilt for 1 second
+- **Recent Fixes**: input handling was adjusted for Arduino-ESP32 3.x so the RETURN/home gesture no longer consumes a game direction, with refreshed GUI goldens for tile rendering.
 - **Developer**: [AndyXFuture](https://github.com/AndyXFuture/HoloCubic-2048-anim)
 
 </details>
@@ -343,6 +355,7 @@ The device uses an MPU6050 gyroscope/accelerometer. For proper initialization:
   2. Select **Market Type**: US/CN/HK
   3. Set **Update Interval** (default: 10 seconds)
 - **Display Info**: Real-time price, change percentage, trading volume, etc.
+- **UI Note**: Long company names are rendered as a single UTF-8-safe ellipsized header line, preventing overlap with the divider and price area.
 - **Developer**: redwolf, asdfghj1237890
 
 > See `AIO_Firmware_PIO\src\app\stockmarket\INTERNATIONAL_STOCK_SUPPORT.md` for detailed configuration
@@ -566,10 +579,32 @@ python Script/get_font.py path/to/font_file.c
 
 ## 📝 Version History
 
-**Current Version**: `v3.1.5`
+**Current Version**: `v3.3.2` (main may include post-tag documentation and regression-test updates)
+
+<details open>
+<summary><b>v3.3.x</b> - Latest</summary>
+
+### Firmware Changes
+- **LVGL**: Upgraded the production firmware and SDL simulator path to LVGL 9.5, with compatibility helpers for existing app code.
+- **Stability**: Fixed the LVGL 9 boot tick path and hardened Stock config parsing so malformed or oversized `/stockmarket.cfg` rewrites to defaults instead of corrupting runtime state.
+- **Stock**: Added a one-line UTF-8-safe company-name header formatter and a long-company-name golden scenario.
+- **Web Settings**: Added responsive CSS for the Glass UI on phone and tablet widths.
+
+</details>
 
 <details>
-<summary><b>v3.1.x</b> - Latest</summary>
+<summary><b>v3.2.x</b></summary>
+
+### Firmware Changes
+- **ESP32 Core**: Moved to the Arduino-ESP32 3.x / ESP-IDF 5.5.x baseline through pioarduino `platform-espressif32 55.03.39`.
+- **JSON**: Migrated firmware parsing/serialization to ArduinoJson 7.4.3 and added host-side JSON smoke coverage.
+- **2048**: Fixed input routing after the ESP32 core upgrade and refreshed GUI regression goldens.
+- **RGB**: Fixed startup crash behavior observed on ESP32 core 3.x.
+
+</details>
+
+<details>
+<summary><b>v3.1.x</b></summary>
 
 ### Firmware Changes
 - **Stock**: Ticker UI redesign — composite arrow, split price (big bold integer + small decimal), ST7789 hardware contrast tuning, real RTC datetime sync, and a bold large-price refresh in IBM Plex Mono (v3.1.2–v3.1.5)
