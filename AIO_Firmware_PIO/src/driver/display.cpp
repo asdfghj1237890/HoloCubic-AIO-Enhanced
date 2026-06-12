@@ -10,6 +10,11 @@
 static uint8_t disp_buf[SCREEN_HOR_RES * LV_HOR_RES_MAX_LEN * 2];
 static lv_display_t *display = NULL;
 
+static uint32_t aio_lv_tick_get_ms(void)
+{
+    return millis();
+}
+
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
     uint32_t w = (area->x2 - area->x1 + 1);
@@ -33,6 +38,7 @@ void Display::init(uint8_t rotation, uint8_t backLight)
 #endif
 
     lv_init();
+    lv_tick_set_cb(aio_lv_tick_get_ms);
 
     setBackLight(0.0); // 设置亮度 为了先不显示初始化时的"花屏"
 

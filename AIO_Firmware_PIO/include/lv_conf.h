@@ -44,14 +44,6 @@
     #endif
 #endif
 
-#if defined(ARDUINO)
-    #define LV_TICK_CUSTOM 1
-    #if LV_TICK_CUSTOM
-        #define LV_TICK_CUSTOM_INCLUDE "Arduino.h"
-        #define LV_TICK_CUSTOM_SYS_TIME_EXPR (xTaskGetTickCount())
-    #endif
-#endif
-
 #if defined(AIO_NATIVE_TEST) || defined(AIO_LVGL_SIMULATOR)
     #define LV_USE_LOG 1
     #define LV_LOG_PRINTF 1
