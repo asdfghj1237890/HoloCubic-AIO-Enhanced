@@ -4,8 +4,23 @@
 #include <string.h>
 
 static const StockmarketRgbColor STOCKMARKET_RGB_OFF = {false, 0, 0, 0};
-static const StockmarketRgbColor STOCKMARKET_RGB_GREEN = {true, 0, 96, 0};
-static const StockmarketRgbColor STOCKMARKET_RGB_RED = {true, 96, 0, 0};
+static const StockmarketRgbColor STOCKMARKET_SCREEN_GREEN = {true, 0, 255, 68};
+static const StockmarketRgbColor STOCKMARKET_SCREEN_RED = {true, 255, 32, 32};
+static const StockmarketRgbColor STOCKMARKET_LED_GREEN = {true, 0, 96, 0};
+static const StockmarketRgbColor STOCKMARKET_LED_RED = {true, 96, 0, 0};
+
+static StockmarketRgbColor stockmarket_color_for_rule(StockmarketColorRule rule,
+                                                      bool is_up,
+                                                      StockmarketRgbColor green,
+                                                      StockmarketRgbColor red)
+{
+    if (STOCKMARKET_COLOR_RULE_UP_RED == rule)
+    {
+        return is_up ? red : green;
+    }
+
+    return is_up ? green : red;
+}
 
 bool stockmarket_color_rule_from_string(const char *text,
                                         StockmarketColorRule *out)
@@ -44,12 +59,9 @@ const char *stockmarket_color_rule_to_string(StockmarketColorRule rule)
 StockmarketRgbColor stockmarket_direction_color(StockmarketColorRule rule,
                                                 bool is_up)
 {
-    if (STOCKMARKET_COLOR_RULE_UP_RED == rule)
-    {
-        return is_up ? STOCKMARKET_RGB_RED : STOCKMARKET_RGB_GREEN;
-    }
-
-    return is_up ? STOCKMARKET_RGB_GREEN : STOCKMARKET_RGB_RED;
+    return stockmarket_color_for_rule(rule, is_up,
+                                      STOCKMARKET_SCREEN_GREEN,
+                                      STOCKMARKET_SCREEN_RED);
 }
 
 StockmarketRgbColor stockmarket_led_color(StockmarketColorRule rule,
@@ -61,5 +73,7 @@ StockmarketRgbColor stockmarket_led_color(StockmarketColorRule rule,
         return STOCKMARKET_RGB_OFF;
     }
 
-    return stockmarket_direction_color(rule, is_up);
+    return stockmarket_color_for_rule(rule, is_up,
+                                      STOCKMARKET_LED_GREEN,
+                                      STOCKMARKET_LED_RED);
 }
