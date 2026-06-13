@@ -1,5 +1,7 @@
 #include "stockmarket.h"
 #include "stockmarket_config_parse.h"
+#include "stockmarket_color_rule.h"
+#include "stockmarket_yahoo_price.h"
 #include "stockmarket_gui.h"
 #include "sys/app_controller.h"
 #include "../../common.h"
@@ -21,6 +23,7 @@ struct B_Config
     String stock_symbol;          // Stock symbol (e.g., AAPL, TSLA, 601126)
     String market_type;           // Market type: CN (China), US (USA), HK (Hong Kong), etc.
     unsigned long updataInterval; // Update interval (milliseconds)
+    StockmarketColorRule color_rule; // Screen and LED up/down color convention
 };
 
 static void write_config(const B_Config *cfg)
@@ -33,6 +36,7 @@ static void write_config(const B_Config *cfg)
     memset(tmp, 0, 16);
     snprintf(tmp, 16, "%lu\n", cfg->updataInterval);
     w_data += tmp;
+    w_data = w_data + stockmarket_color_rule_to_string(cfg->color_rule) + "\n";
     g_flashCfg.writeFile(B_CONFIG_PATH, w_data.c_str());
 }
 
@@ -49,6 +53,10 @@ static void read_config(B_Config *cfg)
     cfg->stock_symbol = raw_cfg.stock_symbol;
     cfg->market_type = raw_cfg.market_type;
     cfg->updataInterval = raw_cfg.updataInterval;
+    if (!stockmarket_color_rule_from_string(raw_cfg.color_rule, &cfg->color_rule))
+    {
+        cfg->color_rule = STOCKMARKET_COLOR_RULE_UP_GREEN;
+    }
 
     if (!valid)
     {
@@ -61,6 +69,13 @@ struct StockmarketAppRunData
 {
     unsigned int refresh_status;
     unsigned long refresh_time_millis;
+    bool market_open;
+    bool yahoo_meta_valid;
+    long stock_utc_epoch;
+    StockmarketYahooMeta yahoo_meta;
+    StockmarketYahooSession yahoo_session;
+    char sina_quote_date[11];
+    char sina_quote_time[9];
     StockMarket stockdata;
 };
 
@@ -73,6 +88,107 @@ struct MyHttpResult
 static B_Config cfg_data;
 static StockmarketAppRunData *run_data = NULL;
 static ESP32Time rtc;
+
+static void stockmarket_reset_yahoo_meta()
+{
+    if (NULL == run_data)
+    {
+        return;
+    }
+
+    memset(&run_data->yahoo_meta, 0, sizeof(run_data->yahoo_meta));
+    run_data->yahoo_session = STOCKMARKET_YAHOO_SESSION_CLOSED;
+    run_data->yahoo_meta_valid = false;
+}
+
+static void stockmarket_apply_led()
+{
+    if (NULL == run_data)
+    {
+        return;
+    }
+
+    const bool is_up = (run_data->stockdata.updownflag == 1);
+    StockmarketRgbColor color =
+        stockmarket_led_color(cfg_data.color_rule, run_data->market_open, is_up);
+
+    rgb_stop();
+    if (color.on)
+    {
+        rgb.setBrightness(0.20f).setRGB(color.r, color.g, color.b);
+    }
+    else
+    {
+        rgb.setRGB(0, 0, 0);
+    }
+}
+
+static bool stockmarket_is_cn_regular_session()
+{
+    if (NULL == run_data || '\0' == run_data->sina_quote_date[0])
+    {
+        return false;
+    }
+
+    String today = rtc.getTime(String("%Y-%m-%d"));
+    if (today != run_data->sina_quote_date)
+    {
+        return false;
+    }
+
+    int day_of_week = rtc.getDayofWeek();
+    if (0 == day_of_week || 6 == day_of_week)
+    {
+        return false;
+    }
+
+    int minutes = rtc.getHour(true) * 60 + rtc.getMinute();
+    return (minutes >= (9 * 60 + 30) && minutes < (11 * 60 + 30)) ||
+           (minutes >= (13 * 60) && minutes < (15 * 60));
+}
+
+static bool sina_copy_field(const String& payload,
+                            int field_index,
+                            char *out,
+                            size_t out_len)
+{
+    if (NULL == out || 0 == out_len || field_index < 0)
+    {
+        return false;
+    }
+    out[0] = '\0';
+
+    int start = payload.indexOf('"');
+    if (start < 0)
+    {
+        return false;
+    }
+    ++start;
+
+    for (int i = 0; i < field_index; ++i)
+    {
+        int comma = payload.indexOf(',', start);
+        if (comma < 0)
+        {
+            return false;
+        }
+        start = comma + 1;
+    }
+
+    int end = payload.indexOf(',', start);
+    int quote_end = payload.indexOf('"', start);
+    if (end < 0 || (quote_end >= 0 && quote_end < end))
+    {
+        end = quote_end;
+    }
+    if (end <= start)
+    {
+        return false;
+    }
+
+    snprintf(out, out_len, "%s", payload.substring(start, end).c_str());
+    return true;
+}
 
 // Build stock symbol based on market type
 static String buildStockSymbol(const String& symbol, const String& market)
@@ -119,8 +235,9 @@ static MyHttpResult http_request(const String& symbol, const String& market)
         // International markets: Yahoo Finance v8 chart API. Yahoo blocks
         // the default ESP32 User-Agent; "Mozilla/5.0" is the smallest UA
         // that gets a normal JSON body.
-        url = "https://query1.finance.yahoo.com/v8/finance/chart/" + stockSymbol + "?interval=1d&range=1d";
-        result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 3000,
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/" + stockSymbol +
+              "?interval=15m&range=1d&includePrePost=true";
+        result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 4000,
                                             "User-Agent", "Mozilla/5.0");
     }
 
@@ -142,15 +259,22 @@ static int stockmarket_init(AppController *sys)
     run_data->stockdata.ChgValue = 0;
     run_data->stockdata.ChgPercent = 0;
     run_data->stockdata.updownflag = 1;
+    run_data->stockdata.color_rule = cfg_data.color_rule;
     run_data->stockdata.symbol[0]  = '\0';
     run_data->stockdata.company[0] = '\0';
     run_data->stockdata.datetime_str[0] = '\0';
     run_data->refresh_status = 0;
     run_data->stockdata.tradvolume = 0;
     run_data->stockdata.turnover = 0;
+    run_data->market_open = false;
+    run_data->stock_utc_epoch = 0;
+    stockmarket_reset_yahoo_meta();
+    run_data->sina_quote_date[0] = '\0';
+    run_data->sina_quote_time[0] = '\0';
     run_data->refresh_time_millis = GET_SYS_MILLIS() - cfg_data.updataInterval;
 
     display_stockmarket(run_data->stockdata, LV_SCR_LOAD_ANIM_NONE);
+    stockmarket_apply_led();
     return 0;
 }
 
@@ -242,6 +366,14 @@ static bool parse_sina_data(const String& payload)
     // fields[5..6] = bid/ask (not displayed)
     run_data->stockdata.tradvolume = fields[7]; // F8 vol (corrected; was F9)
     run_data->stockdata.turnover   = fields[8]; // F9 turnover (corrected; was F10)
+    if (!sina_copy_field(payload, 30, run_data->sina_quote_date,
+                         sizeof(run_data->sina_quote_date)) ||
+        !sina_copy_field(payload, 31, run_data->sina_quote_time,
+                         sizeof(run_data->sina_quote_time)))
+    {
+        Serial.println("[Stock] Sina payload: missing quote date/time — abort parse");
+        return false;
+    }
 
     return true;
 }
@@ -284,31 +416,74 @@ static bool parse_yahoo_data(const String& payload)
     snprintf(run_data->stockdata.company, sizeof(run_data->stockdata.company),
              "%s", yahoo_company);
     
-    // Get current price and previous close from meta
+    // Get regular price, previous close, and extended-hours session metadata.
     JsonObject meta = chart["meta"].as<JsonObject>();
     float currentPrice = 0;
     float previousClose = 0;
+    stockmarket_reset_yahoo_meta();
+    run_data->market_open = false;
+    run_data->sina_quote_date[0] = '\0';
+    run_data->sina_quote_time[0] = '\0';
     
     // Get current price
-    if (meta["regularMarketPrice"].is<float>()) {
+    if (!meta["regularMarketPrice"].isNull()) {
         currentPrice = meta["regularMarketPrice"].as<float>();
     }
     
     // Get previous close - try chartPreviousClose first, then previousClose
-    if (meta["chartPreviousClose"].is<float>()) {
+    if (!meta["chartPreviousClose"].isNull()) {
         previousClose = meta["chartPreviousClose"].as<float>();
-    } else if (meta["previousClose"].is<float>()) {
+    } else if (!meta["previousClose"].isNull()) {
         previousClose = meta["previousClose"].as<float>();
+    }
+
+    run_data->yahoo_meta.regular_price = currentPrice;
+    run_data->yahoo_meta.previous_close = previousClose;
+
+    JsonObject periods = meta["currentTradingPeriod"].as<JsonObject>();
+    if (!periods.isNull())
+    {
+        JsonObject pre = periods["pre"].as<JsonObject>();
+        JsonObject regular = periods["regular"].as<JsonObject>();
+        JsonObject post = periods["post"].as<JsonObject>();
+        run_data->yahoo_meta.pre_start = pre["start"] | 0L;
+        run_data->yahoo_meta.pre_end = pre["end"] | 0L;
+        run_data->yahoo_meta.regular_start = regular["start"] | 0L;
+        run_data->yahoo_meta.regular_end = regular["end"] | 0L;
+        run_data->yahoo_meta.post_start = post["start"] | 0L;
+        run_data->yahoo_meta.post_end = post["end"] | 0L;
     }
     
     // Get OHLC data from quotes
+    JsonArray timestamps = chart["timestamp"].as<JsonArray>();
+    JsonArray close = chart["indicators"]["quote"][0]["close"].as<JsonArray>();
     JsonArray high = chart["indicators"]["quote"][0]["high"].as<JsonArray>();
     JsonArray low = chart["indicators"]["quote"][0]["low"].as<JsonArray>();
     JsonArray open = chart["indicators"]["quote"][0]["open"].as<JsonArray>();
     JsonArray volume = chart["indicators"]["quote"][0]["volume"].as<JsonArray>();
+
+    if (!timestamps.isNull() && !close.isNull())
+    {
+        size_t item_count = timestamps.size();
+        if (close.size() < item_count)
+        {
+            item_count = close.size();
+        }
+
+        for (int i = (int)item_count - 1; i >= 0; --i)
+        {
+            if (!timestamps[i].isNull() && !close[i].isNull())
+            {
+                run_data->yahoo_meta.latest_timestamp = timestamps[i].as<long>();
+                run_data->yahoo_meta.latest_price = close[i].as<float>();
+                break;
+            }
+        }
+    }
     
     run_data->stockdata.NowQuo = currentPrice;
     run_data->stockdata.CloseQuo = previousClose;
+    run_data->yahoo_meta_valid = true;
     
     // Get today's open, high, low (last valid value)
     if (open.size() > 0)
@@ -373,12 +548,19 @@ static bool parse_yahoo_data(const String& payload)
 static void update_stock_data()
 {
     Serial.printf("[MEM] Free heap: %d bytes\n", ESP.getFreeHeap());
+    if (NULL != run_data)
+    {
+        run_data->market_open = false;
+        run_data->stock_utc_epoch = 0;
+        stockmarket_reset_yahoo_meta();
+    }
     
     MyHttpResult result = http_request(cfg_data.stock_symbol, cfg_data.market_type);
     
     if (-1 == result.httpCode)
     {
         Serial.println("[HTTP] Http request failed.");
+        stockmarket_apply_led();
         return;
     }
     
@@ -403,6 +585,7 @@ static void update_stock_data()
             if (!parseSuccess)
             {
                 Serial.println("[Parse] Failed to parse stock data");
+                stockmarket_apply_led();
                 return;
             }
             
@@ -413,6 +596,7 @@ static void update_stock_data()
             // (boot epoch ~"01-01 00:00" on cold start), which is bad but
             // not crashy — and the next update_stock_data tick retries.
             String ts_payload;
+            bool stock_time_updated = false;
             int ts_code = http_fetch_string(STOCK_TIME_API, ts_payload, 1500);
             if (ts_code == HTTP_CODE_OK)
             {
@@ -423,9 +607,11 @@ static void update_stock_data()
                     int t_end = ts_payload.indexOf("\"", t_idx);
                     if (t_end > t_idx)
                     {
-                        long long ms = atoll(ts_payload.substring(t_idx, t_end).c_str())
-                                       + STOCK_TZ_OFFSET_MS;
+                        long long utc_ms = atoll(ts_payload.substring(t_idx, t_end).c_str());
+                        run_data->stock_utc_epoch = (long)(utc_ms / 1000);
+                        long long ms = utc_ms + STOCK_TZ_OFFSET_MS;
                         rtc.setTime(ms / 1000, 0);
+                        stock_time_updated = true;
                     }
                 }
             }
@@ -440,6 +626,36 @@ static void update_stock_data()
             snprintf(run_data->stockdata.datetime_str,
                      sizeof(run_data->stockdata.datetime_str),
                      "%s", datetime.c_str());
+            if (cfg_data.market_type == "CN")
+            {
+                run_data->market_open = stock_time_updated &&
+                                        stockmarket_is_cn_regular_session();
+            }
+            else
+            {
+                if (stock_time_updated && run_data->yahoo_meta_valid)
+                {
+                    StockmarketYahooSelection selection =
+                        stockmarket_yahoo_select_price(&run_data->yahoo_meta,
+                                                       run_data->stock_utc_epoch);
+                    run_data->stockdata.NowQuo = selection.price;
+                    run_data->market_open = selection.market_active;
+                    run_data->yahoo_session = selection.session;
+                }
+                else
+                {
+                    run_data->market_open = false;
+                    run_data->yahoo_session = STOCKMARKET_YAHOO_SESSION_CLOSED;
+                }
+            }
+
+            if (cfg_data.market_type != "CN" &&
+                run_data->stockdata.tradvolume > 0 &&
+                run_data->stockdata.NowQuo > 0)
+            {
+                run_data->stockdata.turnover =
+                    run_data->stockdata.NowQuo * run_data->stockdata.tradvolume;
+            }
 
             // Calculate change values
             run_data->stockdata.ChgValue = run_data->stockdata.NowQuo - run_data->stockdata.CloseQuo;
@@ -449,16 +665,35 @@ static void update_stock_data()
             
             // Set up/down flag
             run_data->stockdata.updownflag = (run_data->stockdata.ChgValue >= 0) ? 1 : 0;
+            run_data->stockdata.color_rule = cfg_data.color_rule;
 
-            Serial.printf("[Stock] %s: %.2f (%.2f%%)\n",
-                run_data->stockdata.symbol,
-                run_data->stockdata.NowQuo,
-                run_data->stockdata.ChgPercent);
+            if (cfg_data.market_type == "CN")
+            {
+                Serial.printf("[Stock] %s: %.2f (%.2f%%)\n",
+                    run_data->stockdata.symbol,
+                    run_data->stockdata.NowQuo,
+                    run_data->stockdata.ChgPercent);
+            }
+            else
+            {
+                Serial.printf("[Stock] %s: %.2f (%.2f%%) [%s]\n",
+                    run_data->stockdata.symbol,
+                    run_data->stockdata.NowQuo,
+                    run_data->stockdata.ChgPercent,
+                    stockmarket_yahoo_session_to_string(run_data->yahoo_session));
+            }
+            stockmarket_apply_led();
+        }
+        else
+        {
+            Serial.println("[HTTP] Non-OK response");
+            stockmarket_apply_led();
         }
     }
     else
     {
         Serial.println("[HTTP] ERROR");
+        stockmarket_apply_led();
     }
 }
 
@@ -495,6 +730,11 @@ static void stockmarket_message_handle(const char *from, const char *to,
         {
             snprintf((char *)ext_info, 32, "%lu", cfg_data.updataInterval);
         }
+        else if (!strcmp(param_key, "color_rule"))
+        {
+            snprintf((char *)ext_info, 32, "%s",
+                     stockmarket_color_rule_to_string(cfg_data.color_rule));
+        }
         // Legacy support for old parameter name
         else if (!strcmp(param_key, "stock_id"))
         {
@@ -521,6 +761,19 @@ static void stockmarket_message_handle(const char *from, const char *to,
         else if (!strcmp(param_key, "updataInterval"))
         {
             cfg_data.updataInterval = atol(param_val);
+        }
+        else if (!strcmp(param_key, "color_rule"))
+        {
+            StockmarketColorRule color_rule = STOCKMARKET_COLOR_RULE_UP_GREEN;
+            if (stockmarket_color_rule_from_string(param_val, &color_rule))
+            {
+                cfg_data.color_rule = color_rule;
+                if (NULL != run_data)
+                {
+                    run_data->stockdata.color_rule = cfg_data.color_rule;
+                }
+                stockmarket_apply_led();
+            }
         }
         // Legacy support for old parameter name
         else if (!strcmp(param_key, "stock_id"))

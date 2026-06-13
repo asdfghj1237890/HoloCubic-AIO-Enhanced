@@ -295,14 +295,18 @@ void stock_setting()
     char stock_symbol[32];
     char market_type[32];
     char updataInterval[32];
+    char color_rule[32];
     app_controller->send_to(SERVER_APP_NAME, "Stock", APP_MESSAGE_READ_CFG, NULL, NULL);
     app_controller->send_to(SERVER_APP_NAME, "Stock", APP_MESSAGE_GET_PARAM, (void *)"stock_symbol", stock_symbol);
     app_controller->send_to(SERVER_APP_NAME, "Stock", APP_MESSAGE_GET_PARAM, (void *)"market_type", market_type);
     app_controller->send_to(SERVER_APP_NAME, "Stock", APP_MESSAGE_GET_PARAM, (void *)"updataInterval", updataInterval);
+    app_controller->send_to(SERVER_APP_NAME, "Stock", APP_MESSAGE_GET_PARAM, (void *)"color_rule", color_rule);
 
     const char *us_selected = (strcmp(market_type, "US") == 0) ? "selected" : "";
     const char *cn_selected = (strcmp(market_type, "CN") == 0) ? "selected" : "";
     const char *hk_selected = (strcmp(market_type, "HK") == 0) ? "selected" : "";
+    const char *up_green_selected = (strcmp(color_rule, "UP_GREEN") == 0) ? "selected" : "";
+    const char *up_red_selected = (strcmp(color_rule, "UP_RED") == 0) ? "selected" : "";
 
     String form;
     emit_form_open(form, "saveStockConf", "form_stock_title");
@@ -324,6 +328,16 @@ void stock_setting()
 
     emit_text_field(form, "fld_update_interval", "updataInterval", updataInterval,
                     "Polling cadence. Markets quote every few seconds; 30000ms is plenty.");
+
+    form += F("<div class=\"field\"><label>");
+    form += getText("fld_stock_color_rule");
+    form += F("</label><select name=\"color_rule\">"
+              "<option value=\"UP_GREEN\" ");
+    form += up_green_selected;
+    form += F(">Green up / red down</option><option value=\"UP_RED\" ");
+    form += up_red_selected;
+    form += F(">Red up / green down</option></select>"
+              "<span class=\"tip\" data-tip=\"Controls both stock screen colors and the physical LED; closed markets turn the LED off.\">?</span></div>");
     emit_form_close(form);
 
     webpage = form;

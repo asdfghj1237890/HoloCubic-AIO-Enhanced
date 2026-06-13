@@ -12,6 +12,7 @@ struct StockMarket
     float ChgValue;             //涨跌幅
     float ChgPercent;           //涨跌率
     unsigned int updownflag;    //升降标志 1：上涨  0:下跌
+    unsigned int color_rule;    //StockmarketColorRule: green-up or red-up
     char symbol[10];            //股票代号 (e.g. AAPL, 601126, 0700)
     char company[24];           //公司名 (CJK or Latin)
     char datetime_str[20];      //Last update time (YYYY-MM-DD HH:MM[:SS])

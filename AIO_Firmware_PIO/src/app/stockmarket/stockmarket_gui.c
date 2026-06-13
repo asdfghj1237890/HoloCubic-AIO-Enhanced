@@ -1,4 +1,5 @@
 #include "stockmarket_gui.h"
+#include "stockmarket_color_rule.h"
 #include "stockmarket_header.h"
 
 #include "lvgl.h"
@@ -250,10 +251,12 @@ void display_stockmarket(struct StockMarket stockInfo, lv_scr_load_anim_t anim_t
                               stockInfo.symbol, stockInfo.company);
     lv_label_set_text(header_label, header_buf);
 
-    // Direction color (Taiwan/HK convention: green = up, red = down)
-    lv_color_t dir_color = (stockInfo.updownflag == 1)
-        ? lv_color_hex(0x00ff44)
-        : lv_color_hex(0xff2020);
+    StockmarketRgbColor rgb_color =
+        stockmarket_direction_color((StockmarketColorRule)stockInfo.color_rule,
+                                    stockInfo.updownflag == 1);
+    lv_color_t dir_color = lv_color_hex((rgb_color.r << 16) |
+                                        (rgb_color.g << 8) |
+                                        rgb_color.b);
     const char *dir_symbol = (stockInfo.updownflag == 1) ? LV_SYMBOL_UP : LV_SYMBOL_DOWN;
     lv_label_set_text(arrow_head_label, dir_symbol);
     lv_obj_set_style_text_color(arrow_head_label, dir_color, LV_PART_MAIN);

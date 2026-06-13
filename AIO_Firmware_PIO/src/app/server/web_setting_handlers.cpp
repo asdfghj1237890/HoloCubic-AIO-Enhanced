@@ -205,6 +205,10 @@ void saveStockConf(void)
                             APP_MESSAGE_SET_PARAM,
                             (void *)"updataInterval",
                             (void *)server.arg("updataInterval").c_str());
+    app_controller->send_to(SERVER_APP_NAME, "Stock",
+                            APP_MESSAGE_SET_PARAM,
+                            (void *)"color_rule",
+                            (void *)server.arg("color_rule").c_str());
     // Persist data to flash
     app_controller->send_to(SERVER_APP_NAME, "Stock", APP_MESSAGE_WRITE_CFG,
                             NULL, NULL);

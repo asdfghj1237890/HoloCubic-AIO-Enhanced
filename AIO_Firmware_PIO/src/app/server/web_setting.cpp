@@ -1077,6 +1077,11 @@ const char* getText(const char* key) {
         if (current_lang == LANG_ZH_TW) return "市場";
         return "Market";
     }
+    if (strcmp(key, "fld_stock_color_rule") == 0) {
+        if (current_lang == LANG_ZH_CN) return "涨跌颜色规则";
+        if (current_lang == LANG_ZH_TW) return "漲跌顏色規則";
+        return "Up/Down Color Rule";
+    }
 
     // Field labels — Picture / Media / Screen Share
     if (strcmp(key, "fld_switch_interval") == 0) {

@@ -13,17 +13,40 @@ static void assert_defaults(const StockmarketRawConfig &out)
     TEST_ASSERT_EQUAL_STRING("AAPL", out.stock_symbol);
     TEST_ASSERT_EQUAL_STRING("US", out.market_type);
     TEST_ASSERT_EQUAL_UINT32(10000UL, out.updataInterval);
+    TEST_ASSERT_EQUAL_STRING("UP_GREEN", out.color_rule);
 }
 
 void test_valid_stock_config_parses_all_fields()
 {
-    char buf[] = "0700\nHK\n15000\n";
+    char buf[] = "0700\nHK\n15000\nUP_RED\n";
     StockmarketRawConfig out{};
     bool ok = stockmarket_parse_config(buf, strlen(buf), false, &out);
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_EQUAL_STRING("0700", out.stock_symbol);
     TEST_ASSERT_EQUAL_STRING("HK", out.market_type);
     TEST_ASSERT_EQUAL_UINT32(15000UL, out.updataInterval);
+    TEST_ASSERT_EQUAL_STRING("UP_RED", out.color_rule);
+}
+
+void test_legacy_three_line_stock_config_keeps_stock_and_defaults_up_green()
+{
+    char buf[] = "MSFT\nUS\n30000\n";
+    StockmarketRawConfig out{};
+    bool ok = stockmarket_parse_config(buf, strlen(buf), false, &out);
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_STRING("MSFT", out.stock_symbol);
+    TEST_ASSERT_EQUAL_STRING("US", out.market_type);
+    TEST_ASSERT_EQUAL_UINT32(30000UL, out.updataInterval);
+    TEST_ASSERT_EQUAL_STRING("UP_GREEN", out.color_rule);
+}
+
+void test_invalid_stock_color_rule_requests_default_rewrite()
+{
+    char buf[] = "AAPL\nUS\n10000\nBLUE\n";
+    StockmarketRawConfig out{};
+    bool ok = stockmarket_parse_config(buf, strlen(buf), false, &out);
+    TEST_ASSERT_FALSE(ok);
+    assert_defaults(out);
 }
 
 void test_empty_stock_config_requests_default_rewrite()
@@ -75,6 +98,8 @@ int main(int /*argc*/, char ** /*argv*/)
 {
     UNITY_BEGIN();
     RUN_TEST(test_valid_stock_config_parses_all_fields);
+    RUN_TEST(test_legacy_three_line_stock_config_keeps_stock_and_defaults_up_green);
+    RUN_TEST(test_invalid_stock_color_rule_requests_default_rewrite);
     RUN_TEST(test_empty_stock_config_requests_default_rewrite);
     RUN_TEST(test_truncated_stock_config_requests_default_rewrite);
     RUN_TEST(test_missing_stock_config_lines_do_not_call_unsafe_splitter);
