@@ -31,6 +31,13 @@ static long stockmarket_yahoo_regular_quote_time(const StockmarketYahooMeta *met
     return meta->latest_timestamp;
 }
 
+static bool stockmarket_yahoo_latest_is_newer_than_regular(
+    const StockmarketYahooMeta *meta)
+{
+    return stockmarket_yahoo_positive_price(meta->latest_price) &&
+           meta->latest_timestamp > stockmarket_yahoo_regular_quote_time(meta);
+}
+
 StockmarketYahooSelection stockmarket_yahoo_select_price(
     const StockmarketYahooMeta *meta,
     long now_epoch)
@@ -89,6 +96,11 @@ StockmarketYahooSelection stockmarket_yahoo_select_price(
     }
 
     if (stockmarket_yahoo_latest_is_live_for_period(meta, meta->post_start, meta->post_end))
+    {
+        selection.price = meta->latest_price;
+        selection.quote_timestamp = meta->latest_timestamp;
+    }
+    else if (stockmarket_yahoo_latest_is_newer_than_regular(meta))
     {
         selection.price = meta->latest_price;
         selection.quote_timestamp = meta->latest_timestamp;
