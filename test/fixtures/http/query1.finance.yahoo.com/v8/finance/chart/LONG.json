@@ -6,14 +6,17 @@
           "symbol": "LONG",
           "shortName": "Very Long Company Name",
           "regularMarketPrice": 88.88,
-          "chartPreviousClose": 80.00
+          "chartPreviousClose": 80.00,
+          "gmtoffset": -14400
         },
+        "timestamp": [1781382300],
         "indicators": {
           "quote": [
             {
               "open":   [82.00],
               "high":   [90.12],
               "low":    [78.34],
+              "close":  [88.88],
               "volume": [1234567]
             }
           ]

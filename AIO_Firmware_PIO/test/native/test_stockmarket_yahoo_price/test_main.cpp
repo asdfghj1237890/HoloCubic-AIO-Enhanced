@@ -88,6 +88,26 @@ void test_closed_market_falls_back_to_regular_price_when_latest_is_not_postmarke
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 100.0f, selection.price);
 }
 
+void test_exchange_datetime_uses_gmtoffset_and_24_hour_clock()
+{
+    char out[20];
+
+    TEST_ASSERT_TRUE(stockmarket_yahoo_format_exchange_datetime(
+        out, sizeof(out), 1781382300L, -14400L));
+
+    TEST_ASSERT_EQUAL_STRING("16:25", out);
+}
+
+void test_exchange_datetime_handles_positive_gmtoffset()
+{
+    char out[20];
+
+    TEST_ASSERT_TRUE(stockmarket_yahoo_format_exchange_datetime(
+        out, sizeof(out), 1781513562L, 28800L));
+
+    TEST_ASSERT_EQUAL_STRING("16:52", out);
+}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
@@ -96,5 +116,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_regular_session_uses_regular_market_price);
     RUN_TEST(test_closed_afterhours_keeps_last_postmarket_price_but_inactive_led);
     RUN_TEST(test_closed_market_falls_back_to_regular_price_when_latest_is_not_postmarket);
+    RUN_TEST(test_exchange_datetime_uses_gmtoffset_and_24_hour_clock);
+    RUN_TEST(test_exchange_datetime_handles_positive_gmtoffset);
     return UNITY_END();
 }

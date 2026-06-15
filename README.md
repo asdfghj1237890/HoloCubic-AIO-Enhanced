@@ -4,6 +4,8 @@
 
 ![HomePage](Image/Holo1.jpg)
 
+![Stock Market simulator preview](test/golden/stockmarket/smoke/01_initial.png)
+
 ## 📖 Project Introduction
 
 `Holocubic` was originally an open-source project by [稚晖君](https://github.com/peng-zhihui), and this project is a third-party independent firmware running on HoloCubic hardware.

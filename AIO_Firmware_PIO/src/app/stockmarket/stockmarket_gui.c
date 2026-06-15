@@ -28,7 +28,7 @@ static lv_obj_t *hi_label       = NULL;  // "H 176.50" — left half of H/L row
 static lv_obj_t *lo_label       = NULL;  // "L 173.00" — right half of H/L row
 static lv_obj_t *hi_lo_divider  = NULL;  // vertical line between H and L
 static lv_obj_t *close_label    = NULL;  // "C 174.18"
-static lv_obj_t *datetime_label = NULL;  // "06-09 15:30"
+static lv_obj_t *datetime_label = NULL;  // "15:30"
 static lv_obj_t *col_divider    = NULL;  // vertical line between C and datetime
                                           // (column-aligned with hi_lo_divider)
 
@@ -95,8 +95,8 @@ void stockmarket_gui_init(void)
 
     lv_style_init(&datetime_style);
     lv_style_set_text_opa(&datetime_style, LV_OPA_COVER);
-    lv_style_set_text_color(&datetime_style, lv_color_hex(0xffffff));
-    lv_style_set_text_font(&datetime_style, &lv_font_ibmplex_bold_14);
+    lv_style_set_text_color(&datetime_style, lv_color_hex(0xffd000));
+    lv_style_set_text_font(&datetime_style, &lv_font_montserrat_24);
 }
 
 static const lv_point_precise_t divider_points[] = {{0, 0}, {239, 0}};
@@ -220,17 +220,12 @@ void display_stockmarket_init(void)
     lv_obj_set_style_line_width(col_divider, 2, LV_PART_MAIN);
     lv_obj_align(col_divider, LV_ALIGN_TOP_LEFT, 128, 200);
 
-    // Last update datetime — left-aligned at x=140 (just right of col_divider).
-    // Format is the compact MM-DD HH:MM (11 chars) populated by
-    // update_stock_data via getTime("%m-%d %H:%M") after NTP bootstrap.
+    // Quote time in the market/exchange timezone, compact 24-hour HH:MM.
+    // Same size and gold color as the H/L/C markers.
     datetime_label = lv_label_create(stockmarket_gui);
     lv_obj_add_style(datetime_label, &datetime_style, LV_STATE_DEFAULT);
     lv_label_set_text(datetime_label, "--");
-    // ibmplex_bold_14 (line_height 11), nudged up to sit roughly centered
-    // against the mont_24 close value rather than bottom-aligned. Bold + a
-    // touch larger than the old montserrat_14; "01-01 00:00" (88px) fits the
-    // x=140 cell.
-    lv_obj_align(datetime_label, LV_ALIGN_TOP_LEFT, 140, 207);
+    lv_obj_align(datetime_label, LV_ALIGN_TOP_LEFT, 140, 200);
 
     lv_scr_load(stockmarket_gui);
 }

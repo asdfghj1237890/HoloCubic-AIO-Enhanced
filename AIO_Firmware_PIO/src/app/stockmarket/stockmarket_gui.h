@@ -15,7 +15,7 @@ struct StockMarket
     unsigned int color_rule;    //StockmarketColorRule: green-up or red-up
     char symbol[10];            //股票代号 (e.g. AAPL, 601126, 0700)
     char company[24];           //公司名 (CJK or Latin)
-    char datetime_str[20];      //Last update time (YYYY-MM-DD HH:MM[:SS])
+    char datetime_str[20];      //Quote time in market timezone (HH:MM)
     float tradvolume;           //成交量 (kept; not currently displayed)
     float turnover;             //成交额 (kept; not currently displayed)
 };

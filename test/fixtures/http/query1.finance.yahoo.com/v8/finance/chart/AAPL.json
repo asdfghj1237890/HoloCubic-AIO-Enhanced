@@ -6,14 +6,17 @@
           "symbol": "AAPL",
           "shortName": "Apple Inc.",
           "regularMarketPrice": 175.50,
-          "chartPreviousClose": 173.20
+          "chartPreviousClose": 173.20,
+          "gmtoffset": -14400
         },
+        "timestamp": [1781382300],
         "indicators": {
           "quote": [
             {
               "open":   [174.00],
               "high":   [176.50],
               "low":    [173.00],
+              "close":  [175.50],
               "volume": [50000000]
             }
           ]

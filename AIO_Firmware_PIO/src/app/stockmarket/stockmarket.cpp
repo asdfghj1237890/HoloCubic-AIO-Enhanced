@@ -190,6 +190,22 @@ static bool sina_copy_field(const String& payload,
     return true;
 }
 
+static bool stockmarket_format_sina_quote_datetime(char *out,
+                                                   size_t out_len,
+                                                   const char *date,
+                                                   const char *time)
+{
+    if (NULL == out || 0 == out_len || NULL == date || NULL == time ||
+        strlen(date) < 10 || strlen(time) < 5)
+    {
+        return false;
+    }
+
+    snprintf(out, out_len, "%c%c:%c%c",
+             time[0], time[1], time[3], time[4]);
+    return true;
+}
+
 // Build stock symbol based on market type
 static String buildStockSymbol(const String& symbol, const String& market)
 {
@@ -453,6 +469,7 @@ static bool parse_yahoo_data(const String& payload)
         run_data->yahoo_meta.post_start = post["start"] | 0L;
         run_data->yahoo_meta.post_end = post["end"] | 0L;
     }
+    run_data->yahoo_meta.gmtoffset = meta["gmtoffset"] | 0L;
     
     // Get OHLC data from quotes
     JsonArray timestamps = chart["timestamp"].as<JsonArray>();
@@ -616,16 +633,39 @@ static void update_stock_data()
                 }
             }
 
-            // Compact "MM-DD HH:MM". Must use getTime(String) — getDateTime
-            // takes a `bool mode` (NOT a format string), so a const char*
-            // implicitly converts to `true` and we get a long-form date
-            // like "Thursday, January 1 1970 00:00:00" which then truncates
-            // to "Thursday, J" in the buffer. getTime(String) is the right
-            // strftime-format-string entry point.
-            String datetime = rtc.getTime(String("%m-%d %H:%M"));
-            snprintf(run_data->stockdata.datetime_str,
-                     sizeof(run_data->stockdata.datetime_str),
-                     "%s", datetime.c_str());
+            // The bottom-right time is the quote timestamp in the exchange's
+            // timezone, shown as compact 24-hour HH:MM.
+            bool quote_time_set = false;
+            if (cfg_data.market_type == "CN")
+            {
+                quote_time_set = stockmarket_format_sina_quote_datetime(
+                    run_data->stockdata.datetime_str,
+                    sizeof(run_data->stockdata.datetime_str),
+                    run_data->sina_quote_date,
+                    run_data->sina_quote_time);
+            }
+            else
+            {
+                quote_time_set = stockmarket_yahoo_format_exchange_datetime(
+                    run_data->stockdata.datetime_str,
+                    sizeof(run_data->stockdata.datetime_str),
+                    run_data->yahoo_meta.latest_timestamp,
+                    run_data->yahoo_meta.gmtoffset);
+            }
+            if (!quote_time_set)
+            {
+                if (stock_time_updated)
+                {
+                    String datetime = rtc.getTime(String("%H:%M"));
+                    snprintf(run_data->stockdata.datetime_str,
+                             sizeof(run_data->stockdata.datetime_str),
+                             "%s", datetime.c_str());
+                }
+                else
+                {
+                    run_data->stockdata.datetime_str[0] = '\0';
+                }
+            }
             if (cfg_data.market_type == "CN")
             {
                 run_data->market_open = stock_time_updated &&

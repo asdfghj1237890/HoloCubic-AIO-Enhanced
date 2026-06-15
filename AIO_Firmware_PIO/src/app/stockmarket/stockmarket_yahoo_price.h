@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 
 typedef enum
 {
@@ -22,6 +23,7 @@ typedef struct
     long regular_end;
     long post_start;
     long post_end;
+    long gmtoffset;
 } StockmarketYahooMeta;
 
 typedef struct
@@ -40,6 +42,11 @@ StockmarketYahooSelection stockmarket_yahoo_select_price(
     long now_epoch);
 
 const char *stockmarket_yahoo_session_to_string(StockmarketYahooSession session);
+
+bool stockmarket_yahoo_format_exchange_datetime(char *out,
+                                                size_t out_len,
+                                                long epoch,
+                                                long gmtoffset);
 
 #ifdef __cplusplus
 }

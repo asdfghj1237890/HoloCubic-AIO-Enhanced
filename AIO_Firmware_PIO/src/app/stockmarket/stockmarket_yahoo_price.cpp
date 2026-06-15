@@ -1,6 +1,7 @@
 #include "stockmarket_yahoo_price.h"
 
 #include <stddef.h>
+#include <time.h>
 
 static bool stockmarket_yahoo_positive_price(float price)
 {
@@ -95,4 +96,34 @@ const char *stockmarket_yahoo_session_to_string(StockmarketYahooSession session)
     default:
         return "CLOSED";
     }
+}
+
+static bool stockmarket_yahoo_gmtime(const time_t *timep, struct tm *out)
+{
+#if defined(_WIN32) && !defined(ARDUINO)
+    return 0 == gmtime_s(out, timep);
+#else
+    return NULL != gmtime_r(timep, out);
+#endif
+}
+
+bool stockmarket_yahoo_format_exchange_datetime(char *out,
+                                                size_t out_len,
+                                                long epoch,
+                                                long gmtoffset)
+{
+    if (NULL == out || 0 == out_len || epoch <= 0)
+    {
+        return false;
+    }
+
+    out[0] = '\0';
+    time_t adjusted = (time_t)(epoch + gmtoffset);
+    struct tm timeinfo;
+    if (!stockmarket_yahoo_gmtime(&adjusted, &timeinfo))
+    {
+        return false;
+    }
+
+    return strftime(out, out_len, "%H:%M", &timeinfo) > 0;
 }
