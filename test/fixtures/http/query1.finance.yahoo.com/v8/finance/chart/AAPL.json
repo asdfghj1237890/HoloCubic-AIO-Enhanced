@@ -6,6 +6,7 @@
           "symbol": "AAPL",
           "shortName": "Apple Inc.",
           "regularMarketPrice": 175.50,
+          "regularMarketTime": 1781382600,
           "chartPreviousClose": 173.20,
           "gmtoffset": -14400
         },

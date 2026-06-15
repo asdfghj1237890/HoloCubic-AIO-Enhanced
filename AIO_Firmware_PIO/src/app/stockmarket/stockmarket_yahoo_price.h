@@ -17,6 +17,7 @@ typedef struct
     float previous_close;
     float latest_price;
     long latest_timestamp;
+    long regular_market_time;
     long pre_start;
     long pre_end;
     long regular_start;
@@ -29,6 +30,7 @@ typedef struct
 typedef struct
 {
     float price;
+    long quote_timestamp;
     bool market_active;
     StockmarketYahooSession session;
 } StockmarketYahooSelection;

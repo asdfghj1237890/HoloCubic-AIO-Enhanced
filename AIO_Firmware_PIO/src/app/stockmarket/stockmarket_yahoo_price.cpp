@@ -22,23 +22,34 @@ static bool stockmarket_yahoo_latest_is_live_for_period(
            stockmarket_yahoo_in_period(meta->latest_timestamp, start, end);
 }
 
+static long stockmarket_yahoo_regular_quote_time(const StockmarketYahooMeta *meta)
+{
+    if (meta->regular_market_time > 0)
+    {
+        return meta->regular_market_time;
+    }
+    return meta->latest_timestamp;
+}
+
 StockmarketYahooSelection stockmarket_yahoo_select_price(
     const StockmarketYahooMeta *meta,
     long now_epoch)
 {
-    StockmarketYahooSelection selection = {0.0f, false, STOCKMARKET_YAHOO_SESSION_CLOSED};
+    StockmarketYahooSelection selection = {0.0f, 0, false, STOCKMARKET_YAHOO_SESSION_CLOSED};
     if (NULL == meta)
     {
         return selection;
     }
 
     selection.price = meta->regular_price;
+    selection.quote_timestamp = stockmarket_yahoo_regular_quote_time(meta);
 
     if (stockmarket_yahoo_in_period(now_epoch, meta->pre_start, meta->pre_end))
     {
         if (stockmarket_yahoo_latest_is_live_for_period(meta, meta->pre_start, meta->pre_end))
         {
             selection.price = meta->latest_price;
+            selection.quote_timestamp = meta->latest_timestamp;
             selection.market_active = true;
             selection.session = STOCKMARKET_YAHOO_SESSION_PRE;
         }
@@ -49,6 +60,7 @@ StockmarketYahooSelection stockmarket_yahoo_select_price(
     {
         if (stockmarket_yahoo_positive_price(meta->regular_price))
         {
+            selection.quote_timestamp = stockmarket_yahoo_regular_quote_time(meta);
             selection.market_active = true;
             selection.session = STOCKMARKET_YAHOO_SESSION_REGULAR;
             return selection;
@@ -57,6 +69,7 @@ StockmarketYahooSelection stockmarket_yahoo_select_price(
         if (stockmarket_yahoo_latest_is_live_for_period(meta, meta->regular_start, meta->regular_end))
         {
             selection.price = meta->latest_price;
+            selection.quote_timestamp = meta->latest_timestamp;
             selection.market_active = true;
             selection.session = STOCKMARKET_YAHOO_SESSION_REGULAR;
         }
@@ -68,6 +81,7 @@ StockmarketYahooSelection stockmarket_yahoo_select_price(
         if (stockmarket_yahoo_latest_is_live_for_period(meta, meta->post_start, meta->post_end))
         {
             selection.price = meta->latest_price;
+            selection.quote_timestamp = meta->latest_timestamp;
             selection.market_active = true;
             selection.session = STOCKMARKET_YAHOO_SESSION_POST;
         }
@@ -77,6 +91,7 @@ StockmarketYahooSelection stockmarket_yahoo_select_price(
     if (stockmarket_yahoo_latest_is_live_for_period(meta, meta->post_start, meta->post_end))
     {
         selection.price = meta->latest_price;
+        selection.quote_timestamp = meta->latest_timestamp;
     }
 
     return selection;

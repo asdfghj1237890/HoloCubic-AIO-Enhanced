@@ -6,6 +6,7 @@
           "symbol": "LONG",
           "shortName": "Very Long Company Name",
           "regularMarketPrice": 88.88,
+          "regularMarketTime": 1781382600,
           "chartPreviousClose": 80.00,
           "gmtoffset": -14400
         },

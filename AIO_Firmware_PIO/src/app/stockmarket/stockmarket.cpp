@@ -455,6 +455,7 @@ static bool parse_yahoo_data(const String& payload)
 
     run_data->yahoo_meta.regular_price = currentPrice;
     run_data->yahoo_meta.previous_close = previousClose;
+    run_data->yahoo_meta.regular_market_time = meta["regularMarketTime"] | 0L;
 
     JsonObject periods = meta["currentTradingPeriod"].as<JsonObject>();
     if (!periods.isNull())
@@ -633,39 +634,6 @@ static void update_stock_data()
                 }
             }
 
-            // The bottom-right time is the quote timestamp in the exchange's
-            // timezone, shown as compact 24-hour HH:MM.
-            bool quote_time_set = false;
-            if (cfg_data.market_type == "CN")
-            {
-                quote_time_set = stockmarket_format_sina_quote_datetime(
-                    run_data->stockdata.datetime_str,
-                    sizeof(run_data->stockdata.datetime_str),
-                    run_data->sina_quote_date,
-                    run_data->sina_quote_time);
-            }
-            else
-            {
-                quote_time_set = stockmarket_yahoo_format_exchange_datetime(
-                    run_data->stockdata.datetime_str,
-                    sizeof(run_data->stockdata.datetime_str),
-                    run_data->yahoo_meta.latest_timestamp,
-                    run_data->yahoo_meta.gmtoffset);
-            }
-            if (!quote_time_set)
-            {
-                if (stock_time_updated)
-                {
-                    String datetime = rtc.getTime(String("%H:%M"));
-                    snprintf(run_data->stockdata.datetime_str,
-                             sizeof(run_data->stockdata.datetime_str),
-                             "%s", datetime.c_str());
-                }
-                else
-                {
-                    run_data->stockdata.datetime_str[0] = '\0';
-                }
-            }
             if (cfg_data.market_type == "CN")
             {
                 run_data->market_open = stock_time_updated &&
@@ -673,6 +641,11 @@ static void update_stock_data()
             }
             else
             {
+                long yahoo_quote_timestamp =
+                    run_data->yahoo_meta.regular_market_time > run_data->yahoo_meta.latest_timestamp
+                        ? run_data->yahoo_meta.regular_market_time
+                        : run_data->yahoo_meta.latest_timestamp;
+
                 if (stock_time_updated && run_data->yahoo_meta_valid)
                 {
                     StockmarketYahooSelection selection =
@@ -681,11 +654,44 @@ static void update_stock_data()
                     run_data->stockdata.NowQuo = selection.price;
                     run_data->market_open = selection.market_active;
                     run_data->yahoo_session = selection.session;
+                    yahoo_quote_timestamp = selection.quote_timestamp;
                 }
                 else
                 {
                     run_data->market_open = false;
                     run_data->yahoo_session = STOCKMARKET_YAHOO_SESSION_CLOSED;
+                }
+
+                if (!stockmarket_yahoo_format_exchange_datetime(
+                        run_data->stockdata.datetime_str,
+                        sizeof(run_data->stockdata.datetime_str),
+                        yahoo_quote_timestamp,
+                        run_data->yahoo_meta.gmtoffset))
+                {
+                    run_data->stockdata.datetime_str[0] = '\0';
+                }
+            }
+
+            if (cfg_data.market_type == "CN")
+            {
+                bool quote_time_set = stockmarket_format_sina_quote_datetime(
+                    run_data->stockdata.datetime_str,
+                    sizeof(run_data->stockdata.datetime_str),
+                    run_data->sina_quote_date,
+                    run_data->sina_quote_time);
+                if (!quote_time_set)
+                {
+                    if (stock_time_updated)
+                    {
+                        String datetime = rtc.getTime(String("%H:%M"));
+                        snprintf(run_data->stockdata.datetime_str,
+                                 sizeof(run_data->stockdata.datetime_str),
+                                 "%s", datetime.c_str());
+                    }
+                    else
+                    {
+                        run_data->stockdata.datetime_str[0] = '\0';
+                    }
                 }
             }
 

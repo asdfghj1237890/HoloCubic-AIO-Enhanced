@@ -60,6 +60,22 @@ void test_regular_session_uses_regular_market_price()
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 100.0f, selection.price);
 }
 
+void test_regular_session_uses_regular_market_time_for_selected_price()
+{
+    StockmarketYahooMeta meta = base_meta();
+    meta.latest_price = 101.25f;
+    meta.latest_timestamp = 2500;
+    meta.regular_market_time = 2755;
+
+    StockmarketYahooSelection selection =
+        stockmarket_yahoo_select_price(&meta, 2760);
+
+    TEST_ASSERT_EQUAL(STOCKMARKET_YAHOO_SESSION_REGULAR, selection.session);
+    TEST_ASSERT_TRUE(selection.market_active);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 100.0f, selection.price);
+    TEST_ASSERT_EQUAL_INT32(2755, selection.quote_timestamp);
+}
+
 void test_closed_afterhours_keeps_last_postmarket_price_but_inactive_led()
 {
     StockmarketYahooMeta meta = base_meta();
@@ -114,6 +130,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_premarket_uses_latest_close_when_timestamp_is_in_pre_session);
     RUN_TEST(test_afterhours_uses_latest_close_when_timestamp_is_in_post_session);
     RUN_TEST(test_regular_session_uses_regular_market_price);
+    RUN_TEST(test_regular_session_uses_regular_market_time_for_selected_price);
     RUN_TEST(test_closed_afterhours_keeps_last_postmarket_price_but_inactive_led);
     RUN_TEST(test_closed_market_falls_back_to_regular_price_when_latest_is_not_postmarket);
     RUN_TEST(test_exchange_datetime_uses_gmtoffset_and_24_hour_clock);
