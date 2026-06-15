@@ -65,8 +65,13 @@ static bool valid_market(const char *market)
            0 == strcmp(market, "HK");
 }
 
-static bool parse_interval(const char *value, unsigned long *out)
+bool stockmarket_parse_interval(const char *value, unsigned long *out)
 {
+    if (NULL == value || NULL == out)
+    {
+        return false;
+    }
+
     char *end = NULL;
     unsigned long interval = strtoul(value, &end, 10);
     if (end == value || '\0' != *end)
@@ -74,7 +79,8 @@ static bool parse_interval(const char *value, unsigned long *out)
         return false;
     }
 
-    if (interval < 1000UL || interval > 3600000UL)
+    if (interval < STOCKMARKET_MIN_INTERVAL ||
+        interval > STOCKMARKET_MAX_INTERVAL)
     {
         return false;
     }
@@ -112,7 +118,7 @@ bool stockmarket_parse_config(char *buffer_mut,
     StockmarketColorRule color_rule = STOCKMARKET_COLOR_RULE_UP_GREEN;
     if (!valid_symbol(param[0]) ||
         !valid_market(param[1]) ||
-        !parse_interval(param[2], &interval) ||
+        !stockmarket_parse_interval(param[2], &interval) ||
         (has_color_rule &&
          !stockmarket_color_rule_from_string(param[3], &color_rule)))
     {

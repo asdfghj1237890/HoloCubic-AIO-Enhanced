@@ -8,6 +8,8 @@
 #define STOCKMARKET_DEFAULT_SYMBOL "AAPL"
 #define STOCKMARKET_DEFAULT_MARKET "US"
 #define STOCKMARKET_DEFAULT_INTERVAL 10000UL
+#define STOCKMARKET_MIN_INTERVAL 1000UL
+#define STOCKMARKET_MAX_INTERVAL 3600000UL
 #define STOCKMARKET_DEFAULT_COLOR_RULE STOCKMARKET_COLOR_RULE_UP_GREEN_TEXT
 
 struct StockmarketRawConfig
@@ -19,6 +21,8 @@ struct StockmarketRawConfig
 };
 
 void stockmarket_default_config(StockmarketRawConfig *out);
+
+bool stockmarket_parse_interval(const char *value, unsigned long *out);
 
 // Parse /stockmarket.cfg into bounded raw fields. Returns false when the
 // caller should rewrite the file with defaults.

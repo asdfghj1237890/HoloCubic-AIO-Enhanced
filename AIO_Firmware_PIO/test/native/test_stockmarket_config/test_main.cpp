@@ -94,6 +94,23 @@ void test_invalid_stock_interval_requests_default_rewrite()
     assert_defaults(out);
 }
 
+void test_stock_interval_parser_bounds_runtime_values()
+{
+    unsigned long interval = 0;
+
+    TEST_ASSERT_TRUE(stockmarket_parse_interval("1000", &interval));
+    TEST_ASSERT_EQUAL_UINT32(1000UL, interval);
+
+    TEST_ASSERT_TRUE(stockmarket_parse_interval("3600000", &interval));
+    TEST_ASSERT_EQUAL_UINT32(3600000UL, interval);
+
+    TEST_ASSERT_FALSE(stockmarket_parse_interval("999", &interval));
+    TEST_ASSERT_FALSE(stockmarket_parse_interval("3600001", &interval));
+    TEST_ASSERT_FALSE(stockmarket_parse_interval("", &interval));
+    TEST_ASSERT_FALSE(stockmarket_parse_interval("1000ms", &interval));
+    TEST_ASSERT_FALSE(stockmarket_parse_interval("1000", nullptr));
+}
+
 int main(int /*argc*/, char ** /*argv*/)
 {
     UNITY_BEGIN();
@@ -105,5 +122,6 @@ int main(int /*argc*/, char ** /*argv*/)
     RUN_TEST(test_missing_stock_config_lines_do_not_call_unsafe_splitter);
     RUN_TEST(test_invalid_stock_market_requests_default_rewrite);
     RUN_TEST(test_invalid_stock_interval_requests_default_rewrite);
+    RUN_TEST(test_stock_interval_parser_bounds_runtime_values);
     return UNITY_END();
 }

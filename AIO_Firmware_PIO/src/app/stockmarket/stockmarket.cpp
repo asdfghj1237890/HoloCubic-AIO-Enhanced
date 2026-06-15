@@ -1,6 +1,7 @@
 #include "stockmarket.h"
 #include "stockmarket_config_parse.h"
 #include "stockmarket_color_rule.h"
+#include "stockmarket_refresh_scheduler.h"
 #include "stockmarket_yahoo_price.h"
 #include "stockmarket_gui.h"
 #include "sys/app_controller.h"
@@ -15,6 +16,7 @@
 // and what weather expects.
 #define STOCK_TIME_API "https://acs.m.taobao.com/gw/mtop.common.getTimestamp/"
 #define STOCK_TZ_OFFSET_MS (28800000LL)
+#define STOCK_REFRESH_EVENT_TIMEOUT_MS (30000UL)
 
 // STOCKmarket configuration for persistence
 #define B_CONFIG_PATH "/stockmarket.cfg"
@@ -68,7 +70,7 @@ static void read_config(B_Config *cfg)
 struct StockmarketAppRunData
 {
     unsigned int refresh_status;
-    unsigned long refresh_time_millis;
+    StockmarketRefreshScheduler refresh_scheduler;
     bool market_open;
     bool yahoo_meta_valid;
     long stock_utc_epoch;
@@ -287,7 +289,8 @@ static int stockmarket_init(AppController *sys)
     stockmarket_reset_yahoo_meta();
     run_data->sina_quote_date[0] = '\0';
     run_data->sina_quote_time[0] = '\0';
-    run_data->refresh_time_millis = GET_SYS_MILLIS() - cfg_data.updataInterval;
+    stockmarket_refresh_scheduler_init(&run_data->refresh_scheduler,
+                                       GET_SYS_MILLIS());
 
     display_stockmarket(run_data->stockdata, LV_SCR_LOAD_ANIM_NONE);
     stockmarket_apply_led();
@@ -306,11 +309,22 @@ static void stockmarket_process(AppController *sys,
         return;
     }
 
-    // 以下减少网络请求的压力
-    if (doDelayMillisTime(cfg_data.updataInterval, &run_data->refresh_time_millis, false))
+    unsigned long now = GET_SYS_MILLIS();
+    stockmarket_refresh_scheduler_expire_in_flight(
+        &run_data->refresh_scheduler,
+        now,
+        STOCK_REFRESH_EVENT_TIMEOUT_MS);
+
+    if (stockmarket_refresh_scheduler_begin_if_due(&run_data->refresh_scheduler, now))
     {
-        sys->send_to(STOCK_APP_NAME, CTRL_NAME,
-                     APP_MESSAGE_WIFI_CONN, NULL, NULL);
+        int rc = sys->send_to(STOCK_APP_NAME, CTRL_NAME,
+                              APP_MESSAGE_WIFI_CONN, NULL, NULL);
+        if (0 != rc)
+        {
+            stockmarket_refresh_scheduler_finish(&run_data->refresh_scheduler,
+                                                now,
+                                                cfg_data.updataInterval);
+        }
     }
 }
 
@@ -754,6 +768,9 @@ static void stockmarket_message_handle(const char *from, const char *to,
         Serial.print(GET_SYS_MILLIS());
         Serial.println("[SYS] stockmarket_event_notification");
         update_stock_data();
+        stockmarket_refresh_scheduler_finish(&run_data->refresh_scheduler,
+                                            GET_SYS_MILLIS(),
+                                            cfg_data.updataInterval);
         display_stockmarket(run_data->stockdata, LV_SCR_LOAD_ANIM_NONE);
     }
     break;
@@ -806,7 +823,11 @@ static void stockmarket_message_handle(const char *from, const char *to,
         }
         else if (!strcmp(param_key, "updataInterval"))
         {
-            cfg_data.updataInterval = atol(param_val);
+            unsigned long interval = 0;
+            if (stockmarket_parse_interval(param_val, &interval))
+            {
+                cfg_data.updataInterval = interval;
+            }
         }
         else if (!strcmp(param_key, "color_rule"))
         {
