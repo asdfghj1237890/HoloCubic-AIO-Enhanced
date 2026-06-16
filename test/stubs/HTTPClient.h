@@ -32,6 +32,7 @@ public:
     int POST(const String &) { return -1; }
     int POST(const uint8_t *, size_t) { return -1; }
     void end() {}
+    void setConnectTimeout(uint32_t) {}
     void setTimeout(uint32_t) {}
     void setReuse(bool) {}
     void setUserAgent(const String &) {}
