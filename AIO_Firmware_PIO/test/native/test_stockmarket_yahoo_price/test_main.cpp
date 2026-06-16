@@ -147,6 +147,16 @@ void test_exchange_datetime_handles_positive_gmtoffset()
     TEST_ASSERT_EQUAL_STRING("16:52", out);
 }
 
+void test_display_timestamp_prefers_refresh_time_over_quote_time()
+{
+    TEST_ASSERT_EQUAL_INT32(7200, stockmarket_yahoo_display_timestamp(7200, 3599));
+}
+
+void test_display_timestamp_falls_back_to_quote_time_without_refresh_time()
+{
+    TEST_ASSERT_EQUAL_INT32(3599, stockmarket_yahoo_display_timestamp(0, 3599));
+}
+
 int main(int argc, char **argv)
 {
     UNITY_BEGIN();
@@ -159,5 +169,7 @@ int main(int argc, char **argv)
     RUN_TEST(test_closed_market_falls_back_to_regular_price_when_latest_is_not_postmarket);
     RUN_TEST(test_exchange_datetime_uses_gmtoffset_and_24_hour_clock);
     RUN_TEST(test_exchange_datetime_handles_positive_gmtoffset);
+    RUN_TEST(test_display_timestamp_prefers_refresh_time_over_quote_time);
+    RUN_TEST(test_display_timestamp_falls_back_to_quote_time_without_refresh_time);
     return UNITY_END();
 }

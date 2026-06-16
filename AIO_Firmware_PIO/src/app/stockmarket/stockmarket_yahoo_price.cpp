@@ -154,3 +154,9 @@ bool stockmarket_yahoo_format_exchange_datetime(char *out,
 
     return strftime(out, out_len, "%H:%M", &timeinfo) > 0;
 }
+
+long stockmarket_yahoo_display_timestamp(long refresh_epoch,
+                                         long fallback_quote_epoch)
+{
+    return refresh_epoch > 0 ? refresh_epoch : fallback_quote_epoch;
+}

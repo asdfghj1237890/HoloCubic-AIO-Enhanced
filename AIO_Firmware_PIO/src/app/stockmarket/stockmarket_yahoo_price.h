@@ -50,6 +50,9 @@ bool stockmarket_yahoo_format_exchange_datetime(char *out,
                                                 long epoch,
                                                 long gmtoffset);
 
+long stockmarket_yahoo_display_timestamp(long refresh_epoch,
+                                         long fallback_quote_epoch);
+
 #ifdef __cplusplus
 }
 #endif

@@ -28,7 +28,9 @@ int http_fetch_string(const char *url, String &out, uint32_t timeout_ms,
     }
 
     HTTPClient http;
+    http.setConnectTimeout(timeout_ms);
     http.setTimeout(timeout_ms);
+    http.setReuse(false);
     if (!http.begin(url)) {
         return -1;
     }

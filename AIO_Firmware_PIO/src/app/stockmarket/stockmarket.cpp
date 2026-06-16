@@ -239,12 +239,15 @@ static MyHttpResult http_request(const String& symbol, const String& market)
     MyHttpResult result;
     String url;
     String stockSymbol = buildStockSymbol(symbol, market);
+    unsigned long started = GET_SYS_MILLIS();
 
     if (market == "CN")
     {
         // Chinese market: Sina Finance API. The `referer` header is
         // load-bearing — Sina returns 403 / empty body without it.
         url = "http://hq.sinajs.cn/list=" + stockSymbol;
+        Serial.printf("[StockHTTP] quote start market=%s symbol=%s\n",
+                      market.c_str(), stockSymbol.c_str());
         result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 2000,
                                             "referer", "https://finance.sina.com.cn");
     }
@@ -255,10 +258,16 @@ static MyHttpResult http_request(const String& symbol, const String& market)
         // that gets a normal JSON body.
         url = "https://query1.finance.yahoo.com/v8/finance/chart/" + stockSymbol +
               "?interval=15m&range=1d&includePrePost=true";
+        Serial.printf("[StockHTTP] quote start market=%s symbol=%s\n",
+                      market.c_str(), stockSymbol.c_str());
         result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 4000,
                                             "User-Agent", "Mozilla/5.0");
     }
 
+    Serial.printf("[StockHTTP] quote done code=%d ms=%lu bytes=%u\n",
+                  result.httpCode,
+                  GET_SYS_MILLIS() - started,
+                  (unsigned int)result.httpResponse.length());
     return result;
 }
 
@@ -629,7 +638,13 @@ static void update_stock_data()
             // not crashy — and the next update_stock_data tick retries.
             String ts_payload;
             bool stock_time_updated = false;
+            unsigned long time_started = GET_SYS_MILLIS();
+            Serial.println("[StockHTTP] time start");
             int ts_code = http_fetch_string(STOCK_TIME_API, ts_payload, 1500);
+            Serial.printf("[StockHTTP] time done code=%d ms=%lu bytes=%u\n",
+                          ts_code,
+                          GET_SYS_MILLIS() - time_started,
+                          (unsigned int)ts_payload.length());
             if (ts_code == HTTP_CODE_OK)
             {
                 int t_idx = ts_payload.indexOf("\"t\":\"");
@@ -660,14 +675,18 @@ static void update_stock_data()
                         ? run_data->yahoo_meta.regular_market_time
                         : run_data->yahoo_meta.latest_timestamp;
 
-                if (stock_time_updated && run_data->yahoo_meta_valid)
+                if (run_data->yahoo_meta_valid)
                 {
                     StockmarketYahooSelection selection =
                         stockmarket_yahoo_select_price(&run_data->yahoo_meta,
-                                                       run_data->stock_utc_epoch);
+                                                       stock_time_updated
+                                                           ? run_data->stock_utc_epoch
+                                                           : 0L);
                     run_data->stockdata.NowQuo = selection.price;
-                    run_data->market_open = selection.market_active;
-                    run_data->yahoo_session = selection.session;
+                    run_data->market_open = stock_time_updated && selection.market_active;
+                    run_data->yahoo_session = stock_time_updated
+                                                  ? selection.session
+                                                  : STOCKMARKET_YAHOO_SESSION_CLOSED;
                     yahoo_quote_timestamp = selection.quote_timestamp;
                 }
                 else
@@ -676,10 +695,13 @@ static void update_stock_data()
                     run_data->yahoo_session = STOCKMARKET_YAHOO_SESSION_CLOSED;
                 }
 
+                long yahoo_display_timestamp = stockmarket_yahoo_display_timestamp(
+                    stock_time_updated ? run_data->stock_utc_epoch : 0L,
+                    yahoo_quote_timestamp);
                 if (!stockmarket_yahoo_format_exchange_datetime(
                         run_data->stockdata.datetime_str,
                         sizeof(run_data->stockdata.datetime_str),
-                        yahoo_quote_timestamp,
+                        yahoo_display_timestamp,
                         run_data->yahoo_meta.gmtoffset))
                 {
                     run_data->stockdata.datetime_str[0] = '\0';
@@ -688,24 +710,20 @@ static void update_stock_data()
 
             if (cfg_data.market_type == "CN")
             {
-                bool quote_time_set = stockmarket_format_sina_quote_datetime(
-                    run_data->stockdata.datetime_str,
-                    sizeof(run_data->stockdata.datetime_str),
-                    run_data->sina_quote_date,
-                    run_data->sina_quote_time);
-                if (!quote_time_set)
+                if (stock_time_updated)
                 {
-                    if (stock_time_updated)
-                    {
-                        String datetime = rtc.getTime(String("%H:%M"));
-                        snprintf(run_data->stockdata.datetime_str,
-                                 sizeof(run_data->stockdata.datetime_str),
-                                 "%s", datetime.c_str());
-                    }
-                    else
-                    {
-                        run_data->stockdata.datetime_str[0] = '\0';
-                    }
+                    String datetime = rtc.getTime(String("%H:%M"));
+                    snprintf(run_data->stockdata.datetime_str,
+                             sizeof(run_data->stockdata.datetime_str),
+                             "%s", datetime.c_str());
+                }
+                else if (!stockmarket_format_sina_quote_datetime(
+                             run_data->stockdata.datetime_str,
+                             sizeof(run_data->stockdata.datetime_str),
+                             run_data->sina_quote_date,
+                             run_data->sina_quote_time))
+                {
+                    run_data->stockdata.datetime_str[0] = '\0';
                 }
             }
 
@@ -729,18 +747,20 @@ static void update_stock_data()
 
             if (cfg_data.market_type == "CN")
             {
-                Serial.printf("[Stock] %s: %.2f (%.2f%%)\n",
-                    run_data->stockdata.symbol,
-                    run_data->stockdata.NowQuo,
-                    run_data->stockdata.ChgPercent);
-            }
-            else
-            {
-                Serial.printf("[Stock] %s: %.2f (%.2f%%) [%s]\n",
+                Serial.printf("[Stock] %s: %.2f (%.2f%%) time=%s\n",
                     run_data->stockdata.symbol,
                     run_data->stockdata.NowQuo,
                     run_data->stockdata.ChgPercent,
-                    stockmarket_yahoo_session_to_string(run_data->yahoo_session));
+                    run_data->stockdata.datetime_str);
+            }
+            else
+            {
+                Serial.printf("[Stock] %s: %.2f (%.2f%%) [%s] time=%s\n",
+                    run_data->stockdata.symbol,
+                    run_data->stockdata.NowQuo,
+                    run_data->stockdata.ChgPercent,
+                    stockmarket_yahoo_session_to_string(run_data->yahoo_session),
+                    run_data->stockdata.datetime_str);
             }
             stockmarket_apply_led();
         }
