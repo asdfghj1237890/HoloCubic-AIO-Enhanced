@@ -21,6 +21,7 @@
 #include <SPIFFS.h>
 #include <esp32-hal.h>
 #include <esp32-hal-timer.h>
+#include "esp_task_wdt.h"
 
 bool isCheckAction = false;
 
@@ -216,6 +217,22 @@ void setup()
                                 200 / portTICK_PERIOD_MS,
                                 pdTRUE, (void *)0, actionCheckHandle);
     xTimerStart(xTimerAction, 0);
+
+    // Whole-device freeze guard. The main loop (LVGL screen.routine + IMU read
+    // + the active app's process/message_handle, including networked refreshes)
+    // all runs on this loop task; if any of it blocks for good — a wedged I2C/IMU
+    // read, a stalled network call, etc. — the screen freezes until a manual
+    // power-cycle. The Task WDT is on by default but at 5s, far too short for a
+    // normal ~5-15s stock refresh, so widen it to 60s, then subscribe this loop
+    // task. The Arduino core feeds it once per loop() iteration (cores/.../main.cpp
+    // loopTask), so a >60s main-thread stall trips the panic handler -> task
+    // backtrace + reboot, auto-recovering instead of staying frozen overnight.
+    esp_task_wdt_config_t twdt_cfg = {};
+    twdt_cfg.timeout_ms = 60000;
+    twdt_cfg.idle_core_mask = (1 << 0); // keep the default core-0 idle-task check
+    twdt_cfg.trigger_panic = true;      // reboot (+ backtrace) on a main-loop hang
+    esp_task_wdt_reconfigure(&twdt_cfg);
+    enableLoopWDT();
 }
 
 void loop()

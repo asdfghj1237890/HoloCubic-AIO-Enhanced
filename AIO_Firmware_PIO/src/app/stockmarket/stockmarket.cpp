@@ -9,6 +9,8 @@
 #include "../../http_util.h"
 #include "ArduinoJson.h"
 #include "ESP32Time.h"
+#include "esp_timer.h"
+#include "esp_system.h"
 
 // Taobao timestamp endpoint — same one weather/anniversary use to bootstrap
 // the RTC without needing a configTime/SNTP setup. The +28800000 ms shifts
@@ -17,6 +19,13 @@
 #define STOCK_TIME_API "https://acs.m.taobao.com/gw/mtop.common.getTimestamp/"
 #define STOCK_TZ_OFFSET_MS (28800000LL)
 #define STOCK_REFRESH_EVENT_TIMEOUT_MS (30000UL)
+// Hard guard: a synchronous HTTPS GET in update_stock_data() can stall on the
+// main thread (TLS/connect hang past the ineffective socket timeout) and freeze
+// the whole firmware (LVGL + IMU + display) until a manual power-cycle. A normal
+// refresh's two GETs finish in ~5-9s; if update_stock_data() runs past this, a
+// high-priority esp_timer (fires even while the loop task is blocked) reboots so
+// the price resumes on its own instead of staying frozen.
+#define STOCK_REFRESH_GUARD_TIMEOUT_US (25ULL * 1000ULL * 1000ULL)
 
 // STOCKmarket configuration for persistence
 #define B_CONFIG_PATH "/stockmarket.cfg"
@@ -90,6 +99,44 @@ struct MyHttpResult
 static B_Config cfg_data;
 static StockmarketAppRunData *run_data = NULL;
 static ESP32Time rtc;
+static esp_timer_handle_t stock_refresh_guard = NULL;
+
+// Reboot if update_stock_data() blocks past STOCK_REFRESH_GUARD_TIMEOUT_US —
+// almost always a stalled synchronous HTTPS GET on the main thread. Runs in the
+// esp_timer task (high priority), so it fires even though the loop task is stuck.
+static void stock_refresh_guard_cb(void *arg)
+{
+    Serial.println(F("[Stock][WDT] refresh guard fired (main thread stalled in update_stock_data) — restarting"));
+    Serial.flush();
+    esp_restart();
+}
+
+static void stock_refresh_guard_arm()
+{
+    if (NULL == stock_refresh_guard)
+    {
+        esp_timer_create_args_t args = {};
+        args.callback = &stock_refresh_guard_cb;
+        args.arg = NULL;
+        args.dispatch_method = ESP_TIMER_TASK;
+        args.name = "stock_wdt";
+        if (ESP_OK != esp_timer_create(&args, &stock_refresh_guard))
+        {
+            stock_refresh_guard = NULL;
+            return;
+        }
+    }
+    esp_timer_stop(stock_refresh_guard); // no-op if idle; guarantees a fresh window
+    esp_timer_start_once(stock_refresh_guard, STOCK_REFRESH_GUARD_TIMEOUT_US);
+}
+
+static void stock_refresh_guard_disarm()
+{
+    if (NULL != stock_refresh_guard)
+    {
+        esp_timer_stop(stock_refresh_guard);
+    }
+}
 
 static void stockmarket_reset_yahoo_meta()
 {
@@ -248,6 +295,7 @@ static MyHttpResult http_request(const String& symbol, const String& market)
         url = "http://hq.sinajs.cn/list=" + stockSymbol;
         Serial.printf("[StockHTTP] quote start market=%s symbol=%s\n",
                       market.c_str(), stockSymbol.c_str());
+        Serial.flush(); // marker on the wire before a possibly-stalling GET
         result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 2000,
                                             "referer", "https://finance.sina.com.cn");
     }
@@ -260,6 +308,7 @@ static MyHttpResult http_request(const String& symbol, const String& market)
               "?interval=15m&range=1d&includePrePost=true";
         Serial.printf("[StockHTTP] quote start market=%s symbol=%s\n",
                       market.c_str(), stockSymbol.c_str());
+        Serial.flush(); // marker on the wire before a possibly-stalling GET
         result.httpCode = http_fetch_string(url.c_str(), result.httpResponse, 4000,
                                             "User-Agent", "Mozilla/5.0");
     }
@@ -588,7 +637,8 @@ static bool parse_yahoo_data(const String& payload)
 
 static void update_stock_data()
 {
-    Serial.printf("[MEM] Free heap: %d bytes\n", ESP.getFreeHeap());
+    Serial.printf("[MEM] Free heap: %d bytes, max block: %d bytes\n",
+                  ESP.getFreeHeap(), ESP.getMaxAllocHeap());
     if (NULL != run_data)
     {
         run_data->market_open = false;
@@ -640,6 +690,7 @@ static void update_stock_data()
             bool stock_time_updated = false;
             unsigned long time_started = GET_SYS_MILLIS();
             Serial.println("[StockHTTP] time start");
+            Serial.flush(); // marker on the wire before a possibly-stalling GET
             int ts_code = http_fetch_string(STOCK_TIME_API, ts_payload, 1500);
             Serial.printf("[StockHTTP] time done code=%d ms=%lu bytes=%u\n",
                           ts_code,
@@ -787,7 +838,9 @@ static void stockmarket_message_handle(const char *from, const char *to,
     {
         Serial.print(GET_SYS_MILLIS());
         Serial.println("[SYS] stockmarket_event_notification");
+        stock_refresh_guard_arm();
         update_stock_data();
+        stock_refresh_guard_disarm();
         stockmarket_refresh_scheduler_finish(&run_data->refresh_scheduler,
                                             GET_SYS_MILLIS(),
                                             cfg_data.updataInterval);
