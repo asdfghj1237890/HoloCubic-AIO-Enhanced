@@ -185,6 +185,7 @@ public:
     int available() { return 0; }
     int read() { return -1; }
     int read(uint8_t *, size_t) { return 0; }
+    void flush() {}
 };
 
 extern HardwareSerial Serial;
@@ -197,6 +198,7 @@ public:
     void restart() {}
     void deepSleep(uint64_t) {}
     uint32_t getFreeHeap() { return 0; }
+    uint32_t getMaxAllocHeap() { return 0; }
     uint32_t getMinFreeHeap() { return 0; }
     // Used by web_api /api/stats. Stub returns sensible values for the
     // host harness; firmware uses real ESP-IDF values.
