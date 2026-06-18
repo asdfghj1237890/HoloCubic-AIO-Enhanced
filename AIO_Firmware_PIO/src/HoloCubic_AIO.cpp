@@ -231,8 +231,18 @@ void setup()
     twdt_cfg.timeout_ms = 60000;
     twdt_cfg.idle_core_mask = (1 << 0); // keep the default core-0 idle-task check
     twdt_cfg.trigger_panic = true;      // reboot (+ backtrace) on a main-loop hang
-    esp_task_wdt_reconfigure(&twdt_cfg);
-    enableLoopWDT();
+    // Only subscribe the loop task once the 60s timeout is actually in effect.
+    // If reconfigure ever fails the TWDT stays at its 5s default, and
+    // enableLoopWDT() would then reboot on every ~10s stock refresh — so fail
+    // closed (no loop guard) rather than brick-loop the device.
+    if (ESP_OK == esp_task_wdt_reconfigure(&twdt_cfg))
+    {
+        enableLoopWDT();
+    }
+    else
+    {
+        Serial.println(F("[WDT] reconfigure failed; loop watchdog not enabled"));
+    }
 }
 
 void loop()
