@@ -171,7 +171,9 @@ The device uses an MPU6050 gyroscope/accelerometer. For proper initialization:
 - **Access**: 
   - Device creates AP `HoloCubic_AIO` (no password) at `192.168.4.2`
   - Or use domain: http://holocubic
+  - Also reachable on your home LAN at the STA IP shown on the device screen
   - Recommended: Use IP address for better compatibility
+- **Login**: settings pages use HTTP Basic auth — user `admin`, password is the 6-character code shown on the device's WebServer screen (unique per device)
 - **Features**:
   - System parameter configuration
   - Weather APP settings
@@ -295,6 +297,26 @@ The device uses an MPU6050 gyroscope/accelerometer. For proper initialization:
 </details>
 
 <details>
+<summary><b>🍅 Tomato Timer (番茄钟)</b></summary>
+
+A pomodoro-style focus timer on the shared stock-instrument visual style, now enabled in the default build.
+
+- **Requirements**: None
+- **Modes**: FOCUS 25 min (default) · FOCUS 45 min · BREAK 15 min · BREAK 5 min
+- **Controls**:
+
+  | Gesture | Action |
+  |---------|--------|
+  | Quick left/right tilts (repeated) | Switch timer mode |
+  | Hold tilt forward | +1 minute per ~0.7 s held |
+  | Tilt backward | Exit to launcher |
+
+- **Time-up**: the RGB LED flashes rapidly as a reminder until you switch modes or exit; state changes (enter, +1 min, mode switch, time-up) are also printed to the serial log for debugging
+- **Developer**: Fjl
+
+</details>
+
+<details>
 <summary><b>📺 BiliBili Fans APP</b></summary>
 
 - **Requirements**:
@@ -369,16 +391,27 @@ The device uses an MPU6050 gyroscope/accelerometer. For proper initialization:
 <details>
 <summary><b>💻 PC Resource Monitor</b></summary>
 
+Shows live PC stats on the cube — CPU / GPU load, temperature, frequency and power, RAM usage, and network up/down — on the shared stock-instrument visual style.
+
 - **Requirements**:
   - WiFi configured
-  - PC and HoloCubic on same network
-  - [AIDA64](https://www.aida64.com/downloads) installed on PC
-- **Setup**:
-  1. Import config file `aida64_setting.rslcd` (in `AIO_Firmware_PIO\src\app\pc_resource\`)
-  2. Set PC service IP in WebServer
-- **Developer**: Jumping99
+  - PC and HoloCubic on the same network
+  - A data source on the PC serving stats over HTTP (see below)
+- **How it works**: once per update interval the cube fetches `http://<PC-IP>:80/sse` and expects **one plain-text line** made of `<name><value><unit>` pairs:
 
-> See group documentation for detailed setup steps
+  ```
+  CPU usage42%CPU temp61.5CCPU freq4242MHzCPU power88.5WGPU usage37%GPU temp58.0CGPU power111.5WRAM usage73%RAM use23456MBNET upload speed123.4KB/sNET download speed987.6KB/s
+  ```
+
+  Recognized names/units: `CPU usage`(%), `CPU temp`(C), `CPU freq`(MHz), `CPU power`(W), `GPU usage`(%), `GPU temp`(C), `GPU power`(W), `RAM usage`(%), `RAM use`(MB), `NET upload speed`(KB/s), `NET download speed`(KB/s). Missing entries display as 0.
+- **Setup**:
+  1. Start a data source on your PC — either:
+     - **AIDA64**: install [AIDA64](https://www.aida64.com/downloads), enable its *RemoteSensor* LCD on port 80, and import the config file `aida64_setting.rslcd` (in `AIO_Firmware_PIO\src\app\pc_resource\`), or
+     - **anything else** that serves the line format above at `/sse` on port 80
+  2. In the device's **WebServer** app, open the *PC Resource* settings page (log in per the Web Server section) and set **PC IP address** to your PC's LAN IP; the update interval defaults to 1000 ms
+  3. Enter the **PC Resource** app — values refresh every second
+- **Troubleshooting**: the device serial log shows the whole exchange — `host Conected!` then `Content: <received line>` per poll; `Connect host failed!` means a wrong PC IP, nothing listening on port 80, or a PC firewall blocking the cube
+- **Developer**: Jumping99
 
 </details>
 
