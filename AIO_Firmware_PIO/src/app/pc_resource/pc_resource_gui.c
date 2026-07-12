@@ -36,9 +36,10 @@ static lv_obj_t *gpu_power_label = NULL;
 static lv_style_t default_style;
 static lv_style_t header_style;     // ch_font20 gold
 static lv_style_t small_gray_style; // montserrat_20 gray labels
+static lv_style_t freq_style;       // montserrat_14 gray (header-right MHz; mont_20 collides with the ch_font20 header)
 static lv_style_t value_style;      // ibmplex_bold_30 white digits
 static lv_style_t meta_gold_style;  // montserrat_20 gold (temperatures)
-static lv_style_t footer_style;     // montserrat_24 white (recolor markers inline)
+static lv_style_t footer_style;     // montserrat_20 white (mont_24 overflows 240px with icon + 6-char values)
 
 static const char *row_names[3] = {"CPU", "GPU", "RAM"};
 static const lv_coord_t row_y[3] = {46, 86, 126};
@@ -61,6 +62,11 @@ void display_pc_resource_gui_init(void)
     lv_style_set_text_color(&small_gray_style, lv_color_hex(PCR_COLOR_GRAY_LABEL));
     lv_style_set_text_font(&small_gray_style, &lv_font_montserrat_20);
 
+    lv_style_init(&freq_style);
+    lv_style_set_text_opa(&freq_style, LV_OPA_COVER);
+    lv_style_set_text_color(&freq_style, lv_color_hex(PCR_COLOR_GRAY_LABEL));
+    lv_style_set_text_font(&freq_style, &lv_font_montserrat_14);
+
     lv_style_init(&value_style);
     lv_style_set_text_opa(&value_style, LV_OPA_COVER);
     lv_style_set_text_color(&value_style, lv_color_hex(PCR_COLOR_WHITE));
@@ -74,7 +80,7 @@ void display_pc_resource_gui_init(void)
     lv_style_init(&footer_style);
     lv_style_set_text_opa(&footer_style, LV_OPA_COVER);
     lv_style_set_text_color(&footer_style, lv_color_hex(PCR_COLOR_WHITE));
-    lv_style_set_text_font(&footer_style, &lv_font_montserrat_24);
+    lv_style_set_text_font(&footer_style, &lv_font_montserrat_20);
 }
 
 static lv_obj_t *pcr_make_hline(lv_coord_t y, uint32_t color_hex)
@@ -115,9 +121,9 @@ void display_pc_resource_init(void)
     lv_obj_align(header_label, LV_ALIGN_TOP_LEFT, 12, 8);
 
     freq_label = lv_label_create(scr);
-    lv_obj_add_style(freq_label, &small_gray_style, LV_STATE_DEFAULT);
+    lv_obj_add_style(freq_label, &freq_style, LV_STATE_DEFAULT);
     lv_label_set_text(freq_label, "0MHz");
-    lv_obj_align(freq_label, LV_ALIGN_TOP_RIGHT, -12, 10);
+    lv_obj_align(freq_label, LV_ALIGN_TOP_RIGHT, -12, 12);
 
     divider_top = pcr_make_hline(40, PCR_COLOR_GOLD_DIM);
 

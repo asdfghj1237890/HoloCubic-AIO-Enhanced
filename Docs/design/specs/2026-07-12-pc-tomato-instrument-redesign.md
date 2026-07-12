@@ -43,7 +43,7 @@ Both new GUI files declare these as local `#define`s with a comment `// mirrors 
 
 Exception: colors appearing inside LVGL recolor markup strings (e.g. `"#ffd000 C#"`, `"#ff2020 ↓#"`) are literal hex text — LVGL's recolor syntax requires inline strings — so those occurrences are not expected to be macros.
 
-Shared geometry (identical to stock): header at (12,8) in `ch_font20`; full-width 2px top divider at y=40; full-width 2px bottom divider at y=166; footer rows at y=172 and y=200 in `montserrat_24`; vertical white rail 2×24 at x=128 on footer rows.
+Shared geometry (identical to stock): header at (12,8) in `ch_font20`; full-width 2px top divider at y=40; full-width 2px bottom divider at y=166; footer rows at y=172 and y=200 (`montserrat_24` on stock and tomato; `montserrat_20` on pc_resource, whose cells carry an icon plus 6-character values that clip past 240px at 24); vertical white rail 2×24 at x=128 on footer rows.
 
 ## 4. pc_resource screen
 
@@ -52,7 +52,7 @@ All data fields of `struct PC_Resource` remain displayed. Element map (positions
 | Element | Pos | Font | Color | Format / source |
 |---|---|---|---|---|
 | Header | (12,8) | ch_font20 | GOLD | `"PC MONITOR"` |
-| CPU freq | TR(-12,10) | montserrat_20 | GRAY_LABEL | `"%dMHz"`, `cpu_freq` |
+| CPU freq | TR(-12,12) | montserrat_14 | GRAY_LABEL | `"%dMHz"`, `cpu_freq` (mont_20 collides with the ch_font20 header at real glyph widths) |
 | Top divider | y=40 | — | GOLD_DIM | lv_line 240w 2px |
 | Row name ×3 | (12, 52/92/132) | montserrat_20 | GRAY_LABEL | `"CPU"` / `"GPU"` / `"RAM"` |
 | Row value ×3 | (72, 46/86/126) | ibmplex_bold_30 | WHITE | `"%d"`, `cpu_usage`/`gpu_usage`/`ram_usage` (0–100) |
@@ -60,12 +60,12 @@ All data fields of `struct PC_Resource` remain displayed. Element map (positions
 | Row meta ×3 | TR(-12, 52/92/132) | montserrat_20 | GOLD / GOLD / GRAY_LABEL | `"%d.%d°C"` (`cpu_temp`,`gpu_temp`, value×10) ; `"%dMB"` (`ram_use`) |
 | Usage bar ×3 | (12, 78/118/158) | lv_bar 216×4 | TRACK / GREEN | range 0–100, value = usage |
 | Bottom divider | y=166 | — | GRAY_DIM | lv_line 240w 2px |
-| Net up | (12,172) | montserrat_24 | recolor | `"#00ff44 " LV_SYMBOL_UPLOAD "# %s"`, white value |
+| Net up | (12,172) | montserrat_20 | recolor | `"#00ff44 " LV_SYMBOL_UPLOAD "# %s"`, white value |
 | Rail 1 | (128,172) | — | WHITE | lv_line 2×24 |
-| Net down | (140,172) | montserrat_24 | recolor | `"#ff2020 " LV_SYMBOL_DOWNLOAD "# %s"`, white value |
-| CPU power | (12,200) | montserrat_24 | recolor | `"#ffd000 C# %d.%dW"`, `cpu_power` ×10 |
+| Net down | (140,172) | montserrat_20 | recolor | `"#ff2020 " LV_SYMBOL_DOWNLOAD "# %s"`, white value |
+| CPU power | (12,200) | montserrat_20 | recolor | `"#ffd000 C# %d.%dW"`, `cpu_power` ×10 |
 | Rail 2 | (128,200) | — | WHITE | lv_line 2×24 |
-| GPU power | (140,200) | montserrat_24 | recolor | `"#ffd000 G# %d.%dW"`, `gpu_power` ×10 |
+| GPU power | (140,200) | montserrat_20 | recolor | `"#ffd000 G# %d.%dW"`, `gpu_power` ×10 |
 
 Net speed formatting (fields are KB/s ×10, fixed layout forbids the old scrolling labels): `kbps = val/10, frac = val%10`; if `kbps < 1000` → `"%d.%dK"`; else → `"%d.%dM"` with `mb = kbps/1000, mdec = (kbps%1000)/100`.
 
@@ -149,3 +149,4 @@ Known glyph gaps that shaped this design: `ch_font20_tc` lacks 專/注/時/到 (
 - Colon rendered as two 8×8 `lv_obj` squares rather than regenerating a 64px font with `:`.
 - Spec lives under `Docs/design/specs/` (repo uses capital-D `Docs/`; the superpowers default `docs/superpowers/specs/` was overridden to match repo convention).
 - Temperature/gold pairing: temps use GOLD rather than introducing a new amber token (fewer family colors).
+- Golden-eyeball iteration (2026-07-12): the first CI regeneration showed the pc_resource header MHz label colliding with "PC MONITOR" and montserrat_24 footer values clipping at the right edge at real glyph widths — freq label downsized to montserrat_14 (y=12), pc_resource footer rows to montserrat_20. Tomato passed eyeball unchanged.
