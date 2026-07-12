@@ -109,7 +109,7 @@
 #endif
 
 // 番茄时钟2.0 APP
-#define APP_TOMATO_USE 0
+#define APP_TOMATO_USE 1
 #if APP_TOMATO_USE
 #include "app/tomato/tomato.h"
 #endif
