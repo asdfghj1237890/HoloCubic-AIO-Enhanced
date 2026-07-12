@@ -360,7 +360,7 @@ static void tomato_process(AppController *sys, const ImuAction *act_info)
         run_data->t.minute = run_data->time_ms / 60 / 1000;
     }
     // Serial.print(run_data->rgb_fast);
-    display_tomato(run_data->t, run_data->time_mode);
+    display_tomato(run_data->t, run_data->t_start, run_data->time_mode);
     delay(100);
 }
 
