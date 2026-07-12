@@ -112,7 +112,7 @@ States to visually verify: focus counting, break counting, last-60s red digits, 
 ## 7. Font inventory (verified 2026-07-12)
 
 **Reused (already linked into firmware):**
-- `ch_font20` (`src/resource/font/ch_font20_tc.c`, NotoSansTC 20px, ASCII + 1438 CJK) — headers.
+- `ch_font20` (`src/resource/font/ch_font20.c` — note it is declared `lv_font_t`, not `const`) — headers (ASCII subset used here). A separate NotoSansTC variant exists as symbol `ch_font20_tc` in `ch_font20_tc.c`; the glyph-gap analysis below was done against that TC variant.
 - `lv_font_ibmplex_bold_30` (stockmarket, glyphs `0-9.`) — PC row values.
 - `lv_font_ibmplex_bold_64` (stockmarket, glyphs `0-9.`) — tomato digits. No colon → rectangle colon dots.
 - Built-in `lv_font_montserrat_14/20/24` (lv_conf.h:56-61 enables 14/20/24/30/40/48; includes ASCII, `°` U+00B0, and LVGL symbols U+F093/U+F019).

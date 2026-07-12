@@ -10,6 +10,8 @@
 
 **Branch:** `pc-tomato-instrument-redesign` (already exists; spec committed as `14f3571`).
 
+> **Historical note (post-execution):** the code blocks below are the pre-amendment versions. The shipped code differs where spec §9's golden-eyeball amendments applied (freq label montserrat_14 at y=12, pc_resource footer rows montserrat_20, tomato release-first screen rebuild, named BG tokens). The spec is the source of truth; this plan is a point-in-time execution record.
+
 **Read first:** the spec (§3 tokens, §4/§5 element maps are the layout source of truth), `stockmarket_gui.c` (the idioms every widget here copies), CLAUDE.md firmware conventions (no `strcpy`/`sprintf`, no `delay()` in GUI paths).
 
 **Pre-existing dirty files (NOT ours — never `git add` them):** `AGENTS.md`, `CLAUDE.md`, `AIO_Tool/Cargo.lock`, `AIO_Tool/studio/Cargo.toml`. Always stage by explicit path.
