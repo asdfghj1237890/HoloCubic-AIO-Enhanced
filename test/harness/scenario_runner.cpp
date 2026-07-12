@@ -76,7 +76,23 @@ void tick_for(int ms_total, AppController *controller, bool drive_app) {
     }
 }
 
+// Count of "Style might be already inited" warnings seen since the last
+// run_scenario() reset — see scenario_lv_log_watch_install() in the header.
+int g_style_reinit_warnings = 0;
+
+void lv_log_watch_cb(lv_log_level_t level, const char *buf) {
+    (void)level;
+    fputs(buf, stdout);
+    if (strstr(buf, "already inited") != nullptr) {
+        ++g_style_reinit_warnings;
+    }
+}
+
 } // namespace
+
+void scenario_lv_log_watch_install(void) {
+    lv_log_register_print_cb(lv_log_watch_cb);
+}
 
 // Derive a scenario "name" from the file path: drop directory components and
 // the .scn extension. Example: ".../anniversary/smoke.scn" -> "smoke", and
@@ -261,6 +277,10 @@ int run_scenario(const char *path,
         fprintf(stderr, "[scenario] app '%s' not registered in this build\n", app_name.c_str());
         return 4;
     }
+    // Fresh style-leak window for this scenario. Boot-time GUI init ran
+    // before run_scenario and inits each style for the first time; only
+    // double-inits happening during the scenario itself should count.
+    g_style_reinit_warnings = 0;
     // Wipe the FlashFS fixture dir so each scenario boots with the
     // default-init code paths unless it explicitly seeds otherwise.
     // Without this, a previous scenario's writeFile (e.g. a default
@@ -398,6 +418,13 @@ int run_scenario(const char *path,
                 printf("[scenario] step %zu (line %d): assert_no_crash — ok\n", i + 1, s.line_no);
                 break;
         }
+    }
+
+    if (g_style_reinit_warnings > 0) {
+        printf("[scenario] style double-init: %d LVGL 'Potential memory leak' "
+               "warning(s) — a static lv_style_t was re-initialised (missing "
+               "once-guard in a *_gui_init?)\n", g_style_reinit_warnings);
+        failures += g_style_reinit_warnings;
     }
 
     printf("[scenario] '%s' completed with %d failure(s)\n", path, failures);

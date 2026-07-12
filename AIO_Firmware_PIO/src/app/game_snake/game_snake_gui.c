@@ -54,8 +54,39 @@ void game_snake_gui_init(void)
     snake[0].y = foodY;
     snake[0].body = NULL;
 
-    lv_style_init(&default_style);
-    lv_style_set_bg_color(&default_style, lv_color_hex(0x000000));
+    // app_init re-runs this GUI init on every app entry; static styles must
+    // only be initialised once - lv_style_init() on an already-inited style
+    // leaks its property array (LVGL "Potential memory leak"). body_style
+    // and over_style are hoisted here from display_snake, which used to
+    // re-init them on every food-eat / game-over (same leak, in-session).
+    static bool style_inited = false;
+    if (!style_inited)
+    {
+        style_inited = true;
+
+        lv_style_init(&default_style);
+        lv_style_set_bg_color(&default_style, lv_color_hex(0x000000));
+
+        lv_style_init(&score_style);
+        lv_style_set_text_color(&score_style, lv_color_hex(0xffffff));
+        lv_style_set_text_font(&score_style, &lv_font_montserrat_24);
+
+        lv_style_init(&head_style);
+        lv_style_set_bg_color(&head_style, lv_color_hex(0x00ff00));
+        lv_style_set_border_color(&head_style, lv_color_hex(0xffffff));
+
+        lv_style_init(&food_style);
+        lv_style_set_bg_color(&food_style, lv_color_hex(0xff0000));
+        lv_style_set_border_color(&food_style, lv_color_hex(0xff0000));
+
+        lv_style_init(&body_style);
+        lv_style_set_bg_color(&body_style, lv_color_hex(0x00ff00));
+        lv_style_set_border_color(&body_style, lv_color_hex(0x00ff00));
+
+        lv_style_init(&over_style);
+        lv_style_set_text_color(&over_style, lv_color_hex(0xff0000));
+        lv_style_set_text_font(&over_style, &lv_font_montserrat_24);
+    }
 
     lv_obj_t *act_obj = lv_scr_act(); // 获取当前活动页
     if (act_obj == game_snake_gui)
@@ -82,27 +113,18 @@ void game_snake_gui_init(void)
     score_label = lv_label_create(game_snake_score);
     lv_label_set_text(score_label, "Score: 0");
     lv_obj_align(score_label, LV_ALIGN_CENTER, 0, 0);
-    lv_style_init(&score_style);
-    lv_style_set_text_color(&score_style, lv_color_hex(0xffffff));
-    lv_style_set_text_font(&score_style, &lv_font_montserrat_24);
     lv_obj_add_style(score_label, &score_style, LV_STATE_DEFAULT);
 
     // 创建贪吃蛇头部
     snake_head = lv_obj_create(game_snake_area);
     lv_obj_set_pos(snake_head, snake[0].x, snake[0].y);
     lv_obj_set_size(snake_head, 15, 15);
-    lv_style_init(&head_style);
-    lv_style_set_bg_color(&head_style, lv_color_hex(0x00ff00));
-    lv_style_set_border_color(&head_style, lv_color_hex(0xffffff));
     lv_obj_add_style(snake_head, &head_style, LV_STATE_DEFAULT);
 
     // 创建食物
     food = lv_obj_create(game_snake_area);
     lv_obj_set_pos(food, foodX, foodY);
     lv_obj_set_size(food, 15, 15);
-    lv_style_init(&food_style);
-    lv_style_set_bg_color(&food_style, lv_color_hex(0xff0000));
-    lv_style_set_border_color(&food_style, lv_color_hex(0xff0000));
     lv_obj_add_style(food, &food_style, LV_STATE_DEFAULT);
 
     // 屏幕重载
@@ -184,9 +206,6 @@ void display_snake(int gameStatus, lv_scr_load_anim_t anim_type)
         snake[snakeLength - 1].body = lv_obj_create(game_snake_area);
         lv_obj_set_pos(snake[snakeLength - 1].body, snake[snakeLength - 1].x, snake[snakeLength - 1].y);
         lv_obj_set_size(snake[snakeLength - 1].body, 10, 10);
-        lv_style_init(&body_style);
-        lv_style_set_bg_color(&body_style, lv_color_hex(0x00ff00));
-        lv_style_set_border_color(&body_style, lv_color_hex(0x00ff00));
         lv_obj_add_style(snake[snakeLength - 1].body, &body_style, LV_STATE_DEFAULT);
     }
 
@@ -210,9 +229,6 @@ void display_snake(int gameStatus, lv_scr_load_anim_t anim_type)
         game_over_label = lv_label_create(game_snake_area);
         lv_label_set_text(game_over_label, "Game Over!");
         lv_obj_align(game_over_label, LV_ALIGN_CENTER, 0, 0);
-        lv_style_init(&over_style);
-        lv_style_set_text_color(&over_style, lv_color_hex(0xff0000));
-        lv_style_set_text_font(&over_style, &lv_font_montserrat_24);
         lv_obj_add_style(game_over_label, &over_style, LV_STATE_DEFAULT);
     }
 }
@@ -239,13 +255,10 @@ void game_snake_gui_del(void)
         game_snake_gui = NULL;
     }
 
-    // 手动清除样式，防止内存泄漏
-    lv_style_reset(&food_style);
-    lv_style_reset(&body_style);
-    lv_style_reset(&head_style);
-    lv_style_reset(&score_style);
-    lv_style_reset(&over_style);
-    lv_style_reset(&default_style);
+    // Styles are static and inited once in game_snake_gui_init; they
+    // intentionally survive app exit (no lv_style_reset here - resetting
+    // styles that were never inited, e.g. body/over before the first
+    // food-eat/game-over, trips LV_USE_ASSERT_STYLE in the host tests).
 }
 
 // 生成食物的位置

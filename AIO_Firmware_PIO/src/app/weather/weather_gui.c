@@ -76,6 +76,16 @@ static const UIStrings ui_strings[2] = {
 
 void weather_gui_init(void)
 {
+    // app_init re-runs this GUI init on every app entry; static styles must
+    // only be initialised once - lv_style_init() on an already-inited style
+    // leaks its property array (LVGL "Potential memory leak").
+    static bool style_inited = false;
+    if (style_inited)
+    {
+        return;
+    }
+    style_inited = true;
+
     lv_style_init(&default_style);
     lv_style_set_bg_color(&default_style, lv_color_hex(0x000000));
 

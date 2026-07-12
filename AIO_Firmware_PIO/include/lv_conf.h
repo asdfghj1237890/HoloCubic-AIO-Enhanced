@@ -48,6 +48,14 @@
     #define LV_USE_LOG 1
     #define LV_LOG_PRINTF 1
     #define LV_USE_SNAPSHOT 1
+    // Host-test-only style checking: lv_style_init() on an already-inited
+    // style logs "Potential memory leak" (the scenario runner fails the run
+    // on it — see scenario_lv_log_watch_install), and LVGL asserts abort()
+    // instead of the default while(1) so a bad style surfaces as a caught
+    // SIGABRT + backtrace rather than a CI timeout. Never set on-device.
+    #define LV_USE_ASSERT_STYLE 1
+    #define LV_ASSERT_HANDLER_INCLUDE <stdlib.h>
+    #define LV_ASSERT_HANDLER abort();
 #else
     #define LV_USE_LOG 0
     #define LV_USE_SNAPSHOT 0

@@ -1,0 +1,23 @@
+# Re-entry regression (style-leak class): enter -> exit -> re-enter.
+# The second entry re-runs app_init -> weather_old_gui_init; re-running
+# lv_style_init() on a static style leaks its property array. Under
+# LV_USE_ASSERT_STYLE, LVGL logs "Potential memory leak" and the runner
+# fails the scenario on any such warning. The screenshot has no golden
+# on purpose — it is uploaded as a candidate artifact.
+
+app weather_old
+
+wait_ms 400
+assert_no_crash
+
+action RETURN
+wait_ms 200
+
+action GO_FORWORD
+wait_ms 400
+screenshot 01_reentry
+assert_no_crash
+
+action RETURN
+wait_ms 200
+assert_no_crash
