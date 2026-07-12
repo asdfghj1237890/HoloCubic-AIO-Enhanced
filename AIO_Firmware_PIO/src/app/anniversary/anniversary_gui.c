@@ -25,6 +25,16 @@ static const char weekDayCh[7][4] = {"日", "一", "二", "三", "四", "五", "
 
 void anniversary_gui_init(void)
 {
+    // app_init re-runs this GUI init on every app entry; static styles must
+    // only be initialised once - lv_style_init() on an already-inited style
+    // leaks its property array (LVGL "Potential memory leak").
+    static bool style_inited = false;
+    if (style_inited)
+    {
+        return;
+    }
+    style_inited = true;
+
     // if(NULL == default_style.map)
     // {
 

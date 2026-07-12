@@ -12,10 +12,19 @@ void photo_gui_init()
 {
     image_scr = lv_obj_create(NULL);
 
-    lv_style_init(&default_style);
-    lv_style_set_bg_color(&default_style, lv_color_hex(0x000000));
-    // lv_style_set_bg_color(&default_style, lv_palette_main(lv_palette_t p));
-    // lv_style_set_bg_color(&default_style, lv_color_black());
+    // app_init re-runs this GUI init on every app entry; static styles must
+    // only be initialised once - lv_style_init() on an already-inited style
+    // leaks its property array (LVGL "Potential memory leak").
+    static bool style_inited = false;
+    if (!style_inited)
+    {
+        style_inited = true;
+
+        lv_style_init(&default_style);
+        lv_style_set_bg_color(&default_style, lv_color_hex(0x000000));
+        // lv_style_set_bg_color(&default_style, lv_palette_main(lv_palette_t p));
+        // lv_style_set_bg_color(&default_style, lv_color_black());
+    }
 
     lv_obj_add_style(image_scr, &default_style, LV_STATE_DEFAULT);
 }

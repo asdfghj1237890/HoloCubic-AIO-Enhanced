@@ -39,8 +39,17 @@ static void reset_tile_state(int i)
 
 void game_2048_gui_init(void)
 {
-    lv_style_init(&default_style);
-    lv_style_set_bg_color(&default_style, lv_color_hex(0x000000));
+    // app_init re-runs this GUI init on every app entry; static styles must
+    // only be initialised once - lv_style_init() on an already-inited style
+    // leaks its property array (LVGL "Potential memory leak").
+    static bool style_inited = false;
+    if (!style_inited)
+    {
+        style_inited = true;
+
+        lv_style_init(&default_style);
+        lv_style_set_bg_color(&default_style, lv_color_hex(0x000000));
+    }
 
     lv_obj_t *act_obj = lv_scr_act(); // 获取当前活动页
     if (act_obj == game_2048_gui)

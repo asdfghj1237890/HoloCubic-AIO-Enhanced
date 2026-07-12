@@ -39,4 +39,13 @@ int run_scenario(const char *path,
                  int app_count,
                  const ScenarioOptions &opts = ScenarioOptions{});
 
+// Install the LVGL log bridge: mirrors every LVGL log line to stdout and
+// counts style double-init warnings ("Style might be already inited."),
+// which lv_style_init() emits under LV_USE_ASSERT_STYLE when a style is
+// re-initialised without lv_style_reset — each one is a leaked style
+// property array (the long-uptime leak class; re-entering an app re-runs
+// its *_gui_init). run_scenario() fails any scenario that produced one.
+// Call once from main() after lv_init().
+void scenario_lv_log_watch_install(void);
+
 #endif

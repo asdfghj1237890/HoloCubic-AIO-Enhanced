@@ -207,6 +207,7 @@ int main(int argc, char **argv) {
            args.headless ? 1 : 0);
 
     lv_init();
+    scenario_lv_log_watch_install();
 
     lv_display_t *display = lv_sdl_window_create(DISP_HOR_RES, DISP_VER_RES);
     lv_sdl_window_set_title(display, "HoloCubic AIO Regression");
