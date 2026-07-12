@@ -41,6 +41,8 @@ Both new GUI files declare these as local `#define`s with a comment `// mirrors 
 | GREEN | `0x00FF44` | up/OK/break accents (stock screen green, `stockmarket_color_rule.cpp:7`) |
 | RED | `0xFF2020` | down/alert/focus accents (stock screen red, `stockmarket_color_rule.cpp:8`) |
 
+Exception: colors appearing inside LVGL recolor markup strings (e.g. `"#ffd000 C#"`, `"#ff2020 ↓#"`) are literal hex text — LVGL's recolor syntax requires inline strings — so those occurrences are not expected to be macros.
+
 Shared geometry (identical to stock): header at (12,8) in `ch_font20`; full-width 2px top divider at y=40; full-width 2px bottom divider at y=166; footer rows at y=172 and y=200 in `montserrat_24`; vertical white rail 2×24 at x=128 on footer rows.
 
 ## 4. pc_resource screen
@@ -88,7 +90,7 @@ Removed: the 2×2 grid, cyan cell borders, 80px arcs, FontAwesome-bearing app fo
 | Next | (140,172) | montserrat_24 (base GRAY_LABEL) | recolor | `"#ffd000 N# %dmin"` |
 | Gesture hint | (12,206) | montserrat_14 | GRAY_DIM | `"HOLD +1min \| TILT reset"` (ASCII only) |
 
-Digit x-positions (32/116/140) assume IBM Plex Mono Bold 64 digit advance ≈38px; implementation may fine-tune ±4px with `lv_obj_align_to`, goldens lock the result.
+Digit x-positions (32/116/132) assume IBM Plex Mono Bold 64 digit advance ≈38px; implementation may fine-tune ±4px with `lv_obj_align_to`, goldens lock the result.
 
 **Derived values** (no app-logic change; all inputs already in `TomatoAppRunData`):
 - Progress: `total = t_start.minute*60 + t_start.second`, `remain = t.minute*60 + t.second`, `pct = total ? clamp(100*(total-remain)/total, 0, 100) : 100`.

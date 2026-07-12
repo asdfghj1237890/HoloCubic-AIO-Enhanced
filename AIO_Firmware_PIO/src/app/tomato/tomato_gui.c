@@ -4,6 +4,7 @@
 #include "lvgl.h"
 
 // Instrument-family tokens — mirrors stockmarket_gui.c
+#define TMT_COLOR_BG 0x000000
 #define TMT_COLOR_GOLD 0xFFD000
 #define TMT_COLOR_GOLD_DIM 0xC89030
 #define TMT_COLOR_GRAY_DIM 0x666666
@@ -45,7 +46,7 @@ static const lv_point_precise_t rail_points[] = {{0, 0}, {0, 24}};
 void tomato_gui_init(void)
 {
     lv_style_init(&default_style);
-    lv_style_set_bg_color(&default_style, lv_color_hex(0x000000));
+    lv_style_set_bg_color(&default_style, lv_color_hex(TMT_COLOR_BG));
 
     lv_style_init(&header_style);
     lv_style_set_text_opa(&header_style, LV_OPA_COVER);
