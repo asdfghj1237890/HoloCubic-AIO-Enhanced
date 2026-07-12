@@ -4,7 +4,9 @@
 
 ![HomePage](Image/Holo1.jpg)
 
-![Stock Market simulator preview](test/golden/stockmarket/smoke/01_initial.png)
+| Stock Market | PC Monitor | Tomato Timer |
+|---|---|---|
+| ![Stock Market simulator preview](test/golden/stockmarket/smoke/01_initial.png) | ![PC resource monitor simulator preview](test/golden/pc_resource/smoke/02_with_data.png) | ![Tomato pomodoro simulator preview](test/golden/tomato/smoke/01_initial.png) |
 
 ## 📖 Project Introduction
 
