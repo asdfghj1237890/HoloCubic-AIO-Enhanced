@@ -106,9 +106,10 @@ static void tomato_ui_create(void)
 {
     if (tomato_scr == lv_scr_act())
         return;
+    tomato_gui_del(); // release-first, mirroring pc_resource_gui.c: a stale
+                      // screen must never be re-populated with duplicate children
     lv_obj_clean(lv_scr_act());
-    if (tomato_scr == NULL)
-        tomato_scr = lv_obj_create(NULL);
+    tomato_scr = lv_obj_create(NULL);
     lv_obj_add_style(tomato_scr, &default_style, LV_STATE_DEFAULT);
 
     header_label = lv_label_create(tomato_scr);
