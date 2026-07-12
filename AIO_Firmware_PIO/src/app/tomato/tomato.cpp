@@ -74,6 +74,7 @@ static int tomato_init(AppController *sys)
                              run_data->rgb_cfg.step_0, run_data->rgb_cfg.step_1, run_data->rgb_cfg.step_2,
                              run_data->rgb_cfg.min_brightness, run_data->rgb_cfg.max_brightness,
                              run_data->rgb_cfg.brightness_step, run_data->rgb_cfg.time};
+    Serial.printf("[Tomato] enter countdown=%dmin\n", run_data->t_start.minute);
     return 0;
 }
 static void time_switch()
@@ -256,6 +257,7 @@ static void tomato_process(AppController *sys, const ImuAction *act_info)
                 else if (run_data->t_start.minute < 99)
                 {
                     run_data->t_start.minute += 1;
+                    Serial.printf("[Tomato] +1min -> %dmin\n", run_data->t_start.minute);
                 }
             }
         }
@@ -277,6 +279,7 @@ static void tomato_process(AppController *sys, const ImuAction *act_info)
                 else if (run_data->t_start.minute < 99)
                 {
                     run_data->t_start.minute += 1;
+                    Serial.printf("[Tomato] +1min -> %dmin\n", run_data->t_start.minute);
                 }
             }
         }
@@ -329,6 +332,8 @@ static void tomato_process(AppController *sys, const ImuAction *act_info)
                     if (last_mode != run_data->time_mode)
                     {
                         time_switch(); // 发生模式切换时运行
+                        Serial.printf("[Tomato] mode=%d countdown=%dmin\n",
+                                      run_data->time_mode, run_data->t_start.minute);
                     }
                     last_mode = run_data->time_mode;
                 }
@@ -350,6 +355,7 @@ static void tomato_process(AppController *sys, const ImuAction *act_info)
     {
         run_data->rgb_fast = 1;
         run_data->rgb_fast_update = 0;
+        Serial.println(F("[Tomato] time up - rgb alert"));
     }
     rgb_ctrl();
     if (run_data->rgb_fast == 0) // 未到点持续计算之间
