@@ -8,6 +8,11 @@
 |---|---|---|
 | ![Stock Market simulator preview](test/golden/stockmarket/smoke/01_initial.png) | ![PC resource monitor simulator preview](test/golden/pc_resource/smoke/02_with_data.png) | ![Tomato pomodoro simulator preview](test/golden/tomato/smoke/01_initial.png) |
 
+<p align="center">
+  <img src="Image/holocubic_realshot.jpg" alt="HoloCubic AIO running the stock market app on real hardware" width="380"><br>
+  <em>Live on real hardware — the stock market app running on a HoloCubic</em>
+</p>
+
 ## 📖 Project Introduction
 
 `Holocubic` was originally an open-source project by [稚晖君](https://github.com/peng-zhihui), and this project is a third-party independent firmware running on HoloCubic hardware.

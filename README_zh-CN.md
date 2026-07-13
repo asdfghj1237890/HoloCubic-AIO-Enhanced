@@ -4,6 +4,11 @@
 
 ![首页](Image/Holo1.jpg)
 
+<p align="center">
+  <img src="Image/holocubic_realshot.jpg" alt="HoloCubic AIO 实机运行股票行情 App" width="380"><br>
+  <em>实机照片 —— 股票行情 App 在 HoloCubic 上实时运行</em>
+</p>
+
 ## 📖 项目介绍
 
 `Holocubic`最初是[稚晖君](https://github.com/peng-zhihui)的开源项目，本项目是运行在HoloCubic硬件上的第三方独立固件。
