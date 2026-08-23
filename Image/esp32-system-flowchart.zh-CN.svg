@@ -1,0 +1,229 @@
+<svg xmlns="http://www.w3.org/2000/svg" lang="zh-CN" width="1400" height="2670" viewBox="0 0 1400 2670" role="img" aria-labelledby="title desc">
+  <title id="title">ESP32 启动与运行流程</title>
+  <desc id="desc">动画流程图，展示当前 HoloCubic ESP32 的启动顺序、协作式循环顺序、混合事件派发，以及明确归属的服务与工作任务。</desc>
+
+  <defs>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" fill="none" stroke="#94a3b8" stroke-opacity=".05"/>
+    </pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#020617" flood-opacity=".6"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9z" fill="#7f9bad"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9z" fill="#7f9bad"/>
+    </marker>
+    <marker id="arrowAmber" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9z" fill="#7f9bad"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif; }
+      .eyebrow { font-size: 25.2px; font-weight: 700; letter-spacing: 2.2px; }
+      .title { fill: #f8fafc; font-size: 36px; font-weight: 730; }
+      .label { fill: #f8fafc; font-size: 28.8px; font-weight: 650; }
+      .meta { fill: #94a3b8; font-size: 23.4px; }
+      .code { fill: #c3d0d8; font-family: "Cascadia Code", Consolas, "Noto Sans SC", "Microsoft YaHei", monospace; font-size: 23.4px; }
+      .rail { fill: none; stroke: #334155; stroke-width: 2; }
+      .boot-flow { fill: none; stroke: #7f9bad; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 4 11; marker-end: url(#arrowBlue); animation: travel 1.35s linear infinite; }
+      .loop-flow { fill: none; stroke: #7f9bad; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 5 12; marker-end: url(#arrowGreen); animation: travel 1.25s linear infinite; }
+      .io-flow { fill: none; stroke: #7f9bad; stroke-width: 2.3; stroke-linecap: round; stroke-dasharray: 4 11; marker-end: url(#arrowAmber); animation: travel 1.5s linear infinite; }
+      .boot-card > rect { animation: bootScan 7.2s ease-in-out infinite; }
+      .boot-card:nth-of-type(2) > rect { animation-delay: -6s; }
+      .boot-card:nth-of-type(3) > rect { animation-delay: -4.8s; }
+      .boot-card:nth-of-type(4) > rect { animation-delay: -3.6s; }
+      .boot-card:nth-of-type(5) > rect { animation-delay: -2.4s; }
+      .boot-card:nth-of-type(6) > rect { animation-delay: -1.2s; }
+      .tick { animation: tick 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .queue-dot { animation: queuePulse 1.2s ease-in-out infinite; }
+      .queue-dot:nth-child(2) { animation-delay: -.4s; }
+      .queue-dot:nth-child(3) { animation-delay: -.8s; }
+      @keyframes travel { to { stroke-dashoffset: -31; } }
+      @keyframes bootScan { 0%,13% { stroke: #9ab0bd; stroke-width: 2.2; } 19%,100% { stroke: #334155; stroke-width: 1.5; } }
+      @keyframes tick { 0%,100% { opacity: .45; transform: scale(.82); } 50% { opacity: 1; transform: scale(1.12); } }
+      @keyframes queuePulse { 0%,100% { opacity: .28; } 50% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-flow, .loop-flow, .io-flow, .boot-card, .tick, .queue-dot { animation: none; }
+      }
+    </style>
+  </defs>
+
+  <rect width="1400" height="2670" rx="26" fill="#111827"/>
+  <rect width="1400" height="2670" rx="26" fill="url(#grid)"/>
+
+  <text x="50" y="64" fill="#8fa8b7" class="eyebrow">ESP32 系统流程 · 启动一次，循环运行</text>
+  <text x="50" y="128" fill="#f8fafc" font-size="55.8" font-weight="760">
+    <tspan x="50">从复位到响应迅速的</tspan>
+    <tspan x="50" dy="62">事件驱动立方体</tspan>
+  </text>
+  <text x="1350" y="64" text-anchor="end" fill="#64748b" font-size="25.2">HoloCubic AIO 运行时</text>
+
+  <!-- Boot sequence -->
+  <g aria-label="Boot sequence">
+    <text x="50" y="258" fill="#8fa8b7" class="eyebrow">启动流程</text>
+    <path class="rail" d="M670 385H730M1040 470V520M730 605H670M360 690V740M670 825H730M1040 910V970"/>
+    <path class="boot-flow" d="M670 385H730"/>
+    <path class="boot-flow" d="M1040 470V520" style="animation-delay:-.25s"/>
+    <path class="boot-flow" d="M730 605H670" style="animation-delay:-.5s"/>
+    <path class="boot-flow" d="M360 690V740" style="animation-delay:-.75s"/>
+    <path class="boot-flow" d="M670 825H730" style="animation-delay:-1s"/>
+    <path class="boot-flow" d="M1040 910V970" style="animation-delay:-1.2s"/>
+
+    <g class="boot-card" transform="translate(50 300)">
+      <rect width="620" height="170" rx="18" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="13" fill="#263746" stroke="#7f9bad"/>
+      <path d="M34 31v10M26 39a10 10 0 1 0 16 0" fill="none" stroke="#b8c7d1" stroke-width="2.2" stroke-linecap="round"/>
+      <text x="62" y="50" class="label">上电 / 复位</text>
+      <text x="28" y="104" class="code">ESP32 boot ROM</text>
+      <text x="28" y="143" class="meta">加载固件</text>
+    </g>
+    <g class="boot-card" transform="translate(730 300)">
+      <rect width="620" height="170" rx="18" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="13" fill="#263746" stroke="#7f9bad"/>
+      <text x="34" y="49" text-anchor="middle" fill="#c3d0d8" font-size="23.4" font-weight="800">1</text>
+      <text x="62" y="50" class="label">核心与配置</text>
+      <text x="28" y="104" class="code">Serial · SPIFFS</text>
+      <text x="28" y="143" class="meta">载入已保存配置</text>
+    </g>
+    <g class="boot-card" transform="translate(730 520)">
+      <rect width="620" height="170" rx="18" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="13" fill="#263746" stroke="#7f9bad"/>
+      <text x="34" y="49" text-anchor="middle" fill="#c3d0d8" font-size="23.4" font-weight="800">2</text>
+      <text x="62" y="50" class="label">显示与 I/O</text>
+      <text x="28" y="104" class="code">TFT · RGB · TF</text>
+      <text x="28" y="143" class="meta">LVGL + 环境光</text>
+    </g>
+    <g class="boot-card" transform="translate(50 520)">
+      <rect width="620" height="170" rx="18" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="13" fill="#263746" stroke="#7f9bad"/>
+      <text x="34" y="49" text-anchor="middle" fill="#c3d0d8" font-size="23.4" font-weight="800">3</text>
+      <text x="62" y="50" class="label">控制器初始化</text>
+      <text x="28" y="104" class="code">CPU · 启动器 UI</text>
+      <text x="28" y="143" class="meta">加载界面就绪</text>
+    </g>
+    <g class="boot-card" transform="translate(50 740)">
+      <rect width="620" height="170" rx="18" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="34" cy="40" r="13" fill="#263746" stroke="#7f9bad"/>
+      <text x="34" y="49" text-anchor="middle" fill="#c3d0d8" font-size="23.4" font-weight="800">4</text>
+      <text x="62" y="50" class="label">注册应用</text>
+      <text x="28" y="104" class="code">APP_OBJ[] · auto</text>
+      <text x="28" y="143" class="meta">首次控制器处理</text>
+    </g>
+    <g class="boot-card" transform="translate(730 740)">
+      <rect width="620" height="170" rx="18" fill="#1d2738" stroke="#334155" stroke-width="1.5"/>
+      <circle class="tick" cx="34" cy="40" r="13" fill="#7f9bad"/>
+      <text x="62" y="50" class="label">MPU + 防护</text>
+      <text x="28" y="104" fill="#c3d0d8" class="code">RGB 任务 · 200 毫秒定时器</text>
+      <text x="28" y="143" class="meta">60 秒 WDT → 进入 loop()</text>
+    </g>
+  </g>
+
+  <!-- Runtime loop -->
+  <g filter="url(#shadow)" aria-label="Cooperative runtime loop">
+    <rect x="50" y="990" width="1300" height="850" rx="24" fill="#172033" stroke="#475569" stroke-width="1.6"/>
+    <text x="80" y="1048" fill="#8fa8b7" class="eyebrow">协作式运行循环</text>
+    <text x="80" y="1102" class="title">核心循环任务 · 当前执行顺序</text>
+
+    <!-- underlying circular rails -->
+    <path class="rail" d="M460 1240H515M885 1240H940M1125 1330V1410M940 1500H885M515 1500H460M90 1500C66 1500 66 1240 90 1240"/>
+    <path class="loop-flow" d="M460 1240H515"/>
+    <path class="loop-flow" d="M885 1240H940" style="animation-delay:-.2s"/>
+    <path class="loop-flow" d="M1125 1330V1410" style="animation-delay:-.4s"/>
+    <path class="loop-flow" d="M940 1500H885" style="animation-delay:-.6s"/>
+    <path class="loop-flow" d="M515 1500H460" style="animation-delay:-.8s"/>
+    <path class="loop-flow" d="M90 1500C66 1500 66 1240 90 1240" style="animation-delay:-1s"/>
+
+    <g transform="translate(90 1150)">
+      <rect width="370" height="180" rx="18" fill="#1d2738" stroke="#475569"/>
+      <path d="M24 25h24v24H24zM30 31h12v12H30z" fill="none" stroke="#b8c7d1" stroke-width="2"/>
+      <text x="62" y="49" class="label">LVGL 处理</text>
+      <text x="28" y="105" class="code">screen.routine()</text>
+      <text x="28" y="147" class="meta">布局 → TFT 刷新</text>
+    </g>
+    <g transform="translate(515 1150)">
+      <rect width="370" height="180" rx="18" fill="#1d2738" stroke="#475569"/>
+      <circle class="tick" cx="36" cy="39" r="13" fill="#7f9bad"/>
+      <text x="62" y="49" class="label">动作输入</text>
+      <text x="28" y="105" class="code">200 毫秒：读取 MPU</text>
+      <text x="28" y="147" class="meta">+ 串口叠加层</text>
+    </g>
+    <g transform="translate(940 1150)">
+      <rect width="370" height="180" rx="18" fill="#2b3e50" stroke="#7892a3"/>
+      <circle cx="36" cy="39" r="14" fill="#607f92"/>
+      <path d="M29 39h14M36 32v14" stroke="#dbeafe" stroke-width="2.2" stroke-linecap="round"/>
+      <text x="62" y="49" class="label">AppController</text>
+      <text x="28" y="105" class="code">main_process()</text>
+      <text x="28" y="147" class="meta">事件 + 外层状态机</text>
+    </g>
+    <g transform="translate(940 1410)">
+      <rect width="370" height="180" rx="18" fill="#243140" stroke="#526474"/>
+      <rect x="24" y="26" width="26" height="26" rx="5" fill="#7f9bad"/>
+      <text x="62" y="49" class="label">事件派发</text>
+      <text x="28" y="105" class="code">排队 · 300 毫秒</text>
+      <text x="28" y="147" class="meta">网络 · 配置同步</text>
+    </g>
+    <g transform="translate(515 1410)">
+      <rect width="370" height="180" rx="18" fill="#1d2738" stroke="#475569"/>
+      <circle cx="36" cy="39" r="12" fill="#607f92"/>
+      <text x="62" y="49" class="label">后台任务</text>
+      <text x="28" y="105" class="code">每 60 秒</text>
+      <text x="28" y="147" class="meta">跳过当前实时应用</text>
+    </g>
+    <g transform="translate(90 1410)">
+      <rect width="370" height="180" rx="18" fill="#1d2738" stroke="#475569"/>
+      <g transform="translate(26 40)">
+        <circle class="queue-dot" cx="0" cy="0" r="6" fill="#7f9bad"/>
+        <circle class="queue-dot" cx="16" cy="0" r="6" fill="#7f9bad"/>
+        <circle class="queue-dot" cx="32" cy="0" r="6" fill="#7f9bad"/>
+      </g>
+      <text x="76" y="49" class="label">启动器 / 应用</text>
+      <text x="28" y="105" class="code">UI 或 main_process</text>
+      <text x="28" y="147" class="meta">callback(this, action)</text>
+    </g>
+
+    <rect x="80" y="1640" width="1240" height="150" rx="12" fill="#202a3a"/>
+    <text x="108" y="1684" fill="#c3d0d8" font-size="23.4" font-weight="650">约束：</text>
+    <text x="108" y="1724" fill="#94a3b8" font-size="23.4">
+      <tspan x="108">核心回调必须快速返回；阻塞会使 LVGL、输入与事件派发停顿。</tspan>
+      <tspan x="108" dy="34">工作任务独立运行。</tspan>
+    </text>
+  </g>
+
+  <!-- Side channels -->
+  <g filter="url(#shadow)" aria-label="Hardware and network side channels">
+    <rect x="50" y="1900" width="1300" height="660" rx="24" fill="#172033" stroke="#475569" stroke-width="1.6"/>
+    <text x="80" y="1958" fill="#8fa8b7" class="eyebrow">明确归属</text>
+    <text x="80" y="2012" class="title">服务与工作任务</text>
+
+    <g transform="translate(90 2060)">
+      <rect width="590" height="130" rx="15" fill="#1d2738" stroke="#475569"/>
+      <text x="26" y="48" class="label">Wi-Fi / AP 驱动</text>
+      <text x="26" y="94" class="meta">AppController 排队事件</text>
+    </g>
+    <g transform="translate(720 2060)">
+      <rect width="590" height="130" rx="15" fill="#1d2738" stroke="#475569"/>
+      <text x="26" y="48" class="label">Web + FTP 服务</text>
+      <text x="26" y="94" class="meta">Server / File Manager 应用</text>
+    </g>
+    <g transform="translate(90 2220)">
+      <rect width="590" height="130" rx="15" fill="#1d2738" stroke="#475569"/>
+      <text x="26" y="48" class="label">HTTP / MQTT 客户端</text>
+      <text x="26" y="94" class="meta">由应用回调调用</text>
+    </g>
+    <g transform="translate(720 2220)">
+      <rect width="590" height="130" rx="15" fill="#1d2738" stroke="#475569"/>
+      <text x="26" y="48" class="label">SD + SPIFFS</text>
+      <text x="26" y="94" class="meta">应用媒体 + 持久化配置</text>
+    </g>
+    <g transform="translate(90 2380)">
+      <rect width="590" height="130" rx="15" fill="#1d2738" stroke="#475569"/>
+      <text x="26" y="48" class="label">RGB 工作任务</text>
+      <text x="26" y="94" class="meta">独立 FreeRTOS 任务</text>
+    </g>
+    <rect x="720" y="2380" width="590" height="130" rx="15" fill="#202a3a"/>
+    <text x="1015" y="2458" text-anchor="middle" fill="#9fafb9" font-size="21.6">每项服务均标明归属</text>
+  </g>
+
+  <text x="1350" y="2630" text-anchor="end" fill="#64748b" font-size="23.4">动画路径表示启动与循环顺序 · 遵循系统“减少动态效果”设置</text>
+</svg>

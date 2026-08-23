@@ -561,7 +561,7 @@ if(sck == -1 && miso == -1 && mosi == -1 && ss == -1) {
 ### 框架图
 
 <p align="center">
-  <img src="Image/holocubic-aio-framework.svg" alt="HoloCubic AIO 动画框架图：设备服务、AppController 派送机制与 APP_OBJ 应用" width="100%">
+  <img src="Image/holocubic-aio-framework.zh-CN.svg" alt="HoloCubic AIO 简体中文动画框架图：设备服务、AppController 派送机制与 APP_OBJ 应用" width="100%">
 </p>
 
 图中分别展示设备服务、`AppController` 的队列／同步混合派送机制，以及通过 `APP_OBJ` 注册的模块化应用。动画会遵循操作系统的“减少动态效果”设置。
@@ -571,7 +571,7 @@ if(sck == -1 && miso == -1 && mosi == -1 && ss == -1) {
 ### ESP32系统流程图
 
 <p align="center">
-  <img src="Image/esp32-system-flowchart.svg" alt="ESP32 启动流程与协作式运行循环动画图" width="100%">
+  <img src="Image/esp32-system-flowchart.zh-CN.svg" alt="ESP32 启动流程与协作式运行循环简体中文动画图" width="100%">
 </p>
 
 启动流程只执行一次；之后每次核心循环依序处理 LVGL、条件式输入采样、控制器事件、60 秒背景任务，以及启动器／当前应用派送。独立 worker task 也在图中明确标出。代码层说明请参阅[固件架构指南](./Docs/development/02-firmware-architecture.md)。

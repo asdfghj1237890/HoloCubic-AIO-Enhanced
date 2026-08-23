@@ -1,0 +1,293 @@
+<svg xmlns="http://www.w3.org/2000/svg" lang="zh-CN" width="1400" height="1470" viewBox="0 0 1400 1470" role="img" aria-labelledby="title desc">
+  <title id="title">HoloCubic AIO 固件框架</title>
+  <desc id="desc">动画架构图，展示设备服务、AppController 混合事件派发，以及通过 APP_OBJ 约定注册的应用。</desc>
+
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#94a3b8" stroke-opacity=".055"/>
+    </pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#020617" flood-opacity=".55"/>
+    </filter>
+    <marker id="arrowCyan" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9z" fill="#7f9bad"/>
+    </marker>
+    <marker id="arrowViolet" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9z" fill="#7f9bad"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif; }
+      .eyebrow { font-size: 25.2px; font-weight: 700; letter-spacing: 2.4px; }
+      .section-title { fill: #f8fafc; font-size: 36px; font-weight: 750; }
+      .label { fill: #f8fafc; font-size: 32.4px; font-weight: 650; }
+      .meta { fill: #94a3b8; font-size: 25.2px; }
+      .code { fill: #c3d0d8; font-family: "Cascadia Code", Consolas, "Noto Sans SC", "Microsoft YaHei", monospace; font-size: 25.2px; }
+      .rail { fill: none; stroke: #334155; stroke-width: 2; }
+      .flow-cyan { fill: none; stroke: #7f9bad; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 4 12; marker-end: url(#arrowCyan); animation: travel 1.5s linear infinite; }
+      .flow-violet { fill: none; stroke: #7f9bad; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 4 12; marker-end: url(#arrowViolet); animation: travel 1.5s linear infinite; }
+      .core-ring { transform-box: fill-box; transform-origin: center; animation: breathe 2.8s ease-in-out infinite; }
+      .status-dot { animation: blink 1.4s ease-in-out infinite; }
+      .app-card > rect { animation: appScan 8s ease-in-out infinite; }
+      .app-card:nth-of-type(2) > rect { animation-delay: -6.7s; }
+      .app-card:nth-of-type(3) > rect { animation-delay: -5.4s; }
+      .app-card:nth-of-type(4) > rect { animation-delay: -4.1s; }
+      .app-card:nth-of-type(5) > rect { animation-delay: -2.8s; }
+      .app-card:nth-of-type(6) > rect { animation-delay: -1.5s; }
+      @keyframes travel { to { stroke-dashoffset: -32; } }
+      @keyframes breathe { 0%,100% { opacity: .5; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.04); } }
+      @keyframes blink { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+      @keyframes appScan { 0%,12% { stroke: #9ab0bd; stroke-width: 2; } 18%,100% { stroke: #475569; stroke-width: 1; } }
+      @media (prefers-reduced-motion: reduce) {
+        .flow-cyan, .flow-violet, .core-ring, .status-dot, .app-card { animation: none; }
+      }
+    </style>
+  </defs>
+
+  <rect width="1400" height="1470" rx="26" fill="#111827"/>
+  <rect width="1400" height="1470" rx="26" fill="url(#grid)"/>
+
+  <g aria-label="Diagram heading">
+    <text x="52" y="64" fill="#8fa8b7" class="eyebrow">HOLOCUBIC AIO · 固件框架</text>
+    <text x="52" y="128" fill="#f8fafc" font-size="55.8" font-weight="760">
+      <tspan x="52">驱动、控制器服务</tspan>
+      <tspan x="52" dy="62">与模块化应用。</tspan>
+    </text>
+    <text x="1348" y="64" text-anchor="end" fill="#64748b" font-size="25.2">ESP32-PICO-D4 · Arduino · LVGL 9</text>
+  </g>
+
+  <!-- Left: 资源 -->
+  <g filter="url(#shadow)" aria-label="Hardware and shared 资源">
+    <rect x="48" y="240" width="310" height="1090" rx="22" fill="#172033" stroke="#334155" stroke-width="1.5"/>
+    <text x="76" y="292" fill="#8fa8b7" class="eyebrow">
+      <tspan x="76">01 · 驱动与</tspan>
+      <tspan x="76" dy="34">服务</tspan>
+    </text>
+    <text x="76" y="378" class="section-title">
+      <tspan x="76">面向设备的</tspan>
+      <tspan x="76" dy="42">资源</tspan>
+    </text>
+
+    <g transform="translate(76 458)">
+      <rect width="254" height="170" rx="14" fill="#1d2738" stroke="#3b4a5d"/>
+      <circle cx="31" cy="34" r="12" fill="#263746" stroke="#7f9bad"/>
+      <path d="M25 37c4-10 8-10 12 0M31 23v5" fill="none" stroke="#b8c7d1" stroke-width="2" stroke-linecap="round"/>
+      <text x="55" y="45" class="label">MPU6050</text>
+      <text x="20" y="102" class="meta">
+        <tspan x="20">动作输入 ·</tspan>
+        <tspan x="20" dy="31">200 毫秒定时器</tspan>
+      </text>
+    </g>
+    <g transform="translate(76 646)">
+      <rect width="254" height="170" rx="14" fill="#1d2738" stroke="#3b4a5d"/>
+      <circle cx="31" cy="34" r="12" fill="#263746" stroke="#7f9bad"/>
+      <path d="M23 33a12 12 0 0 1 16 0M27 38a6 6 0 0 1 8 0M31 43h.1" fill="none" stroke="#b8c7d1" stroke-width="2" stroke-linecap="round"/>
+      <text x="55" y="45" class="label">
+        <tspan x="55">网络</tspan>
+        <tspan x="55" dy="35">协议栈</tspan>
+      </text>
+      <text x="20" y="119" class="meta">
+        <tspan x="20">按需启用 Wi-Fi ·</tspan>
+        <tspan x="20" dy="31">HTTP/MQTT</tspan>
+      </text>
+    </g>
+    <g transform="translate(76 834)">
+      <rect width="254" height="170" rx="14" fill="#1d2738" stroke="#3b4a5d"/>
+      <circle cx="31" cy="34" r="12" fill="#263746" stroke="#7f9bad"/>
+      <path d="M25 25h10l3 4v15H24V25zM28 25v7h6v-7" fill="none" stroke="#b8c7d1" stroke-width="1.8" stroke-linejoin="round"/>
+      <text x="55" y="45" class="label">SD + SPIFFS</text>
+      <text x="20" y="102" class="meta">
+        <tspan x="20">媒体 · 配置 ·</tspan>
+        <tspan x="20" dy="31">缓存</tspan>
+      </text>
+    </g>
+    <g transform="translate(76 1022)">
+      <rect width="254" height="170" rx="14" fill="#1d2738" stroke="#3b4a5d"/>
+      <circle cx="31" cy="34" r="12" fill="#263746" stroke="#7f9bad"/>
+      <circle cx="31" cy="34" r="8" fill="none" stroke="#b8c7d1" stroke-width="1.8"/>
+      <path d="M31 29v6l4 2" fill="none" stroke="#b8c7d1" stroke-width="1.8" stroke-linecap="round"/>
+      <text x="55" y="45" class="label">
+        <tspan x="55">显示与</tspan>
+        <tspan x="55" dy="35">RGB</tspan>
+      </text>
+      <text x="20" y="119" class="meta">
+        <tspan x="20">LVGL/TFT · 独立</tspan>
+        <tspan x="20" dy="31">RGB 任务</tspan>
+      </text>
+    </g>
+    <rect x="76" y="1215" width="254" height="90" rx="12" fill="#202c3b"/>
+    <circle class="status-dot" cx="96" cy="1246" r="6" fill="#7f9bad"/>
+    <text x="116" y="1255" class="code">
+      <tspan x="116">驱动 +</tspan>
+      <tspan x="116" dy="34">存储</tspan>
+    </text>
+  </g>
+
+  <!-- Resource rails -->
+  <g aria-label="Animated resource flow">
+    <path class="rail" d="M330 543C398 543 390 500 454 500"/>
+    <path class="flow-cyan" d="M330 543C398 543 390 500 454 500"/>
+    <path class="rail" d="M330 731C410 731 396 640 454 640"/>
+    <path class="flow-cyan" d="M330 731C410 731 396 640 454 640" style="animation-delay:-.35s"/>
+    <path class="rail" d="M330 919C420 919 402 780 454 780"/>
+    <path class="flow-cyan" d="M330 919C420 919 402 780 454 780" style="animation-delay:-.7s"/>
+    <path class="rail" d="M330 1107C430 1107 408 940 454 940"/>
+    <path class="flow-cyan" d="M330 1107C430 1107 408 940 454 940" style="animation-delay:-1.05s"/>
+  </g>
+
+  <!-- Center: controller -->
+  <g filter="url(#shadow)" aria-label="AppController event router">
+    <rect x="454" y="240" width="420" height="1090" rx="22" fill="#172033" stroke="#475569" stroke-width="1.5"/>
+    <text x="482" y="292" fill="#8fa8b7" class="eyebrow">02 · 事件路由</text>
+    <text x="482" y="350" class="section-title">
+      <tspan x="482">循环任务</tspan>
+      <tspan x="482" dy="42">协调器</tspan>
+    </text>
+
+    <g class="core-ring">
+      <rect x="457" y="446" width="414" height="248" rx="30" fill="none" stroke="#7f9bad" stroke-opacity=".28" stroke-width="9"/>
+    </g>
+    <rect x="462" y="456" width="404" height="228" rx="24" fill="#34495a" stroke="#7892a3"/>
+    <circle cx="516" cy="500" r="13" fill="#dbeafe" fill-opacity=".18"/>
+    <path d="M509 500h14M516 493v14" stroke="#e0f2fe" stroke-width="2.5" stroke-linecap="round"/>
+    <text x="542" y="509" fill="#e0f2fe" font-size="25.2" font-weight="700" letter-spacing="1.2">运行时核心</text>
+    <text x="664" y="583" text-anchor="middle" fill="#fff" font-size="57.6" font-weight="780">AppController</text>
+    <text x="664" y="636" text-anchor="middle" fill="#dbeafe" class="code">main_process(act_info)</text>
+
+    <g transform="translate(492 734)">
+      <rect width="344" height="170" rx="15" fill="#1d2738" stroke="#475569"/>
+      <circle cx="28" cy="32" r="7" fill="#7f9bad" class="status-dot"/>
+      <text x="50" y="43" class="label">混合消息</text>
+      <text x="50" y="79" class="label">派发</text>
+      <text x="22" y="119" class="code">
+        <tspan x="22">网络事件排队 ·</tspan>
+        <tspan x="22" dy="32">配置同步</tspan>
+      </text>
+    </g>
+    <g transform="translate(492 930)">
+      <rect width="344" height="190" rx="15" fill="#1d2738" stroke="#475569"/>
+      <path d="M22 27h18v18H22zM28 21h18v18" fill="none" stroke="#b8c7d1" stroke-width="2"/>
+      <text x="54" y="43" class="label">
+        <tspan x="54">当前应用</tspan>
+        <tspan x="54" dy="36">生命周期</tspan>
+      </text>
+      <text x="22" y="125" class="code">
+        <tspan x="22">启动器 ⇄ 当前</tspan>
+        <tspan x="22" dy="34">APP_OBJ</tspan>
+      </text>
+    </g>
+    <rect x="492" y="1145" width="344" height="150" rx="13" fill="#202a3a" stroke="#526474" stroke-opacity=".8"/>
+    <text x="664" y="1180" text-anchor="middle" fill="#d6dee3" font-size="25.2" font-weight="650">
+      <tspan x="664">核心回调运行于</tspan>
+      <tspan x="664" dy="32">循环任务</tspan>
+    </text>
+    <text x="664" y="1252" text-anchor="middle" fill="#9fafb9" font-size="23.4">
+      <tspan x="664">快速返回 · LVGL</tspan>
+      <tspan x="664" dy="30">使用互斥锁</tspan>
+    </text>
+  </g>
+
+  <!-- Controller-to-app rails -->
+  <g aria-label="Animated app 派发 flow">
+    <path class="rail" d="M852 570C912 570 892 520 944 520"/>
+    <path class="flow-violet" d="M852 570C912 570 892 520 944 520"/>
+    <path class="rail" d="M836 810C914 810 892 775 944 775"/>
+    <path class="flow-violet" d="M836 810C914 810 892 775 944 775" style="animation-delay:-.55s"/>
+    <path class="rail" d="M836 1025C914 1025 895 1045 944 1045"/>
+    <path class="flow-violet" d="M836 1025C914 1025 895 1045 944 1045" style="animation-delay:-1.05s"/>
+  </g>
+
+  <!-- Right: apps -->
+  <g filter="url(#shadow)" aria-label="APP_OBJ application ecosystem">
+    <rect x="944" y="240" width="408" height="1090" rx="22" fill="#172033" stroke="#475569" stroke-width="1.5"/>
+    <text x="972" y="292" fill="#8fa8b7" class="eyebrow">03 · 应用生态</text>
+    <text x="972" y="350" class="section-title">
+      <tspan x="972">应用注册</tspan>
+      <tspan x="972" dy="42">APP_OBJ</tspan>
+    </text>
+
+    <rect x="972" y="420" width="352" height="184" rx="14" fill="#202a3a" stroke="#526474"/>
+    <text x="994" y="454" fill="#d6dee3" font-size="23.4" font-weight="700" letter-spacing="1.2">回调约定</text>
+    <text x="994" y="494" class="code">
+      <tspan x="994">init · process ·</tspan>
+      <tspan x="994" dy="32">background · exit</tspan>
+    </text>
+    <text x="994" y="566" fill="#9fafb9" font-size="21.6">
+      <tspan x="994">message_handle · metadata ·</tspan>
+      <tspan x="994" dy="28">回调可为空</tspan>
+    </text>
+
+    <g class="app-card" transform="translate(972 630)">
+      <rect width="166" height="166" rx="13" fill="#1b2940" stroke="#475569"/>
+      <circle cx="24" cy="24" r="7" fill="#7f9bad"/>
+      <text x="20" y="66" class="label">天气</text>
+      <text x="20" y="108" class="meta">
+        <tspan x="20">时钟 +</tspan>
+        <tspan x="20" dy="31">网络</tspan>
+      </text>
+    </g>
+    <g class="app-card" transform="translate(1158 630)">
+      <rect width="166" height="166" rx="13" fill="#1b2940" stroke="#475569"/>
+      <circle cx="24" cy="24" r="7" fill="#7f9bad"/>
+      <text x="20" y="66" class="label">媒体</text>
+      <text x="20" y="108" class="meta">
+        <tspan x="20">照片 +</tspan>
+        <tspan x="20" dy="31">视频</tspan>
+      </text>
+    </g>
+    <g class="app-card" transform="translate(972 814)">
+      <rect width="166" height="166" rx="13" fill="#1b2940" stroke="#475569"/>
+      <circle cx="24" cy="24" r="7" fill="#7f9bad"/>
+      <text x="20" y="50" class="label">
+        <tspan x="20">Web /</tspan>
+        <tspan x="20" dy="35">FTP</tspan>
+      </text>
+      <text x="20" y="122" class="meta">
+        <tspan x="20">设置 +</tspan>
+        <tspan x="20" dy="31">文件</tspan>
+      </text>
+    </g>
+    <g class="app-card" transform="translate(1158 814)">
+      <rect width="166" height="166" rx="13" fill="#1b2940" stroke="#475569"/>
+      <circle cx="24" cy="24" r="7" fill="#7f9bad"/>
+      <text x="20" y="66" class="label">行情</text>
+      <text x="20" y="108" class="meta">
+        <tspan x="20">股票 +</tspan>
+        <tspan x="20" dy="31">PC 状态</tspan>
+      </text>
+    </g>
+    <g class="app-card" transform="translate(972 998)">
+      <rect width="166" height="166" rx="13" fill="#1b2940" stroke="#475569"/>
+      <circle cx="24" cy="24" r="7" fill="#7f9bad"/>
+      <text x="20" y="66" class="label">游戏</text>
+      <text x="20" y="108" class="meta">
+        <tspan x="20">2048 +</tspan>
+        <tspan x="20" dy="31">贪吃蛇</tspan>
+      </text>
+    </g>
+    <g class="app-card" transform="translate(1158 998)">
+      <rect width="166" height="166" rx="13" fill="#1b2940" stroke="#475569"/>
+      <circle cx="24" cy="24" r="7" fill="#7f9bad"/>
+      <text x="20" y="66" class="label">你的应用</text>
+      <text x="20" y="108" class="meta">
+        <tspan x="20">同一套小型</tspan>
+        <tspan x="20" dy="31">约定</tspan>
+      </text>
+    </g>
+
+    <rect x="972" y="1190" width="352" height="118" rx="13" fill="#202a3a" stroke="#526474"/>
+    <text x="994" y="1228" fill="#d6dee3" font-size="27" font-weight="700">输出路径</text>
+    <text x="994" y="1268" class="code">
+      <tspan x="994">APP UI → LVGL → TFT</tspan>
+      <tspan x="994" dy="31">· RGB 任务</tspan>
+    </text>
+  </g>
+
+  <g aria-label="Runtime legend">
+    <rect x="48" y="1360" width="1304" height="82" rx="10" fill="#0b1425" stroke="#1e293b"/>
+    <circle cx="76" cy="1392" r="6" fill="#7f9bad"/>
+    <text x="96" y="1401" fill="#94a3b8" font-size="23.4">服务访问</text>
+    <circle cx="314" cy="1392" r="6" fill="#a8b5bd"/>
+    <text x="334" y="1401" fill="#94a3b8" font-size="23.4">控制器 / 应用派发</text>
+    <text x="1328" y="1430" text-anchor="end" fill="#64748b" font-size="23.4">动画路径表示方向 · 遵循系统“减少动态效果”设置</text>
+  </g>
+</svg>
