@@ -1,0 +1,222 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="840" viewBox="0 0 1400 840" role="img" aria-labelledby="title desc">
+  <title id="title">ESP32 startup and runtime flow</title>
+  <desc id="desc">Animated flowchart showing the current HoloCubic ESP32 setup order, exact cooperative loop order, hybrid event dispatch, and explicitly owned services and worker tasks.</desc>
+
+  <defs>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" fill="none" stroke="#94a3b8" stroke-opacity=".05"/>
+    </pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#020617" flood-opacity=".6"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9z" fill="#7f9bad"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9z" fill="#7f9bad"/>
+    </marker>
+    <marker id="arrowAmber" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto">
+      <path d="M0 0L9 4.5 0 9z" fill="#7f9bad"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 2.2px; }
+      .title { fill: #f8fafc; font-size: 19px; font-weight: 730; }
+      .label { fill: #f8fafc; font-size: 15px; font-weight: 650; }
+      .meta { fill: #94a3b8; font-size: 12px; }
+      .code { fill: #c3d0d8; font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; }
+      .rail { fill: none; stroke: #334155; stroke-width: 2; }
+      .boot-flow { fill: none; stroke: #7f9bad; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 4 11; marker-end: url(#arrowBlue); animation: travel 1.35s linear infinite; }
+      .loop-flow { fill: none; stroke: #7f9bad; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 5 12; marker-end: url(#arrowGreen); animation: travel 1.25s linear infinite; }
+      .io-flow { fill: none; stroke: #7f9bad; stroke-width: 2.3; stroke-linecap: round; stroke-dasharray: 4 11; marker-end: url(#arrowAmber); animation: travel 1.5s linear infinite; }
+      .boot-card > rect { animation: bootScan 7.2s ease-in-out infinite; }
+      .boot-card:nth-of-type(2) > rect { animation-delay: -6s; }
+      .boot-card:nth-of-type(3) > rect { animation-delay: -4.8s; }
+      .boot-card:nth-of-type(4) > rect { animation-delay: -3.6s; }
+      .boot-card:nth-of-type(5) > rect { animation-delay: -2.4s; }
+      .boot-card:nth-of-type(6) > rect { animation-delay: -1.2s; }
+      .tick { animation: tick 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      .queue-dot { animation: queuePulse 1.2s ease-in-out infinite; }
+      .queue-dot:nth-child(2) { animation-delay: -.4s; }
+      .queue-dot:nth-child(3) { animation-delay: -.8s; }
+      @keyframes travel { to { stroke-dashoffset: -31; } }
+      @keyframes bootScan { 0%,13% { stroke: #9ab0bd; stroke-width: 2.2; } 19%,100% { stroke: #334155; stroke-width: 1.5; } }
+      @keyframes tick { 0%,100% { opacity: .45; transform: scale(.82); } 50% { opacity: 1; transform: scale(1.12); } }
+      @keyframes queuePulse { 0%,100% { opacity: .28; } 50% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-flow, .loop-flow, .io-flow, .boot-card, .tick, .queue-dot { animation: none; }
+      }
+    </style>
+  </defs>
+
+  <rect width="1400" height="840" rx="26" fill="#111827"/>
+  <rect width="1400" height="840" rx="26" fill="url(#grid)"/>
+
+  <text x="50" y="55" fill="#8fa8b7" class="eyebrow">ESP32 SYSTEM FLOW · BOOT ONCE, LOOP FOREVER</text>
+  <text x="50" y="91" fill="#f8fafc" font-size="29" font-weight="760">From reset to a responsive, event-driven cube</text>
+  <text x="1350" y="56" text-anchor="end" fill="#64748b" font-size="13">HoloCubic AIO runtime</text>
+
+  <!-- Boot sequence -->
+  <g aria-label="Boot sequence">
+    <text x="50" y="138" fill="#8fa8b7" class="eyebrow">BOOT SEQUENCE</text>
+    <path class="rail" d="M228 206H264M438 206H474M648 206H684M858 206H894M1068 206H1104"/>
+    <path class="boot-flow" d="M228 206H264"/>
+    <path class="boot-flow" d="M438 206H474" style="animation-delay:-.25s"/>
+    <path class="boot-flow" d="M648 206H684" style="animation-delay:-.5s"/>
+    <path class="boot-flow" d="M858 206H894" style="animation-delay:-.75s"/>
+    <path class="boot-flow" d="M1068 206H1104" style="animation-delay:-1s"/>
+
+    <g class="boot-card" transform="translate(50 160)">
+      <rect width="178" height="92" rx="15" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="25" cy="25" r="9" fill="#263746" stroke="#7f9bad"/>
+      <path d="M25 19v7M20 24a7 7 0 1 0 10 0" fill="none" stroke="#b8c7d1" stroke-width="1.7" stroke-linecap="round"/>
+      <text x="46" y="30" class="label">Power / reset</text>
+      <text x="18" y="58" class="code">ESP32 boot ROM</text>
+      <text x="18" y="77" class="meta">load firmware</text>
+    </g>
+    <g class="boot-card" transform="translate(260 160)">
+      <rect width="178" height="92" rx="15" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="25" cy="25" r="9" fill="#263746" stroke="#7f9bad"/>
+      <text x="25" y="30" text-anchor="middle" fill="#c3d0d8" font-size="12" font-weight="800">1</text>
+      <text x="46" y="30" class="label">Core + configs</text>
+      <text x="18" y="58" class="code">Serial · SPIFFS</text>
+      <text x="18" y="77" class="meta">read persisted config</text>
+    </g>
+    <g class="boot-card" transform="translate(470 160)">
+      <rect width="178" height="92" rx="15" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="25" cy="25" r="9" fill="#263746" stroke="#7f9bad"/>
+      <text x="25" y="30" text-anchor="middle" fill="#c3d0d8" font-size="12" font-weight="800">2</text>
+      <text x="46" y="30" class="label">Display + devices</text>
+      <text x="18" y="58" class="code">TFT · RGB · TF</text>
+      <text x="18" y="77" class="meta">LVGL + ambient light</text>
+    </g>
+    <g class="boot-card" transform="translate(680 160)">
+      <rect width="178" height="92" rx="15" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="25" cy="25" r="9" fill="#263746" stroke="#7f9bad"/>
+      <text x="25" y="30" text-anchor="middle" fill="#c3d0d8" font-size="12" font-weight="800">3</text>
+      <text x="46" y="30" class="label">Controller init</text>
+      <text x="18" y="58" class="code">CPU · launcher UI</text>
+      <text x="18" y="77" class="meta">loading screen ready</text>
+    </g>
+    <g class="boot-card" transform="translate(890 160)">
+      <rect width="178" height="92" rx="15" fill="#102035" stroke="#334155" stroke-width="1.5"/>
+      <circle cx="25" cy="25" r="9" fill="#263746" stroke="#7f9bad"/>
+      <text x="25" y="30" text-anchor="middle" fill="#c3d0d8" font-size="12" font-weight="800">4</text>
+      <text x="46" y="30" class="label">Register apps</text>
+      <text x="18" y="58" class="code">APP_OBJ[] · auto-start</text>
+      <text x="18" y="77" class="meta">first controller pass</text>
+    </g>
+    <g class="boot-card" transform="translate(1100 160)">
+      <rect width="250" height="92" rx="15" fill="#1d2738" stroke="#334155" stroke-width="1.5"/>
+      <circle class="tick" cx="26" cy="25" r="9" fill="#7f9bad"/>
+      <text x="46" y="30" class="label">MPU + guards</text>
+      <text x="18" y="58" fill="#c3d0d8" class="code">RGB task · 200 ms timer</text>
+      <text x="18" y="77" class="meta">60 s WDT → enter loop()</text>
+    </g>
+  </g>
+
+  <!-- Runtime loop -->
+  <g filter="url(#shadow)" aria-label="Cooperative runtime loop">
+    <rect x="50" y="300" width="976" height="480" rx="24" fill="#172033" stroke="#475569" stroke-width="1.6"/>
+    <text x="80" y="342" fill="#8fa8b7" class="eyebrow">COOPERATIVE RUNTIME LOOP</text>
+    <text x="80" y="372" class="title">Core loop task · current execution order</text>
+
+    <!-- underlying circular rails -->
+    <path class="rail" d="M270 465H372M552 465H654M834 465C910 465 928 515 928 595M838 644H746M566 644H474M294 644C202 644 156 594 156 548S178 465 270 465"/>
+    <path class="loop-flow" d="M270 465H372"/>
+    <path class="loop-flow" d="M552 465H654" style="animation-delay:-.2s"/>
+    <path class="loop-flow" d="M834 465C910 465 928 515 928 595" style="animation-delay:-.4s"/>
+    <path class="loop-flow" d="M838 644H746" style="animation-delay:-.6s"/>
+    <path class="loop-flow" d="M566 644H474" style="animation-delay:-.8s"/>
+    <path class="loop-flow" d="M294 644C202 644 156 594 156 548S178 465 270 465" style="animation-delay:-1s"/>
+
+    <g transform="translate(90 416)">
+      <rect width="180" height="98" rx="16" fill="#1d2738" stroke="#475569"/>
+      <path d="M19 19h17v17H19zM23 23h9v9h-9z" fill="none" stroke="#b8c7d1" stroke-width="1.5"/>
+      <text x="46" y="31" class="label">LVGL handler</text>
+      <text x="18" y="61" class="code">screen.routine()</text>
+      <text x="18" y="81" class="meta">layout → TFT flush</text>
+    </g>
+    <g transform="translate(372 416)">
+      <rect width="180" height="98" rx="16" fill="#1d2738" stroke="#475569"/>
+      <circle class="tick" cx="26" cy="26" r="9" fill="#7f9bad"/>
+      <text x="46" y="31" class="label">Action input</text>
+      <text x="18" y="61" class="code">200 ms: MPU read</text>
+      <text x="18" y="81" class="meta">+ serial remote overlay</text>
+    </g>
+    <g transform="translate(654 416)">
+      <rect width="180" height="98" rx="16" fill="#2b3e50" stroke="#7892a3"/>
+      <circle cx="27" cy="26" r="10" fill="#607f92"/>
+      <path d="M22 26h10M27 21v10" stroke="#dbeafe" stroke-width="1.8" stroke-linecap="round"/>
+      <text x="46" y="31" class="label">AppController</text>
+      <text x="18" y="61" class="code">main_process()</text>
+      <text x="18" y="81" class="meta">event + outer FSM</text>
+    </g>
+    <g transform="translate(746 595)">
+      <rect width="180" height="98" rx="16" fill="#243140" stroke="#526474"/>
+      <rect x="18" y="18" width="18" height="18" rx="4" fill="#7f9bad"/>
+      <text x="46" y="31" class="label">Event dispatch</text>
+      <text x="18" y="61" class="code">queued: 300 ms flag</text>
+      <text x="18" y="81" class="meta">Wi-Fi/MQTT · config sync</text>
+    </g>
+    <g transform="translate(474 595)">
+      <rect width="180" height="98" rx="16" fill="#1d2738" stroke="#475569"/>
+      <circle cx="27" cy="26" r="8" fill="#607f92"/>
+      <text x="46" y="31" class="label">Background jobs</text>
+      <text x="18" y="61" class="code">every 60 seconds</text>
+      <text x="18" y="81" class="meta">skip active real-time app</text>
+    </g>
+    <g transform="translate(294 595)">
+      <rect width="180" height="98" rx="16" fill="#1d2738" stroke="#475569"/>
+      <g transform="translate(20 24)">
+        <circle class="queue-dot" cx="0" cy="0" r="4" fill="#7f9bad"/>
+        <circle class="queue-dot" cx="11" cy="0" r="4" fill="#7f9bad"/>
+        <circle class="queue-dot" cx="22" cy="0" r="4" fill="#7f9bad"/>
+      </g>
+      <text x="55" y="31" class="label">Launcher / app</text>
+      <text x="18" y="61" class="code">UI or main_process</text>
+      <text x="18" y="81" class="meta">callback(this, action)</text>
+    </g>
+
+    <rect x="80" y="724" width="916" height="34" rx="9" fill="#202a3a"/>
+    <text x="98" y="746" fill="#c3d0d8" font-size="12" font-weight="650">Invariant:</text>
+    <text x="163" y="746" fill="#94a3b8" font-size="12">core callbacks return quickly; blocking stalls LVGL, input, and event dispatch. Worker tasks exist separately.</text>
+  </g>
+
+  <!-- Side channels -->
+  <g filter="url(#shadow)" aria-label="Hardware and network side channels">
+    <rect x="1060" y="300" width="290" height="480" rx="24" fill="#172033" stroke="#475569" stroke-width="1.6"/>
+    <text x="1088" y="342" fill="#8fa8b7" class="eyebrow">EXPLICIT OWNERS</text>
+    <text x="1088" y="372" class="title">Services outside core flow</text>
+
+    <g transform="translate(1088 400)">
+      <rect width="234" height="54" rx="12" fill="#1d2738" stroke="#475569"/>
+      <text x="16" y="23" class="label">Wi-Fi / AP driver</text>
+      <text x="16" y="43" class="meta">AppController queued events</text>
+    </g>
+    <g transform="translate(1088 468)">
+      <rect width="234" height="54" rx="12" fill="#1d2738" stroke="#475569"/>
+      <text x="16" y="23" class="label">Web + FTP servers</text>
+      <text x="16" y="43" class="meta">Server / File Manager apps</text>
+    </g>
+    <g transform="translate(1088 536)">
+      <rect width="234" height="54" rx="12" fill="#1d2738" stroke="#475569"/>
+      <text x="16" y="23" class="label">HTTP / MQTT clients</text>
+      <text x="16" y="43" class="meta">called from app callbacks</text>
+    </g>
+    <g transform="translate(1088 604)">
+      <rect width="234" height="54" rx="12" fill="#1d2738" stroke="#475569"/>
+      <text x="16" y="23" class="label">SD + SPIFFS</text>
+      <text x="16" y="43" class="meta">app media + persisted config</text>
+    </g>
+    <g transform="translate(1088 672)">
+      <rect width="234" height="54" rx="12" fill="#1d2738" stroke="#475569"/>
+      <text x="16" y="23" class="label">RGB worker task</text>
+      <text x="16" y="43" class="meta">separate FreeRTOS task</text>
+    </g>
+    <rect x="1088" y="738" width="234" height="22" rx="7" fill="#202a3a"/>
+    <text x="1205" y="753" text-anchor="middle" fill="#9fafb9" font-size="11">owner shown for each service</text>
+  </g>
+
+  <text x="1350" y="816" text-anchor="end" fill="#64748b" font-size="12">Animated paths show setup and loop execution order · honors reduced-motion preferences</text>
+</svg>

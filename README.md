@@ -583,13 +583,21 @@ In the PlatformIO toolbar at the bottom of VS Code:
 
 ### Framework Diagram
 
-![HoloCubic_AIO_Frame](Image/holocubic_AIO_Frame.png)
+<p align="center">
+  <img src="Image/holocubic-aio-framework.svg" alt="Animated HoloCubic AIO framework showing device services, AppController dispatch, and APP_OBJ applications" width="100%">
+</p>
+
+The diagram separates device services, `AppController`'s hybrid queued/synchronous dispatch, and modular apps registered through the `APP_OBJ` contract. The animation respects your operating system's reduced-motion preference.
 
 **Framework Explanation Video**: https://www.bilibili.com/video/BV1jh411a7pV?p=4
 
 ### ESP32 System Flowchart
 
-![ESP32 System Flowchart](Image/ESP32-system-flowchart.png)
+<p align="center">
+  <img src="Image/esp32-system-flowchart.svg" alt="Animated ESP32 boot sequence and cooperative runtime loop" width="100%">
+</p>
+
+Boot runs once; each core-loop iteration then handles LVGL, conditional input sampling, controller events, 60-second background jobs, and launcher/active-app dispatch in that order. Separate worker tasks are called out explicitly. See the [firmware architecture guide](./Docs/development/02-firmware-architecture.md) for the code-level walkthrough.
 
 ### Development Resources
 
