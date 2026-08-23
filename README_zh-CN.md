@@ -4,6 +4,10 @@
 
 ![首页](Image/Holo1.jpg)
 
+| 股票行情 | PC 资源监控 | 番茄钟 |
+|---|---|---|
+| ![股票行情模拟器预览](test/golden/stockmarket/smoke/01_initial.png) | ![PC 资源监控模拟器预览](test/golden/pc_resource/smoke/02_with_data.png) | ![番茄钟模拟器预览](test/golden/tomato/smoke/01_initial.png) |
+
 <p align="center">
   <img src="Image/holocubic_realshot.jpg" alt="HoloCubic AIO 实机运行股票行情 App" width="380"><br>
   <em>实机照片 —— 股票行情 App 在 HoloCubic 上实时运行</em>
@@ -35,6 +39,7 @@
 * **PC资源监控**: [Jumping99](https://github.com/Jumping99)
 * **多功能动画**: [LHYHHD](https://github.com/LHYHHD)
 * **股票应用**: [redwolf](https://github.com/redwolf), [asdfghj1237890](https://github.com/asdfghj1237890)
+* 更多开发者持续加入……
 
 ---
 
@@ -101,7 +106,7 @@
 
 ## 🔧 固件刷写（无需IDE环境）
 
-从Release頁面下载上位机工具进行固件刷写。
+从 Release 页面下载上位机工具进行固件刷写。
 
 ### 所需文件
 
@@ -114,8 +119,8 @@
 
 ### 刷写步骤
 
-1. 将文件1-3与`CubicAIO_Tool-v3.0.0-x86_64-windows.exe`放在同一目录
-2. 运行`CubicAIO_Tool-v3.0.0-x86_64-windows.exe`
+1. 将文件1-3与`CubicAIO_Tool-*-x86_64-windows-setup.exe`放在同一目录
+2. 运行`CubicAIO_Tool-*-x86_64-windows-setup.exe`
 3. 在软件中选择最新固件`HoloCubic_AIO_XXX.bin`
 4. 刷写固件
 
@@ -123,7 +128,7 @@
 
 ### 🛠️ AIO 工具（PC 烧录器 + 遥控）
 
-Windows 桌面工具一次烧录 firmware/bootloader/partitions，开启序列埠看即时 debug log，並且（v2.6.3 起）支援远端送方向指令到 cube — 不用实际拿起来倾斜，方便测试、展示、以及 MPU6050 没焊好的开发情境。5 颗按钮 1:1 对应韧体 IMU action enum：
+Windows 桌面工具可一次性烧录 firmware/bootloader/partitions，打开设备串口查看实时调试日志，并且从 v2.6.3 开始支持向 cube 远程发送方向指令，无需实际倾斜设备；这适合测试、演示，以及未焊接 MPU6050 的开发场景。5 个按钮与固件的 IMU action enum 一一对应：
 
 - ↑ → `UP` · ← → `TURN_LEFT` · → → `TURN_RIGHT` · ✓ → `GO_FORWORD`（确认 / 刷新）· 🏠 → `RETURN`（返回 launcher）
 
@@ -187,7 +192,9 @@ Windows 桌面工具一次烧录 firmware/bootloader/partitions，开启序列�
 - **访问方式**：
   - 设备创建AP热点`HoloCubic_AIO`（无密码），地址为`192.168.4.2`
   - 或使用域名：http://holocubic
+  - 在家庭局域网中，也可通过设备屏幕显示的 STA IP 访问
   - 推荐：使用IP地址访问以获得更好兼容性
+- **登录**：设置页面使用 HTTP Basic Auth；用户名为 `admin`，密码是设备 WebServer 屏幕显示的 6 位代码（每台设备不同）
 - **功能特性**：
   - 系统参数配置
   - 天气应用设置
@@ -311,6 +318,26 @@ Windows 桌面工具一次烧录 firmware/bootloader/partitions，开启序列�
 </details>
 
 <details>
+<summary><b>🍅 番茄钟（Tomato Timer）</b></summary>
+
+采用与股票界面一致的仪表风格，是默认固件中启用的番茄工作法专注计时器。
+
+- **运行条件**：无
+- **模式**：FOCUS 25 分钟（默认）· FOCUS 45 分钟 · BREAK 15 分钟 · BREAK 5 分钟
+- **操作方式**：
+
+  | 手势 | 操作 |
+  |------|------|
+  | 连续快速左右倾斜 | 切换计时模式 |
+  | 保持向前倾斜 | 每保持约 0.7 秒增加 1 分钟 |
+  | 向后倾斜 | 返回启动器 |
+
+- **计时结束**：RGB LED 会快速闪烁提醒，直到切换模式或退出；进入、增加 1 分钟、切换模式与计时结束等状态变化也会输出到串口日志，方便调试
+- **开发者**：Fjl
+
+</details>
+
+<details>
 <summary><b>📺 BiliBili粉丝应用</b></summary>
 
 - **运行条件**：
@@ -385,16 +412,27 @@ Windows 桌面工具一次烧录 firmware/bootloader/partitions，开启序列�
 <details>
 <summary><b>💻 PC资源监控（PC Resource）</b></summary>
 
+以与股票界面一致的仪表风格，在 cube 上实时显示 CPU／GPU 负载、温度、频率与功耗、内存使用率，以及网络上传／下载速度。
+
 - **运行条件**：
   - WiFi已配置
   - PC与HoloCubic在同一网段
-  - PC安装[AIDA64](https://www.aida64.com/downloads)
-- **设置步骤**：
-  1. 导入配置文件`aida64_setting.rslcd`（位于`AIO_Firmware_PIO\src\app\pc_resource\`）
-  2. 在WebServer中设置PC服务IP地址
-- **开发者**：Jumping99
+  - PC 上有可通过 HTTP 提供监控数据的数据源（见下文）
+- **工作方式**：cube 会按更新间隔访问 `http://<PC-IP>:80/sse`，并读取由多组 `<name><value><unit>` 拼接而成的**单行纯文本**：
 
-> 详细操作步骤请参见群文档
+  ```
+  CPU usage42%CPU temp61.5CCPU freq4242MHzCPU power88.5WGPU usage37%GPU temp58.0CGPU power111.5WRAM usage73%RAM use23456MBNET upload speed123.4KB/sNET download speed987.6KB/s
+  ```
+
+  可识别的名称／单位包括：`CPU usage`(%)、`CPU temp`(C)、`CPU freq`(MHz)、`CPU power`(W)、`GPU usage`(%)、`GPU temp`(C)、`GPU power`(W)、`RAM usage`(%)、`RAM use`(MB)、`NET upload speed`(KB/s)、`NET download speed`(KB/s)。缺少的项目会显示为 0。
+- **设置步骤**：
+  1. 在 PC 上启动数据源，可选择：
+     - **AIDA64**：安装 [AIDA64](https://www.aida64.com/downloads)，启用端口 80 的 *RemoteSensor* LCD，并导入配置文件 `aida64_setting.rslcd`（位于 `AIO_Firmware_PIO\src\app\pc_resource\`）；或
+     - **其他数据源**：在端口 80 的 `/sse` 路径提供上述单行格式
+  2. 进入设备的 **WebServer** 应用，按 Web Server 章节说明登录，在 *PC Resource* 设置页将 **PC IP 地址**设为 PC 的局域网 IP；默认更新间隔为 1000 毫秒
+  3. 进入 **PC Resource** 应用，数值会每秒刷新
+- **故障排查**：设备串口日志会记录完整通信过程；每轮请求会依次出现 `host Conected!` 与 `Content: <接收到的内容>`。出现 `Connect host failed!` 通常表示 PC IP 错误、端口 80 没有服务监听，或 PC 防火墙阻止了 cube
+- **开发者**：Jumping99
 
 </details>
 
@@ -468,7 +506,7 @@ with open(out_path, 'wb') as f:
 
 ## 🛠️ 开发与编译
 
-> 📚 **想贡献代码？** 先看 [**开发者教学合集**](./Docs/development/README.md) — 涵盖韧体架构、从零写一个新 app、AIO_Tool Rust workspace（6 个 crate：aio-protocol / aio-i18n / aio-device / aio-flasher / aio-converter / aio-tool）、三套测试环境、CI / release 流程。~1800 行，从头读到尾约 3 小时。
+> 📚 **想贡献代码？** 先看 [**开发者教学合集**](./Docs/development/README.md) — 涵盖固件架构、从零编写新应用、AIO_Tool Rust workspace（5 个后端 crate：aio-protocol / aio-i18n / aio-device / aio-flasher / aio-converter，由 Studio 前端使用）、三套测试环境，以及 CI／release 流程。约 1800 行，从头读到尾约需 3 小时。
 
 ### 构建环境
 
@@ -631,6 +669,30 @@ python Script/get_font.py 字模文件路径.c
 </details>
 
 <details>
+<summary><b>v3.1.x</b></summary>
+
+### 固件更新
+- **股票**：重新设计行情界面，加入组合箭头、拆分显示价格（大号粗体整数 + 小号小数）、ST7789 实机对比度调整、真实 RTC 日期时间同步，以及 IBM Plex Mono 大号粗体价格刷新（v3.1.2–v3.1.5）
+- **股票**：从主线程处理循环移除 `delay(300)`，避免 LVGL 与 IMU 每次循环都发生停顿
+- **设置**：新增 `/api/settings` 端点，Studio 工具可通过 HTTP 读取／写入固件设置（修复 B15）
+- **启动器**：共享屏幕访问完整加入 `lvgl_mutex` 保护，修复“残影”渲染问题
+
+> `v3.0.0`／`v3.0.1` 没有固件功能变更；该版本主要是 PC 工具的 Rust 重写（参见**上位机工具更新**）。固件与工具现在共用同一个版本号。
+
+</details>
+
+<details>
+<summary><b>v2.6.x</b></summary>
+
+### 固件更新
+- **Web 设置**：“Glass UI”重写，加入新的侧边栏、表单与提示消息前端、系统页 WiFi 扫描界面、字段提示、全部 12 个设置表单的完整 i18n，以及静态资源浏览器缓存
+- **重构**：将 `weather.cpp`（1081→363 行）与 `ESP32FtpServer.cpp`（1091→264 行）拆分为职责明确的模块；新增 FTP（Unity）测试框架，并把 ESP32 固件构建加入 CI 回归流程
+- **工具**：AIO_Tool 新增远程控制浮层，4 个方向键与 ✓ 按钮可通过串口发送 IMU 动作，无需倾斜设备即可测试；同时改善串口与刷写错误提示
+- **修复**：天气解析器（v2.6.10）、贪吃蛇方向处理、`-Wformat-truncation` 警告及其中两个潜在错误
+
+</details>
+
+<details>
 <summary><b>v2.5.x</b></summary>
 
 ### 固件更新
@@ -760,7 +822,26 @@ python Script/get_font.py 字模文件路径.c
 ### 上位机工具更新
 
 <details>
-<summary><b>HoloCubic_AIO_Tool v1.6.2</b> - 最新版本</summary>
+<summary><b>AIO_Tool v3.1.x</b> - 最新版本</summary>
+
+- **Studio（Tauri 2）**现为正式发布的图形界面；GitHub Releases 为各操作系统提供原生安装包：Windows NSIS `.exe`、macOS `.dmg`、Linux `.AppImage`，取代旧的原始 egui 可执行文件
+- **设置**标签页通过 HTTP 调用固件的 `/api/settings`（在 Studio 端修复 B15）
+- **刷写器**：使用单一会话写入、连接时读取真实芯片信息，并在连接后可靠重启设备以恢复屏幕显示
+- Studio 优化：自动获取最新 Release，并放大默认窗口
+
+</details>
+
+<details>
+<summary><b>AIO_Tool v3.0.x</b></summary>
+
+- **完整使用 Rust 重写**原 Python 上位机工具，并建立 5 个共享后端 crate（`aio-protocol`／`aio-i18n`／`aio-device`／`aio-flasher`／`aio-converter`）
+- 引入 **Studio**（Tauri 2 原生外壳 + Web UI 原型），与当时的旧版 **egui** 程序并行
+- 加入 egui 系统 CJK 字体回退、文件管理器子树缓存修复、原生分区 bin 文件选择器，以及单实例与 Tauri bridge 修复（v3.0.1）
+
+</details>
+
+<details>
+<summary><b>HoloCubic_AIO_Tool v1.6.2</b></summary>
 
 - 修复图片转换工具的BGR颜色通道问题
 - 改进图片转换工具的用户体验
