@@ -2,6 +2,14 @@
 
 Local operational notes for coding agents. See `CLAUDE.md` for the broader repo guide.
 
+## Release Tag Checklist
+
+Before creating or pushing any release tag, review whether the current change
+requires a CI workflow update. Check `.github/workflows/` for release,
+regression, host-harness, toolchain, matrix, artifact, or stub assumptions that
+may have drifted with the code. Update the workflow before tagging when the
+release/build/test surface changed.
+
 ## Firmware Flashing On This Machine
 
 Known local test device: COM5, CH9102 (`USB VID:PID=1A86:55D4`), ESP32-PICO-D4.

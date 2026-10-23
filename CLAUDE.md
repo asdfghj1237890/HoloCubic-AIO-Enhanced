@@ -110,6 +110,12 @@ CI auto-monitor: `gh run list --branch <branch> --limit 1 --json databaseId,stat
 
 Tag `v*.*.*` triggers `.github/workflows/release.yml` which builds firmware .bin + 3 AIO_Tool binaries (Windows .exe, macOS aarch64 tar.gz, Linux x86_64 tar.gz) + publishes a GitHub Release.
 
+Before creating or pushing a tag, review whether the current change requires a
+CI workflow update. Check `.github/workflows/` for release/regression coverage,
+host-stub or Arduino-core assumptions, toolchain/matrix changes, and artifact
+packaging drift. If the build/test/release surface changed, update CI before
+tagging.
+
 ```bash
 # Bump version in AIO_Firmware_PIO/src/common.h first:
 #   #define AIO_VERSION "3.0.X"
